@@ -1,0 +1,599 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  SUPER_ADMIN
+  OWNER
+  MANAGER
+  RECEPTION
+  TRAINER
+  STUDENT
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CANCELED
+}
+
+enum WorkoutStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  ACTIVE
+  EXPIRED
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  CHECKED_IN
+  NO_SHOW
+  CANCELED
+}
+
+enum AccessType {
+  QR_CODE
+  BIOMETRIC
+  FACIAL
+  TAG
+  MANUAL
+}
+
+enum GatewayProvider {
+  ASAAS
+  MERCADO_PAGO
+  PAGARME
+  STRIPE
+  EFI
+  GERENCIANET
+  IUGU
+  VINDI
+  MANUAL
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELED
+}
+
+enum ChargeStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  CANCELED
+  EXPIRED
+  REFUNDED
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionStatus {
+  PLANNED
+  PENDING
+  PAID
+  CANCELED
+}
+
+enum MessageChannel {
+  PUSH
+  IN_APP
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum MessageStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  CANCELED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String?
+  name         String
+  passwordHash String
+  mfaEnabled   Boolean  @default(false)
+  mfaSecret    String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     Session[]
+  userRoles    UserRole[]
+  students     Student[]
+  auditLogs    AuditLog[]
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  refreshTokenHash String
+  deviceName       String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime @default(now())
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  name            RoleName         @unique
+  description     String?
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  module          String?
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  id         String   @id @default(uuid())
+  userId     String
+  roleId     String
+  gymId      String?
+  assignedBy String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  gym        Gym?     @relation(fields: [gymId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  gymId      String?
+  userId     String?
+  action     String
+  entity     String
+  entityId   String?
+  previous   Json?
+  next       Json?
+  ipAddress  String?
+  deviceInfo String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+  @@index([gymId])
+}
+
+model Gym {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  timezone  String   @default("America/Sao_Paulo")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  userRoles UserRole[]
+  students  Student[]
+  equipments Equipment[]
+  scheduleSlots ScheduleSlot[]
+  accessDevices AccessDevice[]
+  accessEvents AccessEvent[]
+  financialProfile FinancialProfile?
+  financialAccounts FinancialAccount[]
+  financialCategories FinancialCategory[]
+  financialTransactions FinancialTransaction[]
+  suppliers Supplier[]
+  payables  Payable[]
+  subscriptions Subscription[]
+  charges   Charge[]
+  communicationTemplates CommunicationTemplate[]
+  communicationAutomations CommunicationAutomation[]
+  communicationMessages CommunicationMessage[]
+  @@index([slug])
+}
+
+model Student {
+  id              String        @id @default(uuid())
+  gymId           String
+  userId          String?
+  birthDate       DateTime?
+  gender          String?
+  goal            String?
+  level           String?
+  status          StudentStatus @default(ACTIVE)
+  enrollmentDate  DateTime      @default(now())
+  consentHealth   Boolean       @default(false)
+  consentComm     Boolean       @default(false)
+  consentBiometry Boolean       @default(false)
+  gym             Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  user            User?   @relation(fields: [userId], references: [id])
+  assessments     Assessment[]
+  workouts        Workout[]
+  schedules       StudentSchedule[]
+  accessCredentials AccessCredential[]
+  accessEvents    AccessEvent[]
+  subscriptions   Subscription[]
+  charges         Charge[]
+  communicationMessages CommunicationMessage[]
+  communicationPreference CommunicationPreference?
+  @@index([gymId])
+}
+
+model Assessment {
+  id             String   @id @default(uuid())
+  studentId      String
+  evaluatorId    String?
+  weight         Float?
+  height         Float?
+  bmi            Float?
+  bodyFatPercent Float?
+  measurements   Json?
+  restrictions   Json?
+  notes          String?
+  createdAt      DateTime @default(now())
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  workouts       Workout[]
+  @@index([studentId])
+}
+
+model Equipment {
+  id            String @id @default(uuid())
+  gymId         String
+  name          String
+  standardName  String?
+  type          String?
+  primaryMuscle String?
+  secondaryMuscles Json?
+  movementPattern String?
+  difficulty    String?
+  contraindications Json?
+  videoUrl      String?
+  active        Boolean @default(true)
+  gym           Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  workoutExercises WorkoutExercise[]
+  @@index([gymId])
+}
+
+model Exercise {
+  id           String @id @default(uuid())
+  name         String @unique
+  muscleGroup  String?
+  movement     String?
+  level        String?
+  videoUrl     String?
+  contraindications Json?
+  workoutExercises WorkoutExercise[]
+}
+
+model Workout {
+  id            String        @id @default(uuid())
+  studentId     String
+  assessmentId  String?
+  createdByAI   Boolean       @default(false)
+  approvedById  String?
+  status        WorkoutStatus @default(DRAFT)
+  goal          String?
+  level         String?
+  weeklyFrequency Int?
+  startDate     DateTime?
+  validUntil    DateTime?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  student       Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assessment    Assessment?   @relation(fields: [assessmentId], references: [id])
+  sessions      WorkoutSession[]
+  @@index([studentId])
+}
+
+model WorkoutSession {
+  id          String @id @default(uuid())
+  workoutId   String
+  name        String
+  sessionType String?
+  order       Int
+  estimatedMinutes Int?
+  workout     Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercises   WorkoutExercise[]
+}
+
+model WorkoutExercise {
+  id            String @id @default(uuid())
+  sessionId     String
+  exerciseId    String
+  equipmentId   String?
+  order         Int
+  sets          Int?
+  reps          String?
+  restSeconds   Int?
+  suggestedLoad String?
+  notes         String?
+  session       WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise      Exercise       @relation(fields: [exerciseId], references: [id])
+  equipment     Equipment?     @relation(fields: [equipmentId], references: [id])
+}
+
+model ScheduleSlot {
+  id        String @id @default(uuid())
+  gymId     String
+  weekday   Int
+  startTime String
+  endTime   String
+  capacity  Int
+  active    Boolean @default(true)
+  gym       Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  schedules StudentSchedule[]
+  @@index([gymId])
+}
+
+model StudentSchedule {
+  id          String         @id @default(uuid())
+  studentId   String
+  slotId      String
+  date        DateTime
+  status      ScheduleStatus @default(SCHEDULED)
+  checkedInAt DateTime?
+  student     Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  slot        ScheduleSlot   @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  @@index([studentId])
+}
+
+model AccessDevice {
+  id         String @id @default(uuid())
+  gymId      String
+  name       String
+  type       AccessType
+  protocol   String?
+  ipAddress  String?
+  active     Boolean @default(true)
+  lastSyncAt DateTime?
+  gym        Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  events     AccessEvent[]
+}
+
+model AccessCredential {
+  id            String   @id @default(uuid())
+  studentId     String
+  type          AccessType
+  tokenHash     String?
+  biometricHash String?
+  active        Boolean  @default(true)
+  expiresAt     DateTime?
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  @@index([studentId])
+}
+
+model AccessEvent {
+  id           String   @id @default(uuid())
+  gymId        String
+  studentId    String?
+  deviceId     String?
+  allowed      Boolean
+  denialReason String?
+  occurredAt   DateTime @default(now())
+  gym          Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  student      Student? @relation(fields: [studentId], references: [id])
+  device       AccessDevice? @relation(fields: [deviceId], references: [id])
+  @@index([gymId])
+}
+
+model FinancialProfile {
+  id               String @id @default(uuid())
+  gymId            String @unique
+  companyName      String
+  tradeName        String?
+  taxID            String?
+  responsibleName  String?
+  responsibleEmail String?
+  responsiblePhone String?
+  status           String @default("pending")
+  gym              Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  gatewayConnections GatewayConnection[]
+}
+
+model GatewayConnection {
+  id               String @id @default(uuid())
+  profileId        String
+  provider         GatewayProvider
+  mode             String @default("sandbox")
+  authType         String
+  merchantId       String?
+  accountId        String?
+  apiKeyEnc        String?
+  accessTokenEnc   String?
+  refreshTokenEnc  String?
+  webhookSecretEnc String?
+  status           String @default("disconnected")
+  lastVerifiedAt   DateTime?
+  profile          FinancialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model FinancialAccount {
+  id             String @id @default(uuid())
+  gymId          String
+  name           String
+  type           String
+  initialBalance Int    @default(0)
+  active         Boolean @default(true)
+  gym            Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  transactions   FinancialTransaction[]
+}
+
+model FinancialCategory {
+  id           String @id @default(uuid())
+  gymId        String
+  name         String
+  type         TransactionType
+  color        String?
+  active       Boolean @default(true)
+  gym          Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  transactions FinancialTransaction[]
+  payables     Payable[]
+}
+
+model FinancialTransaction {
+  id            String            @id @default(uuid())
+  gymId         String
+  type          TransactionType
+  categoryId    String?
+  accountId     String?
+  description   String
+  amount        Int
+  dueDate       DateTime?
+  paidAt        DateTime?
+  status        TransactionStatus @default(PENDING)
+  source        String?
+  sourceId      String?
+  studentId     String?
+  supplierId    String?
+  paymentMethod String?
+  receiptUrl    String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  gym           Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  category      FinancialCategory? @relation(fields: [categoryId], references: [id])
+  account       FinancialAccount?  @relation(fields: [accountId], references: [id])
+  @@index([gymId])
+}
+
+model Supplier {
+  id     String @id @default(uuid())
+  gymId  String
+  name   String
+  taxID  String?
+  phone  String?
+  email  String?
+  active Boolean @default(true)
+  gym    Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  payables Payable[]
+}
+
+model Payable {
+  id            String            @id @default(uuid())
+  gymId         String
+  supplierId    String?
+  categoryId    String?
+  description   String
+  amount        Int
+  dueDate       DateTime
+  paidAt        DateTime?
+  status        TransactionStatus @default(PENDING)
+  attachmentUrl String?
+  gym           Gym       @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+  category      FinancialCategory? @relation(fields: [categoryId], references: [id])
+  @@index([gymId])
+}
+
+model Subscription {
+  id            String             @id @default(uuid())
+  gymId         String
+  studentId     String
+  planName      String
+  amount        Int
+  status        SubscriptionStatus @default(ACTIVE)
+  gatewaySubId  String?
+  nextBillingAt DateTime?
+  startedAt     DateTime @default(now())
+  gym           Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  charges       Charge[]
+  @@index([gymId])
+}
+
+model Charge {
+  id              String       @id @default(uuid())
+  gymId           String
+  studentId       String
+  subscriptionId  String?
+  gatewayChargeId String?
+  amount          Int
+  dueDate         DateTime?
+  paidAt          DateTime?
+  status          ChargeStatus @default(PENDING)
+  paymentMethod   String?
+  pixQrCode       String?
+  paymentLink     String?
+  gym             Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  student         Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+  @@index([gymId])
+}
+
+model CommunicationTemplate {
+  id       String @id @default(uuid())
+  gymId    String
+  name     String
+  channel  MessageChannel
+  title    String?
+  body     String
+  variables Json?
+  active   Boolean @default(true)
+  gym      Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  messages CommunicationMessage[]
+}
+
+model CommunicationAutomation {
+  id           String @id @default(uuid())
+  gymId        String
+  name         String
+  triggerEvent String
+  conditions   Json?
+  actions      Json?
+  active       Boolean @default(true)
+  gym          Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+}
+
+model CommunicationMessage {
+  id           String        @id @default(uuid())
+  gymId        String
+  studentId    String
+  templateId   String?
+  channel      MessageChannel
+  status       MessageStatus @default(QUEUED)
+  title        String?
+  body         String
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  readAt       DateTime?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  gym          Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  template     CommunicationTemplate? @relation(fields: [templateId], references: [id])
+  @@index([studentId])
+}
+
+model CommunicationPreference {
+  id                String  @id @default(uuid())
+  studentId         String  @unique
+  pushEnabled       Boolean @default(true)
+  inAppEnabled      Boolean @default(true)
+  emailEnabled      Boolean @default(false)
+  whatsappEnabled   Boolean @default(false)
+  trainingReminders Boolean @default(true)
+  paymentReminders  Boolean @default(true)
+  marketing         Boolean @default(false)
+  student           Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
