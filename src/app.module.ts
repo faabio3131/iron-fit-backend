@@ -9,6 +9,8 @@ import { AssessmentsModule } from './modules/assessments/assessments.module';
 import { EquipmentsModule } from './modules/equipments/equipments.module';
 import { ExercisesModule } from './modules/exercises/exercises.module';
 import { WorkoutsModule } from './modules/workouts/workouts.module';
+import { SchedulesModule } from './modules/schedules/schedules.module';
+import { AccessModule } from './modules/access/access.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { WorkoutsModule } from './modules/workouts/workouts.module';
     EquipmentsModule,
     ExercisesModule,
     WorkoutsModule,
+    SchedulesModule,
+    AccessModule,
   ],
   controllers: [HealthController],
 })
