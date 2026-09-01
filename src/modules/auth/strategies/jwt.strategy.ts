@@ -44,12 +44,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ur.role.rolePermissions.map((rp) => rp.permission.name),
     );
 
+    // Pegar o gymId da primeira role (se tiver)
+    const gymId = user.userRoles.length > 0 ? user.userRoles[0].gymId : null;
+
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       roles,
       permissions,
+      gymId,
     };
   }
 }
