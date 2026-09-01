@@ -12,6 +12,7 @@ import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { AccessModule } from './modules/access/access.module';
 import { FinancialModule } from './modules/financial/financial.module';
+import { CommunicationModule } from './modules/communication/communication.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { FinancialModule } from './modules/financial/financial.module';
     SchedulesModule,
     AccessModule,
     FinancialModule,
+    CommunicationModule,
   ],
   controllers: [HealthController],
 })
