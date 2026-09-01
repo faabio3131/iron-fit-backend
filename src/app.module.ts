@@ -14,6 +14,7 @@ import { AccessModule } from './modules/access/access.module';
 import { FinancialModule } from './modules/financial/financial.module';
 import { CommunicationModule } from './modules/communication/communication.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { PortalModule } from './modules/portal/portal.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     FinancialModule,
     CommunicationModule,
     DashboardModule,
+    PortalModule,
   ],
   controllers: [HealthController],
 })
