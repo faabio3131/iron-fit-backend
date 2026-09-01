@@ -1,27 +1,16 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix(process.env.API_PREFIX || 'api/v1');
+  app.setGlobalPrefix('api/v1');
+  app.enableCors();
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-
-  app.enableCors({
-    origin: [process.env.WEB_APP_URL || 'http://localhost:3000'],
-    credentials: true,
-  });
-
-  const port = process.env.PORT ? Number(process.env.PORT) : 3333;
-  await app.listen(port);
-  console.log(`Gym SaaS Backend rodando em http://localhost:${port}`);
+  const port = process.env.PORT || 3333;
+  await app.listen(port, '0.0.0.0');
+  console.log(`Gym SaaS Backend rodando na porta ${port}`);
 }
 bootstrap();
