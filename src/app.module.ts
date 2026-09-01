@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { HealthController } from './health.controller';
 import { AuthModule } from './modules/auth/auth.module';
+import { GymsModule } from './modules/gyms/gyms.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -10,6 +12,8 @@ import { AuthModule } from './modules/auth/auth.module';
       envFilePath: '.env',
     }),
     AuthModule,
+    GymsModule,
+    UsersModule,
   ],
   controllers: [HealthController],
 })
