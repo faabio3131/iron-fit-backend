@@ -13,6 +13,7 @@ import { SchedulesModule } from './modules/schedules/schedules.module';
 import { AccessModule } from './modules/access/access.module';
 import { FinancialModule } from './modules/financial/financial.module';
 import { CommunicationModule } from './modules/communication/communication.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CommunicationModule } from './modules/communication/communication.modul
     AccessModule,
     FinancialModule,
     CommunicationModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
 })
