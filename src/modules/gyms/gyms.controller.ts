@@ -4,6 +4,7 @@ import { CreateGymDto } from './dto/create-gym.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('gyms')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -24,7 +25,11 @@ export class GymsController {
 
   @Get(':id')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
-  findOne(@Param('id') id: string) {
-    return this.gymsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.gymsService.findOne(
+      id,
+      user.activeGymId ?? user.gymId,
+      user.isSuperAdmin === true,
+    );
   }
 }
