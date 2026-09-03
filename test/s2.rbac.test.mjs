@@ -1,0 +1,99 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const {
+  canAssignRole,
+  resolveAssignmentGymId,
+} = require('../dist/src/common/security/rbac-policy.js');
+const { GymsService } = require('../dist/src/modules/gyms/gyms.service.js');
+
+test('OWNER cannot assign SUPER_ADMIN', () => {
+  assert.equal(canAssignRole(['OWNER'], 'SUPER_ADMIN', false), false);
+});
+
+test('MANAGER cannot assign OWNER but can assign MANAGER or lower', () => {
+  assert.equal(canAssignRole(['MANAGER'], 'OWNER', false), false);
+  assert.equal(canAssignRole(['MANAGER'], 'MANAGER', false), true);
+  assert.equal(canAssignRole(['MANAGER'], 'TRAINER', false), true);
+});
+
+test('global SUPER_ADMIN may assign SUPER_ADMIN only without tenant binding', () => {
+  assert.equal(canAssignRole(['SUPER_ADMIN'], 'SUPER_ADMIN', true), true);
+  assert.equal(
+    resolveAssignmentGymId({
+      actorGymId: null,
+      requestedGymId: null,
+      targetRole: 'SUPER_ADMIN',
+      isSuperAdmin: true,
+    }),
+    null,
+  );
+
+  assert.throws(
+    () =>
+      resolveAssignmentGymId({
+        actorGymId: null,
+        requestedGymId: 'gym-a',
+        targetRole: 'SUPER_ADMIN',
+        isSuperAdmin: true,
+      }),
+    /INVALID_SUPER_ADMIN_ASSIGNMENT/,
+  );
+});
+
+test('tenant administrator cannot assign a user into Gym B while active in Gym A', () => {
+  assert.throws(
+    () =>
+      resolveAssignmentGymId({
+        actorGymId: 'gym-a',
+        requestedGymId: 'gym-b',
+        targetRole: 'TRAINER',
+        isSuperAdmin: false,
+      }),
+    /CROSS_TENANT_ASSIGNMENT/,
+  );
+});
+
+test('tenant administrator derives assignment gym from active tenant when dto omits gymId', () => {
+  assert.equal(
+    resolveAssignmentGymId({
+      actorGymId: 'gym-a',
+      requestedGymId: null,
+      targetRole: 'TRAINER',
+      isSuperAdmin: false,
+    }),
+    'gym-a',
+  );
+});
+
+test('Gym A actor cannot read Gym B through GET /gyms/:id service path', async () => {
+  const prisma = {
+    gym: {
+      findUnique: async () => {
+        throw new Error('database should not be reached for cross-tenant lookup');
+      },
+    },
+  };
+
+  const service = new GymsService(prisma);
+
+  await assert.rejects(
+    () => service.findOne('gym-b', 'gym-a', false),
+    /Academia nao encontrada/,
+  );
+});
+
+test('SUPER_ADMIN global path can read an explicit gym', async () => {
+  const prisma = {
+    gym: {
+      findUnique: async ({ where }) => ({ id: where.id, name: 'Gym B' }),
+    },
+  };
+
+  const service = new GymsService(prisma);
+  const result = await service.findOne('gym-b', null, true);
+
+  assert.equal(result.id, 'gym-b');
+});
