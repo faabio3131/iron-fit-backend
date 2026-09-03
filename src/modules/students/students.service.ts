@@ -1,61 +1,145 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
+import { AcceptStudentInviteDto } from './dto/accept-student-invite.dto';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomBytes } from 'node:crypto';
+
+const STUDENT_ONBOARDING_SESSION = 'STUDENT_ONBOARDING';
+const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateStudentDto, userGymId?: string) {
-    if (userGymId && dto.gymId !== userGymId) {
+    if (!userGymId) {
+      throw new BadRequestException('Tenant ativo obrigatorio');
+    }
+
+    if (dto.gymId && dto.gymId !== userGymId) {
       throw new NotFoundException('Academia nao encontrada');
     }
 
-    const gym = await this.prisma.gym.findUnique({
-      where: { id: dto.gymId },
+    const gym = await this.prisma.gym.findFirst({
+      where: { id: userGymId, active: true },
     });
 
     if (!gym) {
       throw new NotFoundException('Academia nao encontrada');
     }
 
-    const existing = await this.prisma.student.findFirst({
+    const existingStudent = await this.prisma.student.findFirst({
       where: {
-        gymId: dto.gymId,
+        gymId: userGymId,
         user: { email: dto.email },
       },
       include: { user: true },
     });
 
-    if (existing) {
+    if (existingStudent) {
       throw new ConflictException('Aluno ja cadastrado nesta academia');
     }
 
-    const passwordHash = await bcrypt.hash('aluno123', 10);
-
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        name: dto.name,
-        phone: dto.phone,
-        passwordHash,
-      },
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
     });
 
-    const student = await this.prisma.student.create({
-      data: {
-        gymId: dto.gymId,
-        userId: user.id,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
-        gender: dto.gender,
-        goal: dto.goal,
-        level: dto.level,
-        consentHealth: dto.consentHealth || false,
-        consentComm: dto.consentComm || false,
-        consentBiometry: dto.consentBiometry || false,
-      },
-      include: { user: true },
+    const studentRole = await this.prisma.role.findUnique({
+      where: { name: 'STUDENT' },
+    });
+
+    if (!studentRole) {
+      throw new NotFoundException('Role de aluno nao encontrada');
+    }
+
+    let onboardingToken: string | null = null;
+    let onboardingExpiresAt: Date | null = null;
+
+    const student = await this.prisma.$transaction(async (tx) => {
+      let user = existingUser;
+
+      if (!user) {
+        const provisionalSecret = randomBytes(48).toString('base64url');
+        const passwordHash = await bcrypt.hash(provisionalSecret, 12);
+
+        user = await tx.user.create({
+          data: {
+            email: dto.email,
+            name: dto.name,
+            phone: dto.phone,
+            passwordHash,
+            active: false,
+          },
+        });
+      }
+
+      const existingRole = await tx.userRole.findFirst({
+        where: {
+          userId: user.id,
+          roleId: studentRole.id,
+          gymId: userGymId,
+        },
+      });
+
+      if (!existingRole) {
+        await tx.userRole.create({
+          data: {
+            userId: user.id,
+            roleId: studentRole.id,
+            gymId: userGymId,
+          },
+        });
+      }
+
+      const createdStudent = await tx.student.create({
+        data: {
+          gymId: userGymId,
+          userId: user.id,
+          birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
+          gender: dto.gender,
+          goal: dto.goal,
+          level: dto.level,
+          consentHealth: dto.consentHealth ?? false,
+          consentComm: dto.consentComm ?? false,
+          consentBiometry: dto.consentBiometry ?? false,
+        },
+        include: { user: true },
+      });
+
+      if (!user.active) {
+        onboardingToken = randomBytes(32).toString('base64url');
+        const tokenHash = createHash('sha256')
+          .update(onboardingToken)
+          .digest('hex');
+        onboardingExpiresAt = new Date(Date.now() + INVITE_TTL_MS);
+
+        await tx.session.updateMany({
+          where: {
+            userId: user.id,
+            deviceName: STUDENT_ONBOARDING_SESSION,
+            revokedAt: null,
+          },
+          data: { revokedAt: new Date() },
+        });
+
+        await tx.session.create({
+          data: {
+            userId: user.id,
+            refreshTokenHash: tokenHash,
+            deviceName: STUDENT_ONBOARDING_SESSION,
+            expiresAt: onboardingExpiresAt,
+          },
+        });
+      }
+
+      return createdStudent;
     });
 
     return {
@@ -65,6 +149,55 @@ export class StudentsService {
       phone: student.user!.phone,
       status: student.status,
       enrollmentDate: student.enrollmentDate,
+      onboarding: onboardingToken
+        ? {
+            required: true,
+            token: onboardingToken,
+            expiresAt: onboardingExpiresAt,
+          }
+        : {
+            required: false,
+          },
+    };
+  }
+
+  async acceptInvite(dto: AcceptStudentInviteDto) {
+    const tokenHash = createHash('sha256').update(dto.token).digest('hex');
+    const now = new Date();
+
+    const invite = await this.prisma.session.findFirst({
+      where: {
+        refreshTokenHash: tokenHash,
+        deviceName: STUDENT_ONBOARDING_SESSION,
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
+      include: { user: true },
+    });
+
+    if (!invite) {
+      throw new UnauthorizedException('Convite invalido ou expirado');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: invite.userId },
+        data: {
+          passwordHash,
+          active: true,
+        },
+      }),
+      this.prisma.session.update({
+        where: { id: invite.id },
+        data: { revokedAt: now },
+      }),
+    ]);
+
+    return {
+      activated: true,
+      userId: invite.userId,
     };
   }
 

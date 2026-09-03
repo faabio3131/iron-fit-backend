@@ -1,13 +1,21 @@
-import { IsString, IsOptional, IsDateString, IsBoolean, IsUUID, IsEnum } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateStudentDto {
   @IsUUID()
-  gymId: string;
+  @IsOptional()
+  gymId?: string;
 
   @IsString()
   name: string;
 
-  @IsString()
+  @IsEmail()
   email: string;
 
   @IsString()
