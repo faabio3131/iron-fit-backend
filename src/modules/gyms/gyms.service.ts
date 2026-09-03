@@ -34,7 +34,15 @@ export class GymsService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(
+    id: string,
+    activeGymId?: string | null,
+    isSuperAdmin = false,
+  ) {
+    if (!isSuperAdmin && (!activeGymId || id !== activeGymId)) {
+      throw new NotFoundException('Academia nao encontrada');
+    }
+
     const gym = await this.prisma.gym.findUnique({
       where: { id },
     });
