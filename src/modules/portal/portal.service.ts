@@ -5,9 +5,16 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class PortalService {
   constructor(private prisma: PrismaService) {}
 
-  private async getStudentByUserId(userId: string) {
+  private async getStudentByUserId(userId: string, gymId?: string | null) {
+    if (!gymId) {
+      throw new NotFoundException('Perfil de aluno nao encontrado para este usuario');
+    }
+
     const student = await this.prisma.student.findFirst({
-      where: { userId },
+      where: {
+        userId,
+        gymId,
+      },
       include: { gym: true, user: true },
     });
 
@@ -18,8 +25,8 @@ export class PortalService {
     return student;
   }
 
-  async getProfile(userId: string) {
-    const s = await this.getStudentByUserId(userId);
+  async getProfile(userId: string, gymId?: string | null) {
+    const s = await this.getStudentByUserId(userId, gymId);
 
     return {
       id: s.id,
@@ -34,11 +41,15 @@ export class PortalService {
     };
   }
 
-  async getWorkouts(userId: string) {
-    const s = await this.getStudentByUserId(userId);
+  async getWorkouts(userId: string, gymId?: string | null) {
+    const s = await this.getStudentByUserId(userId, gymId);
 
     return this.prisma.workout.findMany({
-      where: { studentId: s.id, status: { in: ['APPROVED', 'ACTIVE'] } },
+      where: {
+        studentId: s.id,
+        student: { gymId: s.gymId, userId },
+        status: { in: ['APPROVED', 'ACTIVE'] },
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         sessions: {
@@ -54,38 +65,49 @@ export class PortalService {
     });
   }
 
-  async getAssessments(userId: string) {
-    const s = await this.getStudentByUserId(userId);
+  async getAssessments(userId: string, gymId?: string | null) {
+    const s = await this.getStudentByUserId(userId, gymId);
 
     return this.prisma.assessment.findMany({
-      where: { studentId: s.id },
+      where: {
+        studentId: s.id,
+        student: { gymId: s.gymId, userId },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async getSchedules(userId: string) {
-    const s = await this.getStudentByUserId(userId);
+  async getSchedules(userId: string, gymId?: string | null) {
+    const s = await this.getStudentByUserId(userId, gymId);
 
     return this.prisma.studentSchedule.findMany({
-      where: { studentId: s.id },
+      where: {
+        studentId: s.id,
+        student: { gymId: s.gymId, userId },
+        slot: { gymId: s.gymId },
+      },
       orderBy: { date: 'desc' },
       take: 30,
       include: { slot: true },
     });
   }
 
-  async getCharges(userId: string) {
-    const s = await this.getStudentByUserId(userId);
+  async getCharges(userId: string, gymId?: string | null) {
+    const s = await this.getStudentByUserId(userId, gymId);
 
     return this.prisma.charge.findMany({
-      where: { studentId: s.id },
+      where: {
+        studentId: s.id,
+        gymId: s.gymId,
+        student: { userId },
+      },
       orderBy: { dueDate: 'desc' },
       take: 30,
     });
   }
 
-  async checkIn(userId: string) {
-    const s = await this.getStudentByUserId(userId);
+  async checkIn(userId: string, gymId?: string | null) {
+    const s = await this.getStudentByUserId(userId, gymId);
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
@@ -93,6 +115,8 @@ export class PortalService {
     const booking = await this.prisma.studentSchedule.findFirst({
       where: {
         studentId: s.id,
+        student: { gymId: s.gymId, userId },
+        slot: { gymId: s.gymId },
         status: 'SCHEDULED',
         date: { gte: startOfDay, lte: endOfDay },
       },
