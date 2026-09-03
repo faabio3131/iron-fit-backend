@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
+import { resolveActiveTenantContext } from './tenant-context';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,13 @@ export class AuthService {
       include: {
         userRoles: {
           include: {
+            gym: {
+              select: {
+                id: true,
+                name: true,
+                active: true,
+              },
+            },
             role: {
               include: {
                 rolePermissions: {
@@ -39,30 +47,55 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais invalidas');
     }
 
-    const roles = user.userRoles.map((ur) => ur.role.name);
-    const permissions = user.userRoles.flatMap((ur) =>
-      ur.role.rolePermissions.map((rp) => rp.permission.name),
-    );
-
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      roles,
-      permissions,
+      userRoles: user.userRoles,
     };
   }
 
-  async login(user: any) {
-    const payload = { sub: user.id, email: user.email };
+  async login(user: any, requestedGymId?: string) {
+    let context;
+
+    try {
+      context = resolveActiveTenantContext(user.userRoles, requestedGymId);
+    } catch {
+      throw new UnauthorizedException('Tenant invalido ou indisponivel');
+    }
+
+    if (context.requiresTenantSelection) {
+      return {
+        requires_tenant_selection: true,
+        tenants: context.availableTenants,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      };
+    }
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      activeGymId: context.activeGymId,
+      scope: context.scope,
+    };
+
     return {
       access_token: this.jwtService.sign(payload),
+      requires_tenant_selection: false,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        roles: user.roles,
-        permissions: user.permissions,
+        roles: context.roles,
+        permissions: context.permissions,
+        gymId: context.activeGymId,
+        activeGymId: context.activeGymId,
+        isSuperAdmin: context.isSuperAdmin,
+        scope: context.scope,
       },
     };
   }
