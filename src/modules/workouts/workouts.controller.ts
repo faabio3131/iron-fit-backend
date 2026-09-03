@@ -11,6 +11,12 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 export class WorkoutsController {
   constructor(private workoutsService: WorkoutsService) {}
 
+  @Get()
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
+  findAll(@CurrentUser() user: any) {
+    return this.workoutsService.findAll(user.gymId);
+  }
+
   @Post()
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
   create(@Body() dto: CreateWorkoutDto, @CurrentUser() user: any) {
