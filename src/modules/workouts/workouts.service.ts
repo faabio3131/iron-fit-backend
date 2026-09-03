@@ -5,6 +5,20 @@ import { CreateWorkoutDto } from './dto/create-workout.dto';
 @Injectable()
 export class WorkoutsService {
   constructor(private prisma: PrismaService) {}
+  async findAll(userGymId?: string) {
+    return this.prisma.workout.findMany({
+      where: userGymId ? { student: { gymId: userGymId } } : {},
+      orderBy: { createdAt: 'desc' },
+      include: {
+        student: { include: { user: true } },
+        sessions: {
+          include: {
+            exercises: { include: { exercise: true, equipment: true } },
+          },
+        },
+      },
+    });
+  }
 
   async create(dto: CreateWorkoutDto, userGymId?: string) {
     const student = await this.prisma.student.findFirst({
