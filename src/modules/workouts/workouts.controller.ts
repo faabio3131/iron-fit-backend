@@ -14,19 +14,19 @@ export class WorkoutsController {
   @Get()
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
   findAll(@CurrentUser() user: any) {
-    return this.workoutsService.findAll(user.gymId);
+    return this.workoutsService.findAll(user.activeGymId ?? user.gymId);
   }
 
   @Post()
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
   create(@Body() dto: CreateWorkoutDto, @CurrentUser() user: any) {
-    return this.workoutsService.create(dto, user.gymId);
+    return this.workoutsService.create(dto, user.activeGymId ?? user.gymId);
   }
 
   @Get(':id')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER', 'STUDENT')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
   findOne(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.workoutsService.findOne(id, user.gymId);
+    return this.workoutsService.findOne(id, user.activeGymId ?? user.gymId);
   }
 
   @Patch(':id/status')
@@ -36,7 +36,12 @@ export class WorkoutsController {
     @Body('status') status: string,
     @CurrentUser() user: any,
   ) {
-    return this.workoutsService.updateStatus(id, status, user.id, user.gymId);
+    return this.workoutsService.updateStatus(
+      id,
+      status,
+      user.id,
+      user.activeGymId ?? user.gymId,
+    );
   }
 }
 
@@ -46,8 +51,11 @@ export class StudentWorkoutsController {
   constructor(private workoutsService: WorkoutsService) {}
 
   @Get()
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER', 'STUDENT')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
   findAllByStudent(@Param('studentId') studentId: string, @CurrentUser() user: any) {
-    return this.workoutsService.findAllByStudent(studentId, user.gymId);
+    return this.workoutsService.findAllByStudent(
+      studentId,
+      user.activeGymId ?? user.gymId,
+    );
   }
 }
