@@ -37,7 +37,7 @@ export class AuthService {
       },
     });
 
-    if (!user) {
+    if (!user || !user.active) {
       throw new UnauthorizedException('Credenciais invalidas');
     }
 
