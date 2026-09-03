@@ -14,7 +14,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   async login(@Request() req, @Body() dto: LoginDto) {
-    return this.authService.login(req.user);
+    return this.authService.login(req.user, dto.gymId);
   }
 
   @Post('register')
