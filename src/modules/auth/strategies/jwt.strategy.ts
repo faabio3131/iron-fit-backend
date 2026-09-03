@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { resolveActiveTenantContext } from '../tenant-context';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -23,6 +24,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       include: {
         userRoles: {
           include: {
+            gym: {
+              select: {
+                id: true,
+                name: true,
+                active: true,
+              },
+            },
             role: {
               include: {
                 rolePermissions: {
@@ -35,25 +43,39 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       },
     });
 
-    if (!user) {
+    if (!user || !user.active) {
       throw new UnauthorizedException();
     }
 
-    const roles = user.userRoles.map((ur) => ur.role.name);
-    const permissions = user.userRoles.flatMap((ur) =>
-      ur.role.rolePermissions.map((rp) => rp.permission.name),
-    );
+    let context;
 
-    // Pegar o gymId da primeira role (se tiver)
-    const gymId = user.userRoles.length > 0 ? user.userRoles[0].gymId : null;
+    try {
+      context = resolveActiveTenantContext(
+        user.userRoles,
+        payload.activeGymId ?? null,
+      );
+    } catch {
+      throw new UnauthorizedException();
+    }
+
+    if (context.requiresTenantSelection) {
+      throw new UnauthorizedException();
+    }
+
+    if (payload.scope && payload.scope !== context.scope) {
+      throw new UnauthorizedException();
+    }
 
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      roles,
-      permissions,
-      gymId,
+      roles: context.roles,
+      permissions: context.permissions,
+      gymId: context.activeGymId,
+      activeGymId: context.activeGymId,
+      isSuperAdmin: context.isSuperAdmin,
+      scope: context.scope,
     };
   }
 }
