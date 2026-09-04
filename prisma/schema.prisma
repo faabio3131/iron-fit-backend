@@ -360,16 +360,30 @@ model StudentSchedule {
 }
 
 model AccessDevice {
-  id         String @id @default(uuid())
-  gymId      String
-  name       String
-  type       AccessType
-  protocol   String?
-  ipAddress  String?
-  active     Boolean @default(true)
-  lastSyncAt DateTime?
-  gym        Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  events     AccessEvent[]
+  id              String @id @default(uuid())
+  gymId           String
+  name            String
+  type            AccessType
+  protocol        String?
+  ipAddress       String?
+  active          Boolean @default(true)
+  lastSyncAt      DateTime?
+  deviceTokenHash String?
+  tokenRotatedAt  DateTime?
+  gym             Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  events          AccessEvent[]
+  scanNonces      AccessScanNonce[]
+}
+
+model AccessScanNonce {
+  id        String   @id @default(uuid())
+  deviceId  String
+  nonce     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  device    AccessDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  @@unique([deviceId, nonce])
+  @@index([expiresAt])
 }
 
 model AccessCredential {
