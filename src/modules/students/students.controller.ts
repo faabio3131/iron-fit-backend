@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { AcceptStudentInviteDto } from './dto/accept-student-invite.dto';
+import { UpdateConsentsDto } from './dto/update-consents.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -18,6 +19,7 @@ export class StudentsController {
     return this.studentsService.create(
       dto,
       user.activeGymId ?? user.gymId,
+      user.id,
     );
   }
 
@@ -33,6 +35,21 @@ export class StudentsController {
     return this.studentsService.findOne(
       id,
       user.activeGymId ?? user.gymId,
+    );
+  }
+
+  @Patch(':id/consents')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  updateConsents(
+    @Param('id') id: string,
+    @Body() dto: UpdateConsentsDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.studentsService.updateConsents(
+      id,
+      dto,
+      user.activeGymId ?? user.gymId,
+      user.id,
     );
   }
 }
