@@ -6,14 +6,10 @@ import { CreateEquipmentDto } from './dto/create-equipment.dto';
 export class EquipmentsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateEquipmentDto, userGymId?: string) {
-    const gymId = dto.gymId || userGymId;
-
-    if (!gymId) {
-      throw new NotFoundException('Academia nao informada');
-    }
-
-    const gym = await this.prisma.gym.findUnique({ where: { id: gymId } });
+  async create(dto: CreateEquipmentDto, gymId: string) {
+    const gym = await this.prisma.gym.findFirst({
+      where: { id: gymId, active: true },
+    });
 
     if (!gym) {
       throw new NotFoundException('Academia nao encontrada');
@@ -35,24 +31,22 @@ export class EquipmentsService {
     });
   }
 
-  async findAll(userGymId?: string) {
+  async findAll(gymId: string) {
     return this.prisma.equipment.findMany({
       where: {
-        ...(userGymId ? { gymId: userGymId } : {}),
+        gymId,
         active: true,
       },
       orderBy: { name: 'asc' },
     });
   }
 
-  async findOne(id: string, userGymId?: string) {
-    const equipment = await this.prisma.equipment.findUnique({ where: { id } });
+  async findOne(id: string, gymId: string) {
+    const equipment = await this.prisma.equipment.findFirst({
+      where: { id, gymId },
+    });
 
     if (!equipment) {
-      throw new NotFoundException('Equipamento nao encontrado');
-    }
-
-    if (userGymId && equipment.gymId !== userGymId) {
       throw new NotFoundException('Equipamento nao encontrado');
     }
 
