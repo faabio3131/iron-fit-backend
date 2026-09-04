@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { FinancialService } from './financial.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
@@ -8,40 +8,58 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { resolveTenantOperationGymId } from '../../common/security/tenant-operation-scope';
 
 @Controller('financial')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class FinancialController {
   constructor(private financialService: FinancialService) {}
 
+  private resolveGymId(user: any, requestedGymId?: string) {
+    return resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+  }
+
   @Post('accounts')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
   createAccount(@Body() dto: CreateFinancialAccountDto, @CurrentUser() user: any) {
-    return this.financialService.createAccount(dto, user.gymId);
+    const gymId = this.resolveGymId(user, dto.gymId);
+    return this.financialService.createAccount(dto, gymId);
   }
 
   @Get('accounts')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
-  findAllAccounts(@CurrentUser() user: any) {
-    return this.financialService.findAllAccounts(user.gymId);
+  findAllAccounts(@CurrentUser() user: any, @Query('gymId') requestedGymId?: string) {
+    return this.financialService.findAllAccounts(this.resolveGymId(user, requestedGymId));
   }
 
   @Post('subscriptions')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
-  createSubscription(@Body() dto: CreateSubscriptionDto, @CurrentUser() user: any) {
-    return this.financialService.createSubscription(dto, user.gymId);
+  createSubscription(
+    @Body() dto: CreateSubscriptionDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.financialService.createSubscription(dto, this.resolveGymId(user, requestedGymId));
   }
 
   @Post('charges')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
-  createCharge(@Body() dto: CreateChargeDto, @CurrentUser() user: any) {
-    return this.financialService.createCharge(dto, user.gymId);
+  createCharge(
+    @Body() dto: CreateChargeDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.financialService.createCharge(dto, this.resolveGymId(user, requestedGymId));
   }
 
   @Get('charges')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
-  findAllCharges(@CurrentUser() user: any) {
-    return this.financialService.findAllCharges(user.gymId);
+  findAllCharges(@CurrentUser() user: any, @Query('gymId') requestedGymId?: string) {
+    return this.financialService.findAllCharges(this.resolveGymId(user, requestedGymId));
   }
 
   @Patch('charges/:id/pay')
@@ -50,7 +68,8 @@ export class FinancialController {
     @Param('id') id: string,
     @Body() dto: PayChargeDto,
     @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
   ) {
-    return this.financialService.payCharge(id, dto, user.gymId);
+    return this.financialService.payCharge(id, dto, this.resolveGymId(user, requestedGymId));
   }
 }
