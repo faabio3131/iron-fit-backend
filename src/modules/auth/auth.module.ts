@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { PrismaService } from '../../prisma/prisma.service';
+import { requireJwtSecret } from './auth-security';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { PrismaService } from '../../prisma/prisma.service';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService): Promise<JwtModuleOptions> => ({
-        secret: configService.get<string>('JWT_SECRET') ?? 'dev_secret_fallback',
+        secret: requireJwtSecret(configService),
         signOptions: {
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ?? '15m') as any,
         },
