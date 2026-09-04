@@ -8,11 +8,13 @@ import { CreateAutomationDto } from './dto/create-automation.dto';
 export class CommunicationService {
   constructor(private prisma: PrismaService) {}
 
-  async createTemplate(dto: CreateTemplateDto, userGymId?: string) {
-    const gymId = dto.gymId || userGymId;
+  async createTemplate(dto: CreateTemplateDto, gymId: string) {
+    const gym = await this.prisma.gym.findFirst({
+      where: { id: gymId, active: true },
+    });
 
-    if (!gymId) {
-      throw new NotFoundException('Academia nao informada');
+    if (!gym) {
+      throw new NotFoundException('Academia nao encontrada');
     }
 
     return this.prisma.communicationTemplate.create({
@@ -27,31 +29,35 @@ export class CommunicationService {
     });
   }
 
-  async findAllTemplates(userGymId?: string) {
+  async findAllTemplates(gymId: string) {
     return this.prisma.communicationTemplate.findMany({
-      where: {
-        ...(userGymId ? { gymId: userGymId } : {}),
-        active: true,
-      },
+      where: { gymId, active: true },
       orderBy: { name: 'asc' },
     });
   }
 
-  async sendMessage(dto: SendMessageDto, userGymId?: string) {
+  async sendMessage(dto: SendMessageDto, gymId: string) {
     const student = await this.prisma.student.findFirst({
-      where: {
-        id: dto.studentId,
-        ...(userGymId ? { gymId: userGymId } : {}),
-      },
+      where: { id: dto.studentId, gymId },
     });
 
     if (!student) {
       throw new NotFoundException('Aluno nao encontrado');
     }
 
+    if (dto.templateId) {
+      const template = await this.prisma.communicationTemplate.findFirst({
+        where: { id: dto.templateId, gymId, active: true },
+      });
+
+      if (!template) {
+        throw new NotFoundException('Template nao encontrado');
+      }
+    }
+
     return this.prisma.communicationMessage.create({
       data: {
-        gymId: student.gymId,
+        gymId,
         studentId: dto.studentId,
         templateId: dto.templateId,
         channel: dto.channel as any,
@@ -62,9 +68,9 @@ export class CommunicationService {
     });
   }
 
-  async findAllMessages(userGymId?: string) {
+  async findAllMessages(gymId: string) {
     return this.prisma.communicationMessage.findMany({
-      where: userGymId ? { gymId: userGymId } : {},
+      where: { gymId },
       include: {
         student: { include: { user: true } },
         template: true,
@@ -73,11 +79,13 @@ export class CommunicationService {
     });
   }
 
-  async createAutomation(dto: CreateAutomationDto, userGymId?: string) {
-    const gymId = dto.gymId || userGymId;
+  async createAutomation(dto: CreateAutomationDto, gymId: string) {
+    const gym = await this.prisma.gym.findFirst({
+      where: { id: gymId, active: true },
+    });
 
-    if (!gymId) {
-      throw new NotFoundException('Academia nao informada');
+    if (!gym) {
+      throw new NotFoundException('Academia nao encontrada');
     }
 
     return this.prisma.communicationAutomation.create({
@@ -91,12 +99,9 @@ export class CommunicationService {
     });
   }
 
-  async findAllAutomations(userGymId?: string) {
+  async findAllAutomations(gymId: string) {
     return this.prisma.communicationAutomation.findMany({
-      where: {
-        ...(userGymId ? { gymId: userGymId } : {}),
-        active: true,
-      },
+      where: { gymId, active: true },
       orderBy: { name: 'asc' },
     });
   }
