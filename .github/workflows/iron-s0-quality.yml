@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Build, lint and smoke tests
+    name: Build, lint, audit and smoke tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -34,6 +34,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
 
       - name: Generate Prisma client
         run: npx prisma generate
