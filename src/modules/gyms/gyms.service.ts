@@ -1,12 +1,17 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { CreateGymDto } from './dto/create-gym.dto';
 
 @Injectable()
 export class GymsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly audit: AuditService;
 
-  async create(dto: CreateGymDto) {
+  constructor(private prisma: PrismaService) {
+    this.audit = new AuditService(prisma);
+  }
+
+  async create(dto: CreateGymDto, actorUserId?: string) {
     const existing = await this.prisma.gym.findUnique({
       where: { slug: dto.slug },
     });
@@ -21,6 +26,19 @@ export class GymsService {
         slug: dto.slug,
         logoUrl: dto.logoUrl,
         timezone: dto.timezone || 'America/Sao_Paulo',
+      },
+    });
+
+    await this.audit.record({
+      gymId: gym.id,
+      userId: actorUserId ?? null,
+      action: 'GYM_CREATED',
+      entity: 'Gym',
+      entityId: gym.id,
+      next: {
+        slug: gym.slug,
+        timezone: gym.timezone,
+        active: gym.active,
       },
     });
 
