@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
@@ -25,6 +25,7 @@ async function bootstrap() {
     bodyParser: false,
   });
 
+  app.enableShutdownHooks();
   app.setGlobalPrefix('api/v1');
   app.use(helmet());
   app.useBodyParser('json', { limit: '1mb' });
@@ -60,7 +61,14 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3333;
   await app.listen(port, '0.0.0.0');
-  console.log(`Gym SaaS Backend rodando na porta ${port}`);
+  new Logger('Bootstrap').log(
+    JSON.stringify({
+      event: 'service_started',
+      service: 'gym-saas-backend',
+      port: Number(port),
+      environment: process.env.NODE_ENV ?? 'development',
+    }),
+  );
 }
 
 bootstrap();
