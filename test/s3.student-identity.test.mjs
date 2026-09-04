@@ -10,6 +10,12 @@ function studentRole() {
   return { id: 'role-student', name: 'STUDENT' };
 }
 
+function auditMock() {
+  return {
+    record: async () => ({ id: 'audit-test' }),
+  };
+}
+
 test('student service no longer contains the fixed aluno123 credential', async () => {
   const source = await readFile('src/modules/students/students.service.ts', 'utf8');
   assert.equal(source.includes("bcrypt.hash('aluno123'"), false);
@@ -66,7 +72,7 @@ test('existing active user is reused instead of creating a duplicate User', asyn
     $transaction: async (callback) => callback(tx),
   };
 
-  const service = new StudentsService(prisma);
+  const service = new StudentsService(prisma, auditMock());
   const result = await service.create(
     { name: 'Outro Nome', email: existingUser.email },
     'gym-a',
@@ -130,7 +136,7 @@ test('new student receives a random one-time onboarding token and starts inactiv
     $transaction: async (callback) => callback(tx),
   };
 
-  const service = new StudentsService(prisma);
+  const service = new StudentsService(prisma, auditMock());
   const result = await service.create(
     { name: 'Novo Aluno', email: 'novo@example.com' },
     'gym-a',
@@ -146,7 +152,7 @@ test('new student receives a random one-time onboarding token and starts inactiv
 });
 
 test('cross-tenant gymId in student payload is rejected', async () => {
-  const service = new StudentsService({});
+  const service = new StudentsService({}, auditMock());
 
   await assert.rejects(
     () => service.create({ gymId: 'gym-b', name: 'A', email: 'a@b.com' }, 'gym-a'),
@@ -158,7 +164,7 @@ test('invalid or already-used onboarding token is rejected', async () => {
   const prisma = {
     session: { findFirst: async () => null },
   };
-  const service = new StudentsService(prisma);
+  const service = new StudentsService(prisma, auditMock());
 
   await assert.rejects(
     () => service.acceptInvite({ token: 'x'.repeat(43), password: 'SenhaNova123' }),
