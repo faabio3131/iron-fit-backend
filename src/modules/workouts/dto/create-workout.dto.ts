@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsUUID, IsInt, IsArray, IsDateString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateNested,
+} from 'class-validator';
 
 export class CreateWorkoutExerciseDto {
   @IsUUID()
@@ -50,6 +59,8 @@ export class CreateWorkoutSessionDto {
   estimatedMinutes?: number;
 
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateWorkoutExerciseDto)
   @IsOptional()
   exercises?: CreateWorkoutExerciseDto[];
 }
@@ -87,6 +98,8 @@ export class CreateWorkoutDto {
   notes?: string;
 
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateWorkoutSessionDto)
   @IsOptional()
   sessions?: CreateWorkoutSessionDto[];
 }
