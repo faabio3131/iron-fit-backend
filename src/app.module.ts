@@ -16,6 +16,7 @@ import { FinancialModule } from './modules/financial/financial.module';
 import { CommunicationModule } from './modules/communication/communication.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PortalModule } from './modules/portal/portal.module';
+import { AggregatorModule } from './modules/aggregator/aggregator.module';
 import { PrismaService } from './prisma/prisma.service';
 
 @Module({
@@ -38,6 +39,7 @@ import { PrismaService } from './prisma/prisma.service';
     CommunicationModule,
     DashboardModule,
     PortalModule,
+    AggregatorModule,
   ],
   controllers: [HealthController],
   providers: [PrismaService, RequestObservabilityMiddleware],
