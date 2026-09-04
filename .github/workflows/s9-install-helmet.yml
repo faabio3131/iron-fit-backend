@@ -1,0 +1,37 @@
+name: S9 Install Helmet
+
+on:
+  push:
+    branches:
+      - stabilization/iron-s9-api-hardening
+    paths:
+      - .github/workflows/s9-install-helmet.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lock-helmet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: stabilization/iron-s9-api-hardening
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install Helmet and refresh lock
+        run: npm install helmet@8.1.0 --save --package-lock-only
+      - name: Commit lockfile
+        run: |
+          if git diff --quiet -- package.json package-lock.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore(s9): lock helmet 8.1.0"
+          git push origin HEAD:stabilization/iron-s9-api-hardening
