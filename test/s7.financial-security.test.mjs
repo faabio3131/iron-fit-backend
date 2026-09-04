@@ -12,6 +12,7 @@ function basePrisma(overrides = {}) {
       findFirst: async () => null,
       updateMany: async () => ({ count: 0 }),
       findUnique: async () => null,
+      create: async () => ({}),
       ...overrides.charge,
     },
     student: {
@@ -37,6 +38,10 @@ function basePrisma(overrides = {}) {
     gym: {
       findFirst: async () => ({ id: 'gym-a', active: true }),
       ...overrides.gym,
+    },
+    auditLog: {
+      create: async ({ data }) => ({ id: 'audit-a', ...data }),
+      ...overrides.auditLog,
     },
   };
 
@@ -129,7 +134,7 @@ test('payCharge is idempotent when charge is already paid and canonical transact
   assert.equal(creates, 0);
 });
 
-test('payCharge atomically marks charge paid and creates only its canonical income transaction', async () => {
+test('payCharge atomically marks charge paid, audits it and creates only its canonical income transaction', async () => {
   const charge = {
     id: 'charge-a',
     gymId: 'gym-a',
@@ -137,15 +142,17 @@ test('payCharge atomically marks charge paid and creates only its canonical inco
     status: 'PENDING',
     amount: 10000,
     paymentMethod: null,
+    paidAt: null,
     student: { id: 'student-a', gymId: 'gym-a' },
     subscription: null,
   };
   let createdData;
+  let auditData;
   const prisma = basePrisma({
     charge: {
       findFirst: async () => charge,
       updateMany: async () => ({ count: 1 }),
-      findUnique: async () => ({ ...charge, status: 'PAID' }),
+      findUnique: async () => ({ ...charge, status: 'PAID', paymentMethod: 'PIX' }),
     },
     financialAccount: {
       findFirst: async () => ({ id: 'account-a', gymId: 'gym-a', active: true }),
@@ -157,6 +164,12 @@ test('payCharge atomically marks charge paid and creates only its canonical inco
         return { id: 'tx-a', ...data };
       },
     },
+    auditLog: {
+      create: async ({ data }) => {
+        auditData = data;
+        return { id: 'audit-pay', ...data };
+      },
+    },
   });
 
   const service = new FinancialService(prisma);
@@ -164,6 +177,7 @@ test('payCharge atomically marks charge paid and creates only its canonical inco
     'charge-a',
     { accountId: 'account-a', paymentMethod: 'PIX' },
     'gym-a',
+    'actor-a',
   );
 
   assert.equal(result.idempotent, false);
@@ -173,13 +187,19 @@ test('payCharge atomically marks charge paid and creates only its canonical inco
   assert.equal(createdData.sourceId, 'charge-a');
   assert.equal(createdData.accountId, 'account-a');
   assert.equal(createdData.amount, 10000);
+  assert.equal(auditData.gymId, 'gym-a');
+  assert.equal(auditData.userId, 'actor-a');
+  assert.equal(auditData.action, 'FINANCIAL_CHARGE_PAID');
 });
 
-test('payment implementation has serializable transaction and retry protection for concurrency', async () => {
+test('payment implementation has serializable transaction, DB uniqueness and retry protection for concurrency', async () => {
   const source = await readFile('src/modules/financial/financial.service.ts', 'utf8');
+  const schema = await readFile('prisma/schema.prisma', 'utf8');
   assert.equal(source.includes('Prisma.TransactionIsolationLevel.Serializable'), true);
   assert.equal(source.includes("error.code === 'P2034'"), true);
+  assert.equal(source.includes("error.code === 'P2002'"), true);
   assert.equal(source.includes('updateMany({'), true);
   assert.equal(source.includes("source: 'charge'"), true);
   assert.equal(source.includes('sourceId: charge.id'), true);
+  assert.equal(schema.includes('@@unique([gymId, source, sourceId])'), true);
 });
