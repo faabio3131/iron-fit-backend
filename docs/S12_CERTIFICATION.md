@@ -1,31 +1,49 @@
 # IRON — S12 Full Regression + Adversarial Certification
 
-Status: **CANDIDATE — aguardando gate final e PR de certificacao**
+Status: **CERTIFIED — S0-S12 estabilizado e promovido em `main`**
 
-## Baseline
+## Baseline e promoção canônica
 
-- Base canonica de entrada no S12: `bf31244f876fc4022e8c3cdc87b269f8d98a5753`
-- Branch: `stabilization/iron-s12-full-regression-adversarial-certification`
-- Regra: nenhum status global de 100% pode ser declarado antes do gate final, CI da PR e merge do S12 em `main`.
+- Base canônica de entrada no S12: `bf31244f876fc4022e8c3cdc87b269f8d98a5753`
+- Branch de certificação: `stabilization/iron-s12-full-regression-adversarial-certification`
+- SHA candidato certificado: `914e35182644af70af30f12e50729ca3e6ba8ea8`
+- Branch CI: run `33915102496` — **SUCCESS**
+- PR de certificação: **#14 — IRON-S12: Full Regression + Adversarial Certification**
+- PR CI: run `33916155740` — **SUCCESS**
+- Squash merge S12 em `main`: `4fcff4fe7ecbc54d14c2f9ab95ab7ad3fe22f6cd`
+- Gate pós-merge da `main`: run `33916250499` — **SUCCESS**
 
-## Matriz obrigatoria de regressao
+A certificação S12 foi concluída somente depois de branch gate verde, CI da PR verde, squash merge e gate pós-merge verde sobre o SHA canônico do código certificado.
 
-A certificacao executa conjuntamente as suites permanentes S0-S11 e a suite S12, cobrindo:
+## Resultado final da matriz de regressão
+
+A certificação executou conjuntamente as suites permanentes S0-S11 e a suite S12, cobrindo:
 
 - auth e refresh/logout;
 - tenant context Gym A/B;
-- RBAC e atribuicao de roles;
+- RBAC e atribuição de roles;
 - onboarding/identidade do aluno;
 - IDOR e portal do aluno;
-- equipamentos, agenda e comunicacao;
-- cadeia de acesso, autenticacao de dispositivo e replay;
-- financeiro, pagamento, concorrencia e idempotencia;
+- equipamentos, agenda e comunicação;
+- cadeia de acesso, autenticação de dispositivo e replay;
+- financeiro, pagamento, concorrência e idempotência;
 - hardening HTTP/API;
 - liveness/readiness/observabilidade/runtime;
 - AuditLog e consentimentos LGPD;
 - adversarial certification S12.
 
-Nenhuma suite critica S0-S11 pode estar explicitamente marcada com `test.skip`, `it.skip` ou `describe.skip`.
+Resultado certificado do gate:
+
+- **71 testes**;
+- **71 aprovados**;
+- **0 falhas**;
+- **0 skipped**;
+- **0 vulnerabilidades** no `npm audit --audit-level=high`;
+- Prisma generate: success, Prisma 6.19.3;
+- lint/typecheck: success;
+- build: success.
+
+Nenhuma suite crítica S0-S11 ficou explicitamente marcada com `test.skip`, `it.skip` ou `describe.skip`.
 
 ## Blockers encontrados e corrigidos durante S12
 
@@ -33,39 +51,39 @@ Nenhuma suite critica S0-S11 pode estar explicitamente marcada com `test.skip`, 
 
 Uma credencial pertencente a Gym B podia ser corretamente negada por um dispositivo da Gym A, mas o evento de acesso ainda podia carregar `studentId` da Gym B e a resposta podia expor a identidade do aluno estrangeiro.
 
-Correcao S12:
+Correção S12:
 
-- `studentId` estrangeiro nao e persistido no `AccessEvent` da outra academia;
-- resposta negada nao retorna identidade estrangeira;
-- regressao adversarial permanente verifica ausencia do ID e nome do aluno de Gym B;
-- decisao de acesso passa a gerar AuditLog central sem segredos.
+- `studentId` estrangeiro não é persistido no `AccessEvent` da outra academia;
+- resposta negada não retorna identidade estrangeira;
+- regressão adversarial permanente verifica ausência do ID e nome do aluno de Gym B;
+- decisão de acesso passa a gerar AuditLog central sem segredos.
 
-### Idempotencia financeira no banco
+### Idempotência financeira no banco
 
-O pagamento possuia protecao de aplicacao/Serializable, mas `FinancialTransaction` ainda nao possuia unicidade fisica para a identidade canonica `gymId + source + sourceId`.
+O pagamento possuía proteção de aplicação/Serializable, mas `FinancialTransaction` ainda não possuía unicidade física para a identidade canônica `gymId + source + sourceId`.
 
-Correcao S12:
+Correção S12:
 
 - Prisma: `@@unique([gymId, source, sourceId])`;
-- migration explicita `20260904204000_financial_source_idempotency_unique`;
-- a migration falha de forma fechada caso encontre duplicatas historicas nao nulas e nao reescreve historico financeiro silenciosamente;
-- colisao `P2002` participa da recuperacao/retry idempotente do pagamento.
+- migration explícita `20260904204000_financial_source_idempotency_unique`;
+- a migration falha de forma fechada caso encontre duplicatas históricas não nulas e não reescreve histórico financeiro silenciosamente;
+- colisão `P2002` participa da recuperação/retry idempotente do pagamento.
 
-### Operacoes de workout e assessment sem tenant explicito
+### Operações de workout e assessment sem tenant explícito
 
 Rotas privilegiadas podiam chegar aos services sem tenant, preservando uma antiga possibilidade de consulta sem escopo.
 
-Correcao S12:
+Correção S12:
 
 - workout e assessment exigem tenant ativo;
-- SUPER_ADMIN global precisa fornecer tenant explicito para operacoes de dominio;
+- SUPER_ADMIN global precisa fornecer tenant explícito para operações de domínio;
 - controllers usam `resolveTenantOperationGymId`;
 - workout valida assessment contra o mesmo aluno/tenant;
-- equipamentos associados ao workout sao validados dentro da mesma academia.
+- equipamentos associados ao workout são validados dentro da mesma academia.
 
 ### Cobertura central de auditoria
 
-A certificacao encontrou cobertura parcial de AuditLog apos o S11. O S12 fecha a cobertura dos principais dominios mutaveis:
+A certificação encontrou cobertura parcial de AuditLog após o S11. O S12 fechou a cobertura dos principais domínios mutáveis:
 
 - auth;
 - user/role;
@@ -76,11 +94,11 @@ A certificacao encontrou cobertura parcial de AuditLog apos o S11. O S12 fecha a
 - access;
 - financial/payment.
 
-Os registros usam actor quando existe identidade humana autenticada, tenant, action, entity/entityId e previous/next quando aplicavel. Materiais sensiveis continuam passando pelo sanitizador do `AuditService`.
+Os registros usam actor quando existe identidade humana autenticada, tenant, action, entity/entityId e previous/next quando aplicável. Materiais sensíveis continuam passando pelo sanitizador do `AuditService`.
 
 ## Gate permanente
 
-O workflow canonico deve permanecer contendo, no minimo:
+O workflow canônico permanece contendo, no mínimo:
 
 1. `npm ci`
 2. `npm audit --audit-level=high`
@@ -89,26 +107,21 @@ O workflow canonico deve permanecer contendo, no minimo:
 5. `npm run build`
 6. `npm run test:smoke`
 
-A certificacao final deve registrar total de testes, failures, skipped, SHA do candidato, run ID da branch, run ID da PR e SHA final da `main`.
+Esses gates permanecem obrigatórios para impedir regressão futura da base certificada.
 
-## Inventario residual conhecido
+## Inventário residual conhecido
 
-Os itens abaixo permanecem registrados e nao devem ser apresentados como implementados:
+Os itens abaixo permanecem registrados e **não** devem ser apresentados como implementados:
 
-- MFA continua formalmente pendente; campos de schema nao equivalem a fluxo MFA implementado;
-- refresh token nao possui ainda um absolute maximum lifetime independente das rotacoes;
-- eventos de autenticacao usam politica fail-safe para que falha de escrita de auditoria nao revele nem altere o resultado de autenticacao;
-- Prisma emite aviso de deprecacao para configuracao em `package.json` visando Prisma 7; a versao atual continua Prisma 6.19.3.
+- MFA continua formalmente pendente; campos de schema não equivalem a fluxo MFA implementado;
+- refresh token não possui ainda um absolute maximum lifetime independente das rotações;
+- eventos de autenticação usam política fail-safe para que falha de escrita de auditoria não revele nem altere o resultado de autenticação;
+- Prisma emite aviso de depreciação para configuração em `package.json` visando Prisma 7; a versão certificada continua Prisma 6.19.3.
 
-Esses itens permanecem no inventario de evolucao. Qualquer novo residual critico descoberto pelo gate S12 bloqueia a certificacao ate correcao ou decisao formal do Diretor.
+Esses itens permanecem no inventário de evolução e não invalidaram os gates obrigatórios da certificação S12.
 
-## Condicao de fechamento
+## Conclusão
 
-Este documento somente muda de **CANDIDATE** para **CERTIFIED** depois de:
+O ciclo de estabilização **S0-S12 está formalmente CERTIFIED** no código canônico promovido pelo PR #14 e validado novamente em `main` pelo run `33916250499`.
 
-- branch CI integral verde;
-- zero failure e zero skipped critico;
-- revisao de dependencies/migrations concluida;
-- PR S12 aberta e CI da PR verde;
-- squash merge do S12 em `main`;
-- captura do SHA canonico final.
+A partir deste marco, novas fases devem respeitar a sequência arquitetural posterior definida na Ordem Mestre. A certificação S12 não significa que funcionalidades futuras — Aggregator Hub, Creator Network, AI0/AI+ ou residuais explicitamente listados — estejam implementadas.
