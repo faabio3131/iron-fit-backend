@@ -3,10 +3,28 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { AggregatorAgreementsController } from './agreements/aggregator-agreements.controller';
 import { AggregatorAgreementsService } from './agreements/aggregator-agreements.service';
+import { AggregatorEligibilityController } from './eligibility/aggregator-eligibility.controller';
+import { AggregatorEligibilityService } from './eligibility/aggregator-eligibility.service';
+import { AggregatorVisitAuthorizationController } from './visits/aggregator-visit-authorization.controller';
+import { AggregatorVisitAuthorizationService } from './visits/aggregator-visit-authorization.service';
 
 @Module({
-  controllers: [AggregatorAgreementsController],
-  providers: [AggregatorAgreementsService, PrismaService, AuditService],
-  exports: [AggregatorAgreementsService],
+  controllers: [
+    AggregatorAgreementsController,
+    AggregatorEligibilityController,
+    AggregatorVisitAuthorizationController,
+  ],
+  providers: [
+    AggregatorAgreementsService,
+    AggregatorEligibilityService,
+    AggregatorVisitAuthorizationService,
+    PrismaService,
+    AuditService,
+  ],
+  exports: [
+    AggregatorAgreementsService,
+    AggregatorEligibilityService,
+    AggregatorVisitAuthorizationService,
+  ],
 })
 export class AggregatorModule {}
