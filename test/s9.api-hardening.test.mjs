@@ -32,9 +32,9 @@ function mockHost(url = '/api/v1/test') {
 
 test('S9 bootstrap enables Helmet, strict validation, payload limits and CORS allowlist', async () => {
   const source = await readFile('src/main.ts', 'utf8');
-  assert.equal(source.includes("import helmet from 'helmet'"), true);
+  assert.equal(source.includes("import helmet = require('helmet')"), true);
   assert.equal(source.includes('app.use(helmet())'), true);
-  assert.equal(source.includes("CORS_ORIGINS obrigatorio em producao"), true);
+  assert.equal(source.includes('CORS_ORIGINS obrigatorio em producao'), true);
   assert.equal(source.includes('whitelist: true'), true);
   assert.equal(source.includes('forbidNonWhitelisted: true'), true);
   assert.equal(source.includes('forbidUnknownValues: true'), true);
