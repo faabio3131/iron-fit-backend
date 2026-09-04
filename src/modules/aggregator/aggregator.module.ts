@@ -7,6 +7,7 @@ import { AggregatorEligibilityController } from './eligibility/aggregator-eligib
 import { AggregatorEligibilityService } from './eligibility/aggregator-eligibility.service';
 import { AggregatorVisitAuthorizationController } from './visits/aggregator-visit-authorization.controller';
 import { AggregatorVisitAuthorizationService } from './visits/aggregator-visit-authorization.service';
+import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.service';
 
 @Module({
   controllers: [
@@ -18,6 +19,7 @@ import { AggregatorVisitAuthorizationService } from './visits/aggregator-visit-a
     AggregatorAgreementsService,
     AggregatorEligibilityService,
     AggregatorVisitAuthorizationService,
+    WellhubAdapterService,
     PrismaService,
     AuditService,
   ],
@@ -25,6 +27,7 @@ import { AggregatorVisitAuthorizationService } from './visits/aggregator-visit-a
     AggregatorAgreementsService,
     AggregatorEligibilityService,
     AggregatorVisitAuthorizationService,
+    WellhubAdapterService,
   ],
 })
 export class AggregatorModule {}
