@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateScheduleSlotDto } from './dto/create-schedule-slot.dto';
 import { BookStudentDto } from './dto/book-student.dto';
@@ -7,11 +7,13 @@ import { BookStudentDto } from './dto/book-student.dto';
 export class SchedulesService {
   constructor(private prisma: PrismaService) {}
 
-  async createSlot(dto: CreateScheduleSlotDto, userGymId?: string) {
-    const gymId = dto.gymId || userGymId;
+  async createSlot(dto: CreateScheduleSlotDto, gymId: string) {
+    const gym = await this.prisma.gym.findFirst({
+      where: { id: gymId, active: true },
+    });
 
-    if (!gymId) {
-      throw new NotFoundException('Academia nao informada');
+    if (!gym) {
+      throw new NotFoundException('Academia nao encontrada');
     }
 
     return this.prisma.scheduleSlot.create({
@@ -26,76 +28,100 @@ export class SchedulesService {
     });
   }
 
-  async findAllSlots(userGymId?: string) {
+  async findAllSlots(gymId: string) {
     return this.prisma.scheduleSlot.findMany({
       where: {
-        ...(userGymId ? { gymId: userGymId } : {}),
+        gymId,
         active: true,
       },
       orderBy: [{ weekday: 'asc' }, { startTime: 'asc' }],
     });
   }
 
-  async book(dto: BookStudentDto, userGymId?: string) {
-    const student = await this.prisma.student.findFirst({
-      where: {
-        id: dto.studentId,
-        ...(userGymId ? { gymId: userGymId } : {}),
-      },
-    });
+  async book(dto: BookStudentDto, gymId: string) {
+    const bookingDate = new Date(dto.date);
 
-    if (!student) {
-      throw new NotFoundException('Aluno nao encontrado');
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const student = await tx.student.findFirst({
+              where: { id: dto.studentId, gymId },
+            });
+
+            if (!student) {
+              throw new NotFoundException('Aluno nao encontrado');
+            }
+
+            const slot = await tx.scheduleSlot.findFirst({
+              where: { id: dto.slotId, gymId, active: true },
+            });
+
+            if (!slot) {
+              throw new NotFoundException('Horario nao encontrado');
+            }
+
+            const existing = await tx.studentSchedule.findFirst({
+              where: {
+                studentId: dto.studentId,
+                slotId: dto.slotId,
+                date: bookingDate,
+                status: { in: ['SCHEDULED', 'CHECKED_IN'] },
+              } as any,
+            });
+
+            if (existing) {
+              throw new BadRequestException('Aluno ja agendado neste horario');
+            }
+
+            const booked = await tx.studentSchedule.count({
+              where: {
+                slotId: dto.slotId,
+                date: bookingDate,
+                status: { in: ['SCHEDULED', 'CHECKED_IN'] },
+              } as any,
+            });
+
+            if (booked >= slot.capacity) {
+              throw new BadRequestException('Slot lotado');
+            }
+
+            return tx.studentSchedule.create({
+              data: {
+                studentId: dto.studentId,
+                slotId: dto.slotId,
+                date: bookingDate,
+              } as any,
+              include: {
+                student: { include: { user: true } },
+                slot: true,
+              },
+            });
+          },
+          { isolationLevel: 'Serializable' as any },
+        );
+      } catch (error: any) {
+        if (error?.code === 'P2034' && attempt < 2) {
+          continue;
+        }
+        throw error;
+      }
     }
 
-    const slot = await this.prisma.scheduleSlot.findUnique({
-      where: { id: dto.slotId },
-    });
-
-    if (!slot) {
-      throw new NotFoundException('Horario nao encontrado');
-    }
-
-    if (userGymId && slot.gymId !== userGymId) {
-      throw new NotFoundException('Horario nao encontrado');
-    }
-
-    const booked = await this.prisma.studentSchedule.count({
-      where: {
-        slotId: dto.slotId,
-        date: new Date(dto.date),
-        status: { in: ['SCHEDULED', 'CHECKED_IN'] },
-      } as any,
-    });
-
-    if (booked >= slot.capacity) {
-      throw new BadRequestException('Slot lotado');
-    }
-
-    return this.prisma.studentSchedule.create({
-      data: {
-        studentId: dto.studentId,
-        slotId: dto.slotId,
-        date: new Date(dto.date),
-      } as any,
-      include: {
-        student: { include: { user: true } },
-        slot: true,
-      },
-    });
+    throw new BadRequestException('Nao foi possivel concluir o agendamento');
   }
 
-  async checkIn(id: string, userGymId?: string) {
-    const schedule = await this.prisma.studentSchedule.findUnique({
-      where: { id },
+  async checkIn(id: string, gymId: string) {
+    const schedule = await this.prisma.studentSchedule.findFirst({
+      where: {
+        id,
+        student: { gymId },
+        slot: { gymId },
+      },
       include: { slot: true, student: { include: { user: true } } },
     });
 
     if (!schedule) {
-      throw new NotFoundException('Agendamento nao encontrado');
-    }
-
-    if (userGymId && schedule.slot.gymId !== userGymId) {
       throw new NotFoundException('Agendamento nao encontrado');
     }
 
