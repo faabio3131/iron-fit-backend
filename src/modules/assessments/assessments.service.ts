@@ -1,16 +1,33 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { CreateAssessmentDto } from './dto/create-assessment.dto';
 
 @Injectable()
 export class AssessmentsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly audit: AuditService;
+
+  constructor(private prisma: PrismaService) {
+    this.audit = new AuditService(prisma);
+  }
+
+  private requireGymId(userGymId?: string) {
+    if (!userGymId) {
+      throw new BadRequestException('Tenant ativo obrigatorio');
+    }
+    return userGymId;
+  }
 
   async create(dto: CreateAssessmentDto, userId: string, userGymId?: string) {
+    const gymId = this.requireGymId(userGymId);
     const student = await this.prisma.student.findFirst({
       where: {
         id: dto.studentId,
-        ...(userGymId ? { gymId: userGymId } : {}),
+        gymId,
       },
       include: { user: true },
     });
@@ -19,7 +36,6 @@ export class AssessmentsService {
       throw new NotFoundException('Aluno nao encontrado');
     }
 
-    // Calcular IMC automaticamente se peso e altura foram informados
     let calculatedBmi = dto.bmi;
     if (!calculatedBmi && dto.weight && dto.height) {
       const heightInMeters = dto.height / 100;
@@ -37,7 +53,21 @@ export class AssessmentsService {
         measurements: dto.measurements,
         restrictions: dto.restrictions,
         notes: dto.notes,
-      } as any, // Cast para resolver rigidez de tipos do Prisma v6
+      } as any,
+    });
+
+    await this.audit.record({
+      gymId,
+      userId,
+      action: 'ASSESSMENT_CREATED',
+      entity: 'Assessment',
+      entityId: assessment.id,
+      next: {
+        studentId: dto.studentId,
+        bmi: assessment.bmi,
+        bodyFatPercent: assessment.bodyFatPercent,
+        restrictions: assessment.restrictions,
+      },
     });
 
     const studentUser = student.user;
@@ -58,10 +88,11 @@ export class AssessmentsService {
   }
 
   async findAllByStudent(studentId: string, userGymId?: string) {
+    const gymId = this.requireGymId(userGymId);
     const student = await this.prisma.student.findFirst({
       where: {
         id: studentId,
-        ...(userGymId ? { gymId: userGymId } : {}),
+        gymId,
       },
     });
 
@@ -88,6 +119,7 @@ export class AssessmentsService {
   }
 
   async findOne(id: string, userGymId?: string) {
+    const gymId = this.requireGymId(userGymId);
     const assessment = await this.prisma.assessment.findUnique({
       where: { id },
       include: {
@@ -97,12 +129,8 @@ export class AssessmentsService {
       },
     });
 
-    if (!assessment) {
+    if (!assessment || assessment.student.gymId !== gymId) {
       throw new NotFoundException('Avaliacao nao encontrada');
-    }
-
-    if (userGymId && assessment.student.gymId !== userGymId) {
-      throw new ForbiddenException('Sem acesso a esta avaliacao');
     }
 
     const studentUser = assessment.student.user;
