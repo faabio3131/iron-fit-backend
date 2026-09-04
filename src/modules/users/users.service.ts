@@ -6,6 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import {
@@ -15,7 +16,11 @@ import {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  private readonly audit: AuditService;
+
+  constructor(private prisma: PrismaService) {
+    this.audit = new AuditService(prisma);
+  }
 
   async create(dto: CreateUserDto, actor: any) {
     const existingUser = await this.prisma.user.findUnique({
@@ -79,13 +84,35 @@ export class UsersService {
       },
     });
 
+    await this.audit.record({
+      gymId: assignmentGymId ?? actor.activeGymId ?? actor.gymId ?? null,
+      userId: actor.id ?? null,
+      action: 'USER_CREATED',
+      entity: 'User',
+      entityId: user.id,
+      next: { active: user.active },
+    });
+
     if (role) {
-      await this.prisma.userRole.create({
+      const userRole = await this.prisma.userRole.create({
         data: {
           userId: user.id,
           roleId: role.id,
           gymId: assignmentGymId ?? null,
           assignedBy: actor.id,
+        },
+      });
+
+      await this.audit.record({
+        gymId: assignmentGymId ?? null,
+        userId: actor.id ?? null,
+        action: 'USER_ROLE_ASSIGNED',
+        entity: 'UserRole',
+        entityId: userRole.id,
+        next: {
+          targetUserId: user.id,
+          role: role.name,
+          gymId: assignmentGymId ?? null,
         },
       });
     }
