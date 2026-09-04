@@ -11,6 +11,7 @@ const hash = (value) => createHash('sha256').update(value).digest('hex');
 
 function basePrisma(overrides = {}) {
   let eventSeq = 0;
+  let auditSeq = 0;
   return {
     accessDevice: {
       findUnique: async () => null,
@@ -31,6 +32,10 @@ function basePrisma(overrides = {}) {
     accessEvent: {
       create: async (args) => ({ id: `event-${++eventSeq}`, ...args.data }),
       ...overrides.accessEvent,
+    },
+    auditLog: {
+      create: async (args) => ({ id: `audit-${++auditSeq}`, ...args.data }),
+      ...overrides.auditLog,
     },
     student: {
       findFirst: async () => null,
@@ -113,7 +118,8 @@ test('invalid device token is denied and audited', async () => {
   assert.equal(result.eventId, 'event-1');
 });
 
-test('credential from Gym B cannot open an authenticated device from Gym A', async () => {
+test('credential from Gym B cannot leak identity into Gym A event or response', async () => {
+  let recordedEventData;
   const prisma = basePrisma({
     accessDevice: {
       findUnique: async () => ({
@@ -137,6 +143,12 @@ test('credential from Gym B cannot open an authenticated device from Gym A', asy
         },
       }),
     },
+    accessEvent: {
+      create: async (args) => {
+        recordedEventData = args.data;
+        return { id: 'event-1', ...args.data };
+      },
+    },
   });
 
   const service = new AccessService(prisma);
@@ -151,6 +163,10 @@ test('credential from Gym B cannot open an authenticated device from Gym A', asy
   assert.equal(result.allowed, false);
   assert.equal(result.denialReason, 'Credencial de outra academia');
   assert.equal(result.eventId, 'event-1');
+  assert.equal(result.student, null);
+  assert.equal(recordedEventData.studentId, null);
+  assert.equal(JSON.stringify(result).includes('student-b'), false);
+  assert.equal(JSON.stringify(result).includes('Aluno B'), false);
 });
 
 test('service contains durable replay rejection for Prisma unique nonce collision', async () => {
