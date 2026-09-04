@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CreateChargeDto } from './dto/create-charge.dto';
@@ -10,7 +11,11 @@ const MAX_SERIALIZABLE_RETRIES = 3;
 
 @Injectable()
 export class FinancialService {
-  constructor(private prisma: PrismaService) {}
+  private readonly audit: AuditService;
+
+  constructor(private prisma: PrismaService) {
+    this.audit = new AuditService(prisma);
+  }
 
   private async withSerializableRetry<T>(operation: () => Promise<T>): Promise<T> {
     for (let attempt = 1; attempt <= MAX_SERIALIZABLE_RETRIES; attempt += 1) {
@@ -18,7 +23,8 @@ export class FinancialService {
         return await operation();
       } catch (error) {
         const retryable =
-          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === 'P2034' || error.code === 'P2002');
         if (!retryable || attempt === MAX_SERIALIZABLE_RETRIES) {
           throw error;
         }
@@ -27,13 +33,17 @@ export class FinancialService {
     throw new BadRequestException('Falha de concorrencia financeira');
   }
 
-  async createAccount(dto: CreateFinancialAccountDto, gymId: string) {
+  async createAccount(
+    dto: CreateFinancialAccountDto,
+    gymId: string,
+    actorUserId?: string,
+  ) {
     const gym = await this.prisma.gym.findFirst({ where: { id: gymId, active: true } });
     if (!gym) {
       throw new NotFoundException('Academia nao encontrada');
     }
 
-    return this.prisma.financialAccount.create({
+    const account = await this.prisma.financialAccount.create({
       data: {
         gymId,
         name: dto.name,
@@ -41,6 +51,22 @@ export class FinancialService {
         initialBalance: dto.initialBalance ?? 0,
       } as any,
     });
+
+    await this.audit.record({
+      gymId,
+      userId: actorUserId ?? null,
+      action: 'FINANCIAL_ACCOUNT_CREATED',
+      entity: 'FinancialAccount',
+      entityId: account.id,
+      next: {
+        name: account.name,
+        type: account.type,
+        initialBalance: account.initialBalance,
+        active: account.active,
+      },
+    });
+
+    return account;
   }
 
   async findAllAccounts(gymId: string) {
@@ -49,7 +75,11 @@ export class FinancialService {
     });
   }
 
-  async createSubscription(dto: CreateSubscriptionDto, gymId: string) {
+  async createSubscription(
+    dto: CreateSubscriptionDto,
+    gymId: string,
+    actorUserId?: string,
+  ) {
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, gymId },
     });
@@ -58,7 +88,7 @@ export class FinancialService {
       throw new NotFoundException('Aluno nao encontrado');
     }
 
-    return this.prisma.subscription.create({
+    const subscription = await this.prisma.subscription.create({
       data: {
         gymId,
         studentId: dto.studentId,
@@ -68,9 +98,30 @@ export class FinancialService {
       } as any,
       include: { student: { include: { user: true } } },
     });
+
+    await this.audit.record({
+      gymId,
+      userId: actorUserId ?? null,
+      action: 'FINANCIAL_SUBSCRIPTION_CREATED',
+      entity: 'Subscription',
+      entityId: subscription.id,
+      next: {
+        studentId: subscription.studentId,
+        planName: subscription.planName,
+        amount: subscription.amount,
+        status: subscription.status,
+        nextBillingAt: subscription.nextBillingAt,
+      },
+    });
+
+    return subscription;
   }
 
-  async createCharge(dto: CreateChargeDto, gymId: string) {
+  async createCharge(
+    dto: CreateChargeDto,
+    gymId: string,
+    actorUserId?: string,
+  ) {
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, gymId },
     });
@@ -92,7 +143,7 @@ export class FinancialService {
       }
     }
 
-    return this.prisma.charge.create({
+    const charge = await this.prisma.charge.create({
       data: {
         gymId,
         studentId: dto.studentId,
@@ -102,9 +153,32 @@ export class FinancialService {
         paymentMethod: dto.paymentMethod,
       } as any,
     });
+
+    await this.audit.record({
+      gymId,
+      userId: actorUserId ?? null,
+      action: 'FINANCIAL_CHARGE_CREATED',
+      entity: 'Charge',
+      entityId: charge.id,
+      next: {
+        studentId: charge.studentId,
+        subscriptionId: charge.subscriptionId,
+        amount: charge.amount,
+        dueDate: charge.dueDate,
+        status: charge.status,
+        paymentMethod: charge.paymentMethod,
+      },
+    });
+
+    return charge;
   }
 
-  async payCharge(chargeId: string, dto: PayChargeDto, gymId: string) {
+  async payCharge(
+    chargeId: string,
+    dto: PayChargeDto,
+    gymId: string,
+    actorUserId?: string,
+  ) {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
@@ -196,6 +270,28 @@ export class FinancialService {
           });
 
           const updatedCharge = await tx.charge.findUnique({ where: { id: charge.id } });
+
+          await this.audit.record({
+            gymId,
+            userId: actorUserId ?? null,
+            action: 'FINANCIAL_CHARGE_PAID',
+            entity: 'Charge',
+            entityId: charge.id,
+            previous: {
+              status: charge.status,
+              paidAt: charge.paidAt,
+              paymentMethod: charge.paymentMethod,
+            },
+            next: {
+              status: updatedCharge?.status,
+              paidAt: updatedCharge?.paidAt,
+              paymentMethod: updatedCharge?.paymentMethod,
+              transactionId: transaction.id,
+              accountId: account.id,
+              amount: transaction.amount,
+            },
+          }, tx);
+
           return { charge: updatedCharge, transaction, idempotent: false };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },

@@ -25,7 +25,7 @@ export class AccessController {
       requestedGymId,
       isSuperAdmin: user.isSuperAdmin === true,
     });
-    return this.accessService.createCredential(dto, gymId);
+    return this.accessService.createCredential(dto, gymId, user.id);
   }
 
   @Post('devices/:deviceId/token')
@@ -41,7 +41,7 @@ export class AccessController {
       requestedGymId,
       isSuperAdmin: user.isSuperAdmin === true,
     });
-    return this.accessService.provisionDeviceToken(deviceId, gymId);
+    return this.accessService.provisionDeviceToken(deviceId, gymId, user.id);
   }
 
   @Post('scan')

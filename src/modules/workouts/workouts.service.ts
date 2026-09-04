@@ -1,13 +1,27 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { CreateWorkoutDto } from './dto/create-workout.dto';
 
 @Injectable()
 export class WorkoutsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly audit: AuditService;
+
+  constructor(private prisma: PrismaService) {
+    this.audit = new AuditService(prisma);
+  }
+
+  private requireGymId(userGymId?: string) {
+    if (!userGymId) {
+      throw new BadRequestException('Tenant ativo obrigatorio');
+    }
+    return userGymId;
+  }
+
   async findAll(userGymId?: string) {
+    const gymId = this.requireGymId(userGymId);
     return this.prisma.workout.findMany({
-      where: userGymId ? { student: { gymId: userGymId } } : {},
+      where: { student: { gymId } },
       orderBy: { createdAt: 'desc' },
       include: {
         student: { include: { user: true } },
@@ -20,11 +34,16 @@ export class WorkoutsService {
     });
   }
 
-  async create(dto: CreateWorkoutDto, userGymId?: string) {
+  async create(
+    dto: CreateWorkoutDto,
+    userGymId?: string,
+    actorUserId?: string,
+  ) {
+    const gymId = this.requireGymId(userGymId);
     const student = await this.prisma.student.findFirst({
       where: {
         id: dto.studentId,
-        ...(userGymId ? { gymId: userGymId } : {}),
+        gymId,
       },
     });
 
@@ -32,7 +51,39 @@ export class WorkoutsService {
       throw new NotFoundException('Aluno nao encontrado');
     }
 
+    if (dto.assessmentId) {
+      const assessment = await this.prisma.assessment.findFirst({
+        where: {
+          id: dto.assessmentId,
+          studentId: dto.studentId,
+          student: { gymId },
+        },
+      });
+      if (!assessment) {
+        throw new NotFoundException('Avaliacao nao encontrada');
+      }
+    }
+
     const sessions = dto.sessions || [];
+    const equipmentIds = [
+      ...new Set(
+        sessions.flatMap((session) =>
+          (session.exercises || [])
+            .map((exercise) => exercise.equipmentId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ),
+    ];
+
+    if (equipmentIds.length > 0) {
+      const scopedEquipment = await this.prisma.equipment.findMany({
+        where: { id: { in: equipmentIds }, gymId, active: true },
+        select: { id: true },
+      });
+      if (scopedEquipment.length !== equipmentIds.length) {
+        throw new NotFoundException('Equipamento nao encontrado');
+      }
+    }
 
     const workout = await this.prisma.workout.create({
       data: {
@@ -77,14 +128,29 @@ export class WorkoutsService {
       },
     });
 
+    await this.audit.record({
+      gymId,
+      userId: actorUserId ?? null,
+      action: 'WORKOUT_CREATED',
+      entity: 'Workout',
+      entityId: workout.id,
+      next: {
+        studentId: workout.studentId,
+        assessmentId: workout.assessmentId,
+        status: workout.status,
+        weeklyFrequency: workout.weeklyFrequency,
+      },
+    });
+
     return workout;
   }
 
   async findAllByStudent(studentId: string, userGymId?: string) {
+    const gymId = this.requireGymId(userGymId);
     const student = await this.prisma.student.findFirst({
       where: {
         id: studentId,
-        ...(userGymId ? { gymId: userGymId } : {}),
+        gymId,
       },
     });
 
@@ -106,6 +172,7 @@ export class WorkoutsService {
   }
 
   async findOne(id: string, userGymId?: string) {
+    const gymId = this.requireGymId(userGymId);
     const workout = await this.prisma.workout.findUnique({
       where: { id },
       include: {
@@ -118,11 +185,7 @@ export class WorkoutsService {
       },
     });
 
-    if (!workout) {
-      throw new NotFoundException('Treino nao encontrado');
-    }
-
-    if (userGymId && workout.student.gymId !== userGymId) {
+    if (!workout || workout.student.gymId !== gymId) {
       throw new NotFoundException('Treino nao encontrado');
     }
 
@@ -130,16 +193,13 @@ export class WorkoutsService {
   }
 
   async updateStatus(id: string, status: string, userId: string, userGymId?: string) {
+    const gymId = this.requireGymId(userGymId);
     const workout = await this.prisma.workout.findUnique({
       where: { id },
       include: { student: true },
     });
 
-    if (!workout) {
-      throw new NotFoundException('Treino nao encontrado');
-    }
-
-    if (userGymId && workout.student.gymId !== userGymId) {
+    if (!workout || workout.student.gymId !== gymId) {
       throw new NotFoundException('Treino nao encontrado');
     }
 
@@ -155,6 +215,24 @@ export class WorkoutsService {
       data.approvedById = userId;
     }
 
-    return this.prisma.workout.update({ where: { id }, data });
+    const updated = await this.prisma.workout.update({ where: { id }, data });
+
+    await this.audit.record({
+      gymId,
+      userId,
+      action: 'WORKOUT_STATUS_UPDATED',
+      entity: 'Workout',
+      entityId: id,
+      previous: {
+        status: workout.status,
+        approvedById: workout.approvedById,
+      },
+      next: {
+        status: updated.status,
+        approvedById: updated.approvedById,
+      },
+    });
+
+    return updated;
   }
 }

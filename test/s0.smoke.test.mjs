@@ -37,19 +37,15 @@ test('workouts findAll scopes listing by authenticated gym when provided', async
   assert.equal(calls[0].include.student.include.user, true);
 });
 
-test('workouts findAll remains callable without tenant for privileged future handling', async () => {
-  const calls = [];
+test('workouts findAll refuses an unscoped tenant context', async () => {
   const prisma = {
     workout: {
-      findMany: async (args) => {
-        calls.push(args);
-        return [];
+      findMany: async () => {
+        throw new Error('unscoped query must never execute');
       },
     },
   };
 
   const service = new WorkoutsService(prisma);
-  await service.findAll();
-
-  assert.deepEqual(calls[0].where, {});
+  await assert.rejects(() => service.findAll(), /Tenant ativo obrigatorio/);
 });

@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditRecordInput, AuditService } from '../../common/audit/audit.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { resolveActiveTenantContext } from './tenant-context';
@@ -19,10 +20,14 @@ import {
 
 @Injectable()
 export class AuthService {
+  private readonly audit: AuditService;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) {}
+  ) {
+    this.audit = new AuditService(prisma);
+  }
 
   private userInclude() {
     return {
@@ -39,23 +44,25 @@ export class AuthService {
     } as const;
   }
 
+  private async safeAudit(input: AuditRecordInput) {
+    try {
+      await this.audit.record(input);
+    } catch {
+      // Authentication outcome must not leak logging failures.
+    }
+  }
+
   private async recordLoginEvent(
     action: 'AUTH_LOGIN_FAILED' | 'AUTH_LOGIN_SUCCESS',
     email: string,
     userId?: string | null,
   ) {
-    try {
-      await this.prisma.auditLog.create({
-        data: {
-          userId: userId ?? null,
-          action,
-          entity: 'AuthLogin',
-          entityId: loginIdentityHash(email),
-        },
-      });
-    } catch {
-      // Authentication outcome must not leak logging failures.
-    }
+    await this.safeAudit({
+      userId: userId ?? null,
+      action,
+      entity: 'AuthLogin',
+      entityId: loginIdentityHash(email),
+    });
   }
 
   private async assertLoginNotRateLimited(email: string) {
@@ -123,6 +130,16 @@ export class AuthService {
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       },
     });
+
+    await this.safeAudit({
+      gymId: activeGymId,
+      userId,
+      action: 'AUTH_REFRESH_SESSION_CREATED',
+      entity: 'Session',
+      entityId: session.id,
+      next: { expiresAt: session.expiresAt },
+    });
+
     return `${session.id}.${secret}`;
   }
 
@@ -207,6 +224,7 @@ export class AuthService {
     }
 
     const rotatedSecret = newRefreshSecret();
+    const nextExpiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
     const updated = await this.prisma.session.updateMany({
       where: {
         id: session.id,
@@ -215,12 +233,22 @@ export class AuthService {
       },
       data: {
         refreshTokenHash: hashOpaqueToken(rotatedSecret),
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+        expiresAt: nextExpiresAt,
       },
     });
     if (updated.count !== 1) {
       throw new UnauthorizedException('Refresh token invalido');
     }
+
+    await this.safeAudit({
+      gymId: activeGymId,
+      userId: user.id,
+      action: 'AUTH_REFRESH_ROTATED',
+      entity: 'Session',
+      entityId: session.id,
+      previous: { expiresAt: session.expiresAt },
+      next: { expiresAt: nextExpiresAt },
+    });
 
     return {
       access_token: this.signAccessToken(user, context),
@@ -240,10 +268,21 @@ export class AuthService {
       return { revoked: true };
     }
 
+    const revokedAt = new Date();
     await this.prisma.session.updateMany({
       where: { id: session.id, revokedAt: null },
-      data: { revokedAt: new Date() },
+      data: { revokedAt },
     });
+
+    await this.safeAudit({
+      gymId: gymIdFromRefreshSessionName(session.deviceName),
+      userId: session.userId,
+      action: 'AUTH_LOGOUT',
+      entity: 'Session',
+      entityId: session.id,
+      next: { revokedAt },
+    });
+
     return { revoked: true };
   }
 
@@ -257,6 +296,14 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
       data: { email, name: dto.name, phone: dto.phone, passwordHash },
+    });
+
+    await this.safeAudit({
+      userId: user.id,
+      action: 'AUTH_REGISTERED',
+      entity: 'User',
+      entityId: user.id,
+      next: { active: user.active },
     });
 
     return { id: user.id, email: user.email, name: user.name };

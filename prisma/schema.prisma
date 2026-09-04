@@ -489,6 +489,7 @@ model FinancialTransaction {
   category      FinancialCategory? @relation(fields: [categoryId], references: [id])
   account       FinancialAccount?  @relation(fields: [accountId], references: [id])
   @@index([gymId])
+  @@unique([gymId, source, sourceId])
 }
 
 model Supplier {

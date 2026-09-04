@@ -27,7 +27,7 @@ export class FinancialController {
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
   createAccount(@Body() dto: CreateFinancialAccountDto, @CurrentUser() user: any) {
     const gymId = this.resolveGymId(user, dto.gymId);
-    return this.financialService.createAccount(dto, gymId);
+    return this.financialService.createAccount(dto, gymId, user.id);
   }
 
   @Get('accounts')
@@ -43,7 +43,11 @@ export class FinancialController {
     @CurrentUser() user: any,
     @Query('gymId') requestedGymId?: string,
   ) {
-    return this.financialService.createSubscription(dto, this.resolveGymId(user, requestedGymId));
+    return this.financialService.createSubscription(
+      dto,
+      this.resolveGymId(user, requestedGymId),
+      user.id,
+    );
   }
 
   @Post('charges')
@@ -53,7 +57,11 @@ export class FinancialController {
     @CurrentUser() user: any,
     @Query('gymId') requestedGymId?: string,
   ) {
-    return this.financialService.createCharge(dto, this.resolveGymId(user, requestedGymId));
+    return this.financialService.createCharge(
+      dto,
+      this.resolveGymId(user, requestedGymId),
+      user.id,
+    );
   }
 
   @Get('charges')
@@ -70,6 +78,11 @@ export class FinancialController {
     @CurrentUser() user: any,
     @Query('gymId') requestedGymId?: string,
   ) {
-    return this.financialService.payCharge(id, dto, this.resolveGymId(user, requestedGymId));
+    return this.financialService.payCharge(
+      id,
+      dto,
+      this.resolveGymId(user, requestedGymId),
+      user.id,
+    );
   }
 }

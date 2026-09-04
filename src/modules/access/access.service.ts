@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { CreateCredentialDto } from './dto/create-credential.dto';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
@@ -9,7 +10,11 @@ const NONCE_TTL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class AccessService {
-  constructor(private prisma: PrismaService) {}
+  private readonly audit: AuditService;
+
+  constructor(private prisma: PrismaService) {
+    this.audit = new AuditService(prisma);
+  }
 
   private hash(token: string): string {
     return createHash('sha256').update(token).digest('hex');
@@ -28,7 +33,7 @@ export class AccessService {
     allowed: boolean;
     denialReason?: string | null;
   }) {
-    return this.prisma.accessEvent.create({
+    const event = await this.prisma.accessEvent.create({
       data: {
         gymId: params.gymId,
         deviceId: params.deviceId,
@@ -37,9 +42,28 @@ export class AccessService {
         denialReason: params.denialReason ?? null,
       } as any,
     });
+
+    await this.audit.record({
+      gymId: params.gymId,
+      action: 'ACCESS_DECISION_RECORDED',
+      entity: 'AccessEvent',
+      entityId: event.id,
+      next: {
+        deviceId: params.deviceId,
+        studentId: params.studentId ?? null,
+        allowed: params.allowed,
+        denialReason: params.denialReason ?? null,
+      },
+    });
+
+    return event;
   }
 
-  async createCredential(dto: CreateCredentialDto, gymId: string) {
+  async createCredential(
+    dto: CreateCredentialDto,
+    gymId: string,
+    actorUserId?: string,
+  ) {
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, gymId },
     });
@@ -60,6 +84,20 @@ export class AccessService {
       } as any,
     });
 
+    await this.audit.record({
+      gymId,
+      userId: actorUserId ?? null,
+      action: 'ACCESS_CREDENTIAL_CREATED',
+      entity: 'AccessCredential',
+      entityId: credential.id,
+      next: {
+        studentId: dto.studentId,
+        type: credential.type,
+        active: credential.active,
+        expiresAt: credential.expiresAt,
+      },
+    });
+
     return {
       credentialId: credential.id,
       qrToken: rawToken,
@@ -69,7 +107,11 @@ export class AccessService {
     };
   }
 
-  async provisionDeviceToken(deviceId: string, gymId: string) {
+  async provisionDeviceToken(
+    deviceId: string,
+    gymId: string,
+    actorUserId?: string,
+  ) {
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: deviceId, gymId, active: true },
     });
@@ -79,12 +121,22 @@ export class AccessService {
     }
 
     const rawToken = randomBytes(32).toString('base64url');
+    const tokenRotatedAt = new Date();
     await this.prisma.accessDevice.update({
       where: { id: device.id },
       data: {
         deviceTokenHash: this.hash(rawToken),
-        tokenRotatedAt: new Date(),
+        tokenRotatedAt,
       },
+    });
+
+    await this.audit.record({
+      gymId,
+      userId: actorUserId ?? null,
+      action: 'ACCESS_DEVICE_TOKEN_ROTATED',
+      entity: 'AccessDevice',
+      entityId: device.id,
+      next: { tokenRotatedAt },
     });
 
     return {
@@ -171,13 +223,16 @@ export class AccessService {
       include: { student: { include: { user: true } } },
     });
 
+    const credentialBelongsToGym =
+      credential !== null && credential.student.gymId === device.gymId;
+
     let allowed = true;
     let denialReason: string | null = null;
 
     if (!credential) {
       allowed = false;
       denialReason = 'Credencial invalida';
-    } else if (credential.student.gymId !== device.gymId) {
+    } else if (!credentialBelongsToGym) {
       allowed = false;
       denialReason = 'Credencial de outra academia';
     } else if (!credential.active) {
@@ -191,10 +246,11 @@ export class AccessService {
       denialReason = 'Matricula inativa';
     }
 
+    const safeStudentId = credentialBelongsToGym ? credential!.studentId : null;
     const event = await this.recordEvent({
       gymId: device.gymId,
       deviceId: device.id,
-      studentId: credential?.studentId ?? null,
+      studentId: safeStudentId,
       allowed,
       denialReason,
     });
@@ -203,7 +259,7 @@ export class AccessService {
       allowed,
       denialReason,
       eventId: event.id,
-      student: credential
+      student: allowed && credentialBelongsToGym && credential
         ? {
             id: credential.student.id,
             name: credential.student.user ? credential.student.user.name : null,
