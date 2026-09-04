@@ -59,7 +59,11 @@ export class AccessService {
     return event;
   }
 
-  async createCredential(dto: CreateCredentialDto, gymId: string) {
+  async createCredential(
+    dto: CreateCredentialDto,
+    gymId: string,
+    actorUserId?: string,
+  ) {
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, gymId },
     });
@@ -82,6 +86,7 @@ export class AccessService {
 
     await this.audit.record({
       gymId,
+      userId: actorUserId ?? null,
       action: 'ACCESS_CREDENTIAL_CREATED',
       entity: 'AccessCredential',
       entityId: credential.id,
@@ -102,7 +107,11 @@ export class AccessService {
     };
   }
 
-  async provisionDeviceToken(deviceId: string, gymId: string) {
+  async provisionDeviceToken(
+    deviceId: string,
+    gymId: string,
+    actorUserId?: string,
+  ) {
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: deviceId, gymId, active: true },
     });
@@ -123,6 +132,7 @@ export class AccessService {
 
     await this.audit.record({
       gymId,
+      userId: actorUserId ?? null,
       action: 'ACCESS_DEVICE_TOKEN_ROTATED',
       entity: 'AccessDevice',
       entityId: device.id,
