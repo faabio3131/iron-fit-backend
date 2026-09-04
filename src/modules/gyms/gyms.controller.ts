@@ -13,8 +13,8 @@ export class GymsController {
 
   @Post()
   @Roles('SUPER_ADMIN')
-  create(@Body() dto: CreateGymDto) {
-    return this.gymsService.create(dto);
+  create(@Body() dto: CreateGymDto, @CurrentUser() user: any) {
+    return this.gymsService.create(dto, user.id);
   }
 
   @Get()
