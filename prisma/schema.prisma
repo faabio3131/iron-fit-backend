@@ -106,6 +106,84 @@ enum MessageStatus {
   CANCELED
 }
 
+enum AggregatorConnectionStatus {
+  PENDING
+  ACTIVE
+  DEGRADED
+  SUSPENDED
+  DISCONNECTED
+}
+
+enum AggregatorMembershipStatus {
+  UNKNOWN
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  EXPIRED
+}
+
+enum AggregatorAgreementStatus {
+  REQUIRED
+  SIGNED
+  SUPERSEDED
+  REVOKED
+}
+
+enum AggregatorEligibilityStatus {
+  UNKNOWN
+  ELIGIBLE
+  INELIGIBLE
+}
+
+enum AggregatorVisitStatus {
+  PENDING
+  CONFIRMED
+  DENIED
+  PROVISIONAL
+  FAILED
+}
+
+enum AggregatorProvisionalDecisionStatus {
+  APPROVED
+  DENIED
+  REVOKED
+  EXPIRED
+}
+
+enum AggregatorRevalidationStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  UNKNOWN
+}
+
+enum AggregatorSettlementStatus {
+  EXPECTED
+  CONFIRMED
+  RECEIVED
+  DIVERGENT
+  DISPUTED
+  EXPIRED
+}
+
+enum AggregatorReconciliationStatus {
+  PENDING
+  RECONCILED
+  MISSING_PROVIDER_CHECKIN
+  MISSING_PHYSICAL_ENTRY
+  UNPAID_RISK
+  AMOUNT_DIVERGENCE
+  DUPLICATE
+  MANUAL_REVIEW
+}
+
+enum AggregatorRiskStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -211,6 +289,7 @@ model Gym {
   communicationTemplates CommunicationTemplate[]
   communicationAutomations CommunicationAutomation[]
   communicationMessages CommunicationMessage[]
+  aggregatorConnections AggregatorProviderConnection[]
   @@index([slug])
 }
 
@@ -238,6 +317,7 @@ model Student {
   charges         Charge[]
   communicationMessages CommunicationMessage[]
   communicationPreference CommunicationPreference?
+  aggregatorMembers AggregatorMember[]
   @@index([gymId])
 }
 
@@ -409,6 +489,7 @@ model AccessEvent {
   gym          Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
   student      Student? @relation(fields: [studentId], references: [id])
   device       AccessDevice? @relation(fields: [deviceId], references: [id])
+  aggregatorLink AggregatorAccessEventLink?
   @@index([gymId])
 }
 
@@ -611,4 +692,232 @@ model CommunicationPreference {
   paymentReminders  Boolean @default(true)
   marketing         Boolean @default(false)
   student           Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model AggregatorProviderConnection {
+  id                 String                     @id @default(uuid())
+  gymId              String
+  providerCode       String
+  externalLocationId String?
+  status             AggregatorConnectionStatus @default(PENDING)
+  capabilities       Json
+  configuration      Json?
+  contractVersion    String?
+  lastVerifiedAt     DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  gym                Gym                        @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  members            AggregatorMember[]
+  settlements        AggregatorSettlement[]
+  riskCases          AggregatorRiskCase[]
+  @@unique([gymId, providerCode])
+  @@index([providerCode, status])
+}
+
+model AggregatorMember {
+  id               String                       @id @default(uuid())
+  connectionId     String
+  studentId        String?
+  externalMemberId String
+  providerStatus   String?
+  provenance       Json?
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+  connection       AggregatorProviderConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  student          Student?                     @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  memberships      AggregatorMembership[]
+  agreements       AggregatorAgreement[]
+  eligibilityChecks AggregatorEligibilityCheck[]
+  visitAuthorizations AggregatorVisitAuthorization[]
+  @@unique([connectionId, externalMemberId])
+  @@index([studentId])
+}
+
+model AggregatorMembership {
+  id                   String                     @id @default(uuid())
+  memberId             String
+  externalMembershipId String?
+  status               AggregatorMembershipStatus @default(UNKNOWN)
+  planCode             String?
+  providerStatus       String?
+  validFrom            DateTime?
+  validUntil           DateTime?
+  verifiedAt           DateTime?
+  provenance           Json?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  member               AggregatorMember           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  eligibilityChecks    AggregatorEligibilityCheck[]
+  @@unique([memberId, externalMembershipId])
+  @@index([memberId, status])
+}
+
+model AggregatorAgreement {
+  id                  String                    @id @default(uuid())
+  memberId            String
+  version             String
+  status              AggregatorAgreementStatus @default(REQUIRED)
+  documentHash        String?
+  signedAt            DateTime?
+  supersededAt        DateTime?
+  revokedAt           DateTime?
+  provenance          Json?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  member              AggregatorMember          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  visitAuthorizations AggregatorVisitAuthorization[]
+  @@unique([memberId, version])
+  @@index([memberId, status])
+}
+
+model AggregatorEligibilityCheck {
+  id                  String                      @id @default(uuid())
+  memberId            String
+  membershipId        String?
+  externalCheckId     String?
+  status              AggregatorEligibilityStatus @default(UNKNOWN)
+  providerStatus      String?
+  reasonCode          String?
+  verifiedAt          DateTime
+  validUntil          DateTime?
+  scope               Json?
+  provenance          Json?
+  createdAt           DateTime                    @default(now())
+  member              AggregatorMember            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  membership          AggregatorMembership?       @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  visitAuthorizations AggregatorVisitAuthorization[]
+  @@unique([memberId, externalCheckId])
+  @@index([memberId, status, verifiedAt])
+}
+
+model AggregatorVisitAuthorization {
+  id                  String                 @id @default(uuid())
+  memberId            String
+  agreementId         String?
+  eligibilityCheckId  String?
+  externalVisitId     String?
+  status              AggregatorVisitStatus  @default(PENDING)
+  requestedAt         DateTime               @default(now())
+  authorizedAt        DateTime?
+  expiresAt           DateTime?
+  denialReason        String?
+  provenance          Json?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  member              AggregatorMember       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  agreement           AggregatorAgreement?   @relation(fields: [agreementId], references: [id], onDelete: SetNull)
+  eligibilityCheck    AggregatorEligibilityCheck? @relation(fields: [eligibilityCheckId], references: [id], onDelete: SetNull)
+  accessEventLink     AggregatorAccessEventLink?
+  provisionalDecision AggregatorProvisionalDecision?
+  revalidationAttempts AggregatorRevalidationAttempt[]
+  settlements         AggregatorSettlement[]
+  reconciliations     AggregatorReconciliation[]
+  riskCases           AggregatorRiskCase[]
+  @@unique([memberId, externalVisitId])
+  @@index([memberId, status, requestedAt])
+}
+
+model AggregatorAccessEventLink {
+  id                   String                       @id @default(uuid())
+  visitAuthorizationId String                       @unique
+  accessEventId        String                       @unique
+  linkedAt             DateTime                     @default(now())
+  visitAuthorization   AggregatorVisitAuthorization @relation(fields: [visitAuthorizationId], references: [id], onDelete: Cascade)
+  accessEvent          AccessEvent                  @relation(fields: [accessEventId], references: [id], onDelete: Cascade)
+  reconciliations      AggregatorReconciliation[]
+}
+
+model AggregatorProvisionalDecision {
+  id                   String                              @id @default(uuid())
+  visitAuthorizationId String                              @unique
+  status               AggregatorProvisionalDecisionStatus
+  policyVersion        String?
+  reason               String
+  authorizedByUserId   String?
+  expiresAt            DateTime?
+  metadata             Json?
+  createdAt            DateTime                            @default(now())
+  updatedAt            DateTime                            @updatedAt
+  visitAuthorization   AggregatorVisitAuthorization       @relation(fields: [visitAuthorizationId], references: [id], onDelete: Cascade)
+}
+
+model AggregatorRevalidationAttempt {
+  id                   String                       @id @default(uuid())
+  visitAuthorizationId String
+  attempt              Int
+  status               AggregatorRevalidationStatus @default(PENDING)
+  externalCheckId      String?
+  reasonCode           String?
+  provenance           Json?
+  attemptedAt          DateTime                     @default(now())
+  completedAt          DateTime?
+  visitAuthorization   AggregatorVisitAuthorization @relation(fields: [visitAuthorizationId], references: [id], onDelete: Cascade)
+  @@unique([visitAuthorizationId, attempt])
+  @@index([status, attemptedAt])
+}
+
+model AggregatorSettlement {
+  id                   String                      @id @default(uuid())
+  connectionId         String
+  visitAuthorizationId String?
+  externalSettlementId String?
+  externalVisitId      String?
+  status               AggregatorSettlementStatus  @default(EXPECTED)
+  amountExpected       Int?
+  amountConfirmed      Int?
+  currency             String?
+  periodStart          DateTime?
+  periodEnd            DateTime?
+  providerStatus       String?
+  provenance           Json?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  connection           AggregatorProviderConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  visitAuthorization   AggregatorVisitAuthorization? @relation(fields: [visitAuthorizationId], references: [id], onDelete: SetNull)
+  reconciliations      AggregatorReconciliation[]
+  riskCases            AggregatorRiskCase[]
+  @@unique([connectionId, externalSettlementId])
+  @@index([connectionId, status])
+  @@index([visitAuthorizationId])
+}
+
+model AggregatorReconciliation {
+  id                   String                         @id @default(uuid())
+  visitAuthorizationId String?
+  accessEventLinkId    String?
+  settlementId         String?
+  status               AggregatorReconciliationStatus @default(PENDING)
+  details              Json?
+  reconciledAt         DateTime?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  visitAuthorization   AggregatorVisitAuthorization?  @relation(fields: [visitAuthorizationId], references: [id], onDelete: SetNull)
+  accessEventLink      AggregatorAccessEventLink?     @relation(fields: [accessEventLinkId], references: [id], onDelete: SetNull)
+  settlement           AggregatorSettlement?          @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+  riskCases            AggregatorRiskCase[]
+  @@index([status, createdAt])
+  @@index([visitAuthorizationId])
+  @@index([settlementId])
+}
+
+model AggregatorRiskCase {
+  id                   String                       @id @default(uuid())
+  connectionId         String
+  visitAuthorizationId String?
+  reconciliationId     String?
+  settlementId         String?
+  type                 String
+  status               AggregatorRiskStatus         @default(OPEN)
+  potentialAmount      Int?
+  currency             String?
+  details              Json?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  resolvedAt           DateTime?
+  connection           AggregatorProviderConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  visitAuthorization   AggregatorVisitAuthorization? @relation(fields: [visitAuthorizationId], references: [id], onDelete: SetNull)
+  reconciliation       AggregatorReconciliation?    @relation(fields: [reconciliationId], references: [id], onDelete: SetNull)
+  settlement           AggregatorSettlement?         @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+  @@index([connectionId, status])
+  @@index([visitAuthorizationId])
 }
