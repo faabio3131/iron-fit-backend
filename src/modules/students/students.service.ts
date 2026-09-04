@@ -6,8 +6,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { AcceptStudentInviteDto } from './dto/accept-student-invite.dto';
+import { UpdateConsentsDto } from './dto/update-consents.dto';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 
@@ -16,9 +18,12 @@ const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class StudentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
-  async create(dto: CreateStudentDto, userGymId?: string) {
+  async create(dto: CreateStudentDto, userGymId?: string, actorUserId?: string) {
     if (!userGymId) {
       throw new BadRequestException('Tenant ativo obrigatorio');
     }
@@ -112,6 +117,20 @@ export class StudentsService {
         },
         include: { user: true },
       });
+
+      await this.audit.record({
+        gymId: userGymId,
+        userId: actorUserId ?? null,
+        action: 'STUDENT_CREATED',
+        entity: 'Student',
+        entityId: createdStudent.id,
+        next: {
+          status: createdStudent.status,
+          consentHealth: createdStudent.consentHealth,
+          consentComm: createdStudent.consentComm,
+          consentBiometry: createdStudent.consentBiometry,
+        },
+      }, tx);
 
       if (!user.active) {
         onboardingToken = randomBytes(32).toString('base64url');
@@ -243,5 +262,65 @@ export class StudentsService {
       consentComm: student.consentComm,
       consentBiometry: student.consentBiometry,
     };
+  }
+
+  async updateConsents(
+    id: string,
+    dto: UpdateConsentsDto,
+    gymId?: string,
+    actorUserId?: string,
+  ) {
+    if (!gymId) {
+      throw new BadRequestException('Tenant ativo obrigatorio');
+    }
+
+    const previous = await this.prisma.student.findFirst({
+      where: { id, gymId },
+      select: {
+        id: true,
+        consentHealth: true,
+        consentComm: true,
+        consentBiometry: true,
+      },
+    });
+
+    if (!previous) {
+      throw new NotFoundException('Aluno nao encontrado');
+    }
+
+    const nextValues = {
+      consentHealth: dto.consentHealth ?? previous.consentHealth,
+      consentComm: dto.consentComm ?? previous.consentComm,
+      consentBiometry: dto.consentBiometry ?? previous.consentBiometry,
+    };
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.student.update({
+        where: { id },
+        data: nextValues,
+        select: {
+          id: true,
+          consentHealth: true,
+          consentComm: true,
+          consentBiometry: true,
+        },
+      });
+
+      await this.audit.record({
+        gymId,
+        userId: actorUserId ?? null,
+        action: 'STUDENT_CONSENTS_UPDATED',
+        entity: 'Student',
+        entityId: id,
+        previous: {
+          consentHealth: previous.consentHealth,
+          consentComm: previous.consentComm,
+          consentBiometry: previous.consentBiometry,
+        },
+        next: updated,
+      }, tx);
+
+      return updated;
+    });
   }
 }
