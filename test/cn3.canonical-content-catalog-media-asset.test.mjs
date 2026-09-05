@@ -195,7 +195,7 @@ test('CN3 module is registered while CN4-CN9 behavior stays outside runtime', as
   assert.match(module, /ContentCatalogService/);
   assert.match(docs, /CN4: ingestão, upload, storage, CDN e abstração de providers/);
   assert.match(docs, /CN5: Exercise ↔ Content Mapping e Publishing Workflow/);
-  assert.match(docs, /Exercise\.videoUrl não é alterado/);
+  assert.match(docs, /`Exercise\.videoUrl` não é alterado/);
   assert.doesNotMatch(
     `${service}\n${controller}`,
     /\bexerciseId\b|publishContent|unpublish|ingest|storageKey|cdnUrl|providerId|uploadSession|revenueShare|settlement|engagement/i,
