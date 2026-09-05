@@ -44,6 +44,12 @@ function makeService({ planValue = true, tenantRow = null, studentRow = null } =
   };
 }
 
+function modelBlock(schema, name) {
+  const match = schema.match(new RegExp(`model ${name} \\{[\\s\\S]*?\\n\\}`));
+  assert.ok(match, `model ${name} missing`);
+  return match[0];
+}
+
 test('PE3 migration creates physically isolated tenant configuration and student preference tables with shape checks', async () => {
   const migration = await source(
     'prisma/migrations/20260905140500_tenant_configuration_student_experience/migration.sql',
@@ -60,6 +66,25 @@ test('PE3 migration creates physically isolated tenant configuration and student
   for (const forbidden of ['ALTER TABLE "Subscription"', 'DROP TABLE', 'DELETE FROM "Student"']) {
     assert.equal(migration.includes(forbidden), false, forbidden);
   }
+});
+
+test('PE3 Prisma schema mirrors both migration tables and tenant/student relations', async () => {
+  const schema = await source('prisma/schema.prisma');
+  const tenant = modelBlock(schema, 'TenantProductConfiguration');
+  const preference = modelBlock(schema, 'StudentProductPreference');
+  const gym = modelBlock(schema, 'Gym');
+  const student = modelBlock(schema, 'Student');
+
+  assert.match(tenant, /gymId\s+String/);
+  assert.match(tenant, /featureKey\s+String/);
+  assert.match(tenant, /kind\s+ProductEntitlementKind/);
+  assert.match(tenant, /@@unique\(\[gymId, featureKey\]\)/);
+  assert.match(tenant, /gym\s+Gym\s+@relation/);
+  assert.match(preference, /studentId\s+String/);
+  assert.match(preference, /@@unique\(\[studentId, featureKey\]\)/);
+  assert.match(preference, /student\s+Student\s+@relation/);
+  assert.match(gym, /productConfigurations\s+TenantProductConfiguration\[\]/);
+  assert.match(student, /productPreferences\s+StudentProductPreference\[\]/);
 });
 
 test('PE3 controller derives tenant and student exclusively from authenticated identity', async () => {
