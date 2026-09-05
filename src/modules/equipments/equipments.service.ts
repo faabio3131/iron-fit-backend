@@ -115,7 +115,7 @@ export class EquipmentsService {
         select: { id: true, catalogItemId: true, active: true },
       });
 
-      const selected = [];
+      const selected: Prisma.EquipmentGetPayload<{ include: { catalogItem: true } }>[] = [];
       for (const item of catalogItems) {
         const equipment = await tx.equipment.upsert({
           where: {
