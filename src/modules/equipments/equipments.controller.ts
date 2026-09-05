@@ -38,6 +38,21 @@ export class EquipmentsController {
     return this.equipmentsService.findCatalog(query, gymId);
   }
 
+  @Get('exercises/:exerciseId/compatible')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER', 'RECEPTION')
+  findCompatibleForExercise(
+    @Param('exerciseId', new ParseUUIDPipe()) exerciseId: string,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.equipmentsService.findCompatibleForExercise(exerciseId, gymId);
+  }
+
   @Post('catalog/selection')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
   selectCatalog(
