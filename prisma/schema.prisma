@@ -196,6 +196,13 @@ enum EquipmentCatalogCategory {
   SPECIALIZED_STRENGTH
 }
 
+enum EquipmentCatalogCandidateStatus {
+  PENDING
+  APPROVED
+  MERGED
+  REJECTED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -211,6 +218,8 @@ model User {
   userRoles    UserRole[]
   students     Student[]
   auditLogs    AuditLog[]
+  equipmentCandidatesSubmitted EquipmentCatalogCandidate[] @relation("EquipmentCandidateSubmittedBy")
+  equipmentCandidatesReviewed  EquipmentCatalogCandidate[] @relation("EquipmentCandidateReviewedBy")
 }
 
 model Session {
@@ -287,6 +296,7 @@ model Gym {
   userRoles UserRole[]
   students  Student[]
   equipments Equipment[]
+  equipmentCatalogCandidates EquipmentCatalogCandidate[]
   scheduleSlots ScheduleSlot[]
   accessDevices AccessDevice[]
   accessEvents AccessEvent[]
@@ -365,7 +375,37 @@ model EquipmentCatalogItem {
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
   gymEquipments      Equipment[]
+  resolvedCandidates EquipmentCatalogCandidate[]
   @@index([category, active])
+}
+
+model EquipmentCatalogCandidate {
+  id                    String                          @id @default(uuid())
+  gymId                 String
+  submittedByUserId     String?
+  fingerprint           String
+  proposedName          String
+  proposedCategory      EquipmentCatalogCategory?
+  manufacturerName      String?
+  modelName             String?
+  aliases               Json?
+  evidenceUrl           String?
+  notes                 String?
+  status                EquipmentCatalogCandidateStatus @default(PENDING)
+  resolvedCatalogItemId String?
+  reviewNotes           String?
+  reviewedByUserId      String?
+  reviewedAt            DateTime?
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  gym                   Gym                             @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  submittedBy           User?                           @relation("EquipmentCandidateSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  reviewedBy            User?                           @relation("EquipmentCandidateReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  resolvedCatalogItem   EquipmentCatalogItem?           @relation(fields: [resolvedCatalogItemId], references: [id], onDelete: SetNull)
+  @@unique([gymId, fingerprint])
+  @@index([gymId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([resolvedCatalogItemId])
 }
 
 model Equipment {
