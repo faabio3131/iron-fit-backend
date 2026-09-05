@@ -59,7 +59,7 @@ test('EQ5 candidate intake never accepts tenant authority in request body', () =
   const section = service.slice(start, end);
   assert.ok(section.includes('await this.ensureActiveGym(gymId)'));
   assert.ok(section.includes('gymId,'));
-  assert.ok(section.includes("TransactionIsolationLevel.Serializable"));
+  assert.ok(section.includes('TransactionIsolationLevel.Serializable'));
   assert.ok(section.includes('EQUIPMENT_CATALOG_CANDIDATE_SUBMITTED'));
 });
 
@@ -126,7 +126,7 @@ test('EQ5 MERGE and REJECT preserve governed final-state semantics', () => {
 test('EQ5 full certification preserves every EQ0-EQ5 permanent suite with no explicit skips', () => {
   const required = [
     'eq0.equipment-taxonomy.test.mjs',
-    'eq1.canonical-equipment-catalog.test.mjs',
+    'eq1.canonical-equipment-catalog-domain.test.mjs',
     'eq2.manufacturer-model-alias-equivalence.test.mjs',
     'eq3.gym-equipment-inventory-selection.test.mjs',
     'eq4.equipment-capability-exercise-mapping.test.mjs',
