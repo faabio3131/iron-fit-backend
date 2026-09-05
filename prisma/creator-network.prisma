@@ -1,0 +1,42 @@
+enum CreatorStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  RETIRED
+}
+
+enum CreatorIdentityStatus {
+  UNVERIFIED
+  VERIFIED
+  REVOKED
+}
+
+model Creator {
+  id          String        @id @default(uuid())
+  slug        String        @unique
+  displayName String
+  bio         String?
+  status      CreatorStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  identities  CreatorIdentity[]
+  @@index([status, displayName])
+}
+
+model CreatorIdentity {
+  id              String                @id @default(uuid())
+  creatorId       String
+  providerCode    String
+  externalSubject String
+  handle          String?
+  profileUrl      String?
+  status          CreatorIdentityStatus @default(UNVERIFIED)
+  verifiedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  creator         Creator               @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  @@unique([providerCode, externalSubject])
+  @@index([creatorId, status])
+  @@index([providerCode, handle])
+}
