@@ -1,0 +1,9 @@
+manufacturer_slug	model_name	catalog_item_id	source_url	status
+life-fitness	Integrity+ Treadmill	treadmill_motorized	https://www.lifefitness.com/en-us/catalog/cardio/treadmills/integrity-plus	ACTIVE
+life-fitness	Integrity+ Elliptical Cross-Trainer	elliptical	https://www.lifefitness.com/en-us/catalog/integrity-plus	ACTIVE
+life-fitness	Integrity+ Lifecycle Upright Bike	bike_upright	https://www.lifefitness.com/en-us/catalog/integrity-plus	ACTIVE
+life-fitness	PowerMill Climber	stair_climber	https://www.lifefitness.com/en-us/catalog/integrity-plus	ACTIVE
+concept2	RowErg	row_ergometer	https://www.concept2.com/ergs/rowerg	ACTIVE
+concept2	SkiErg	ski_ergometer	https://www.concept2.com/ergs/skierg	ACTIVE
+concept2	BikeErg	bike_ergometer	https://www.concept2.com/ergs/bikeerg	ACTIVE
+concept2	StrengthErg	air_resistance_strength_erg	https://www.concept2.com/strengtherg	ACTIVE
