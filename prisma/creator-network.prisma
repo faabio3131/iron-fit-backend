@@ -218,21 +218,21 @@ model CreatorRightsConsent {
 }
 
 model CreatorContent {
-  id               String                          @id @default(uuid())
-  scope            CreatorRightsScope
-  gymId            String?
-  canonicalKey     String
-  title            String
-  description      String?
-  relationKind     CreatorManagedRelationKind
-  creatorId        String?
-  rightsGrantId    String
-  fingerprint      String                          @unique
-  createdAt        DateTime                        @default(now())
-  updatedAt        DateTime                        @updatedAt
-  creator          Creator?                        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
-  rightsGrant      CreatorRightsGrant              @relation(fields: [rightsGrantId], references: [id], onDelete: Restrict)
-  mediaAssets      CreatorMediaAsset[]
+  id            String                     @id @default(uuid())
+  scope         CreatorRightsScope
+  gymId         String?
+  canonicalKey  String
+  title         String
+  description   String?
+  relationKind  CreatorManagedRelationKind
+  creatorId     String?
+  rightsGrantId String
+  fingerprint   String                     @unique
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  creator       Creator?                   @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  rightsGrant   CreatorRightsGrant         @relation(fields: [rightsGrantId], references: [id], onDelete: Restrict)
+  mediaAssets   CreatorMediaAsset[]
   exerciseMappings CreatorExerciseContentMapping[]
   @@index([scope, gymId, createdAt])
   @@index([creatorId, createdAt])
@@ -240,20 +240,20 @@ model CreatorContent {
 }
 
 model CreatorMediaAsset {
-  id               String                          @id @default(uuid())
-  contentId        String
-  kind             CreatorMediaAssetKind
-  integritySha256  String
-  mimeType         String
-  durationMs       Int?
-  width            Int?
-  height           Int?
-  languageCode     String?
-  createdAt        DateTime                        @default(now())
-  updatedAt        DateTime                        @updatedAt
-  content          CreatorContent                  @relation(fields: [contentId], references: [id], onDelete: Restrict)
-  ingestions       CreatorMediaIngestion[]
-  storageObjects   CreatorMediaStorageObject[]
+  id              String                     @id @default(uuid())
+  contentId       String
+  kind            CreatorMediaAssetKind
+  integritySha256 String
+  mimeType        String
+  durationMs      Int?
+  width           Int?
+  height          Int?
+  languageCode    String?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  content         CreatorContent             @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  ingestions      CreatorMediaIngestion[]
+  storageObjects  CreatorMediaStorageObject[]
   exerciseMappings CreatorExerciseContentMapping[]
   @@unique([contentId, integritySha256])
   @@index([contentId, kind])
@@ -302,23 +302,23 @@ model CreatorMediaStorageObject {
 }
 
 model CreatorExerciseContentMapping {
-  id              String                                   @id @default(uuid())
+  id              String                                  @id @default(uuid())
   scope           CreatorRightsScope
   gymId           String?
   exerciseId      String
   contentId       String
   mediaAssetId    String
-  placement       CreatorExerciseContentPlacement          @default(PRIMARY)
-  priority        Int                                      @default(100)
-  status          CreatorExerciseContentPublicationStatus  @default(DRAFT)
-  fingerprint     String                                   @unique
+  placement       CreatorExerciseContentPlacement         @default(PRIMARY)
+  priority        Int                                     @default(100)
+  status          CreatorExerciseContentPublicationStatus @default(DRAFT)
+  fingerprint     String                                  @unique
   publishedAt     DateTime?
   unpublishedAt   DateTime?
   unpublishReason String?
-  createdAt       DateTime                                 @default(now())
-  updatedAt       DateTime                                 @updatedAt
-  content         CreatorContent                           @relation(fields: [contentId], references: [id], onDelete: Restrict)
-  mediaAsset      CreatorMediaAsset                        @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  createdAt       DateTime                                @default(now())
+  updatedAt       DateTime                                @updatedAt
+  content         CreatorContent                          @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  mediaAsset      CreatorMediaAsset                       @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
   @@index([scope, gymId, exerciseId, status])
   @@index([contentId, status])
   @@index([mediaAssetId, status])
