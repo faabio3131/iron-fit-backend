@@ -70,6 +70,21 @@ enum CreatorMediaAssetKind {
   IMAGE
 }
 
+enum CreatorMediaIngestionStatus {
+  PREPARED
+  VERIFIED
+  FAILED
+}
+
+enum CreatorMediaIngestionFailure {
+  PROVIDER_PREPARE_FAILED
+  PROVIDER_INSPECTION_FAILED
+  OBJECT_NOT_FOUND
+  INTEGRITY_HASH_UNAVAILABLE
+  INTEGRITY_MISMATCH
+  INVALID_OBJECT_SIZE
+}
+
 model Creator {
   id                   String                 @id @default(uuid())
   slug                 String                 @unique
@@ -213,7 +228,7 @@ model CreatorContent {
 }
 
 model CreatorMediaAsset {
-  id              String                @id @default(uuid())
+  id              String                     @id @default(uuid())
   contentId       String
   kind            CreatorMediaAssetKind
   integritySha256 String
@@ -222,10 +237,53 @@ model CreatorMediaAsset {
   width           Int?
   height          Int?
   languageCode    String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  content         CreatorContent        @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  content         CreatorContent             @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  ingestions      CreatorMediaIngestion[]
+  storageObjects  CreatorMediaStorageObject[]
   @@unique([contentId, integritySha256])
   @@index([contentId, kind])
   @@index([integritySha256])
+}
+
+model CreatorMediaIngestion {
+  id             String                       @id @default(uuid())
+  mediaAssetId   String
+  providerCode   String
+  objectKey      String
+  requestKey     String
+  fingerprint    String                       @unique
+  status         CreatorMediaIngestionStatus  @default(PREPARED)
+  failureCode    CreatorMediaIngestionFailure?
+  preparedAt     DateTime                     @default(now())
+  verifiedAt     DateTime?
+  failedAt       DateTime?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+  mediaAsset     CreatorMediaAsset            @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  storageObjects CreatorMediaStorageObject[]
+  @@unique([mediaAssetId, requestKey])
+  @@index([mediaAssetId, status])
+  @@index([providerCode, status])
+}
+
+model CreatorMediaStorageObject {
+  id                String                 @id @default(uuid())
+  mediaAssetId      String
+  sourceIngestionId String
+  providerCode      String
+  objectKey         String
+  integritySha256   String
+  sizeBytes         BigInt
+  etag              String?
+  verifiedAt        DateTime               @default(now())
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  mediaAsset        CreatorMediaAsset      @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  sourceIngestion   CreatorMediaIngestion  @relation(fields: [sourceIngestionId], references: [id], onDelete: Restrict)
+  @@unique([mediaAssetId, providerCode])
+  @@unique([providerCode, objectKey])
+  @@index([mediaAssetId, verifiedAt])
+  @@index([providerCode, verifiedAt])
 }
