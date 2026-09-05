@@ -1,0 +1,11 @@
+exercise_name	catalog_slug	compatibility	priority
+Supino Reto	bench_olympic_flat	PRIMARY	10
+Supino Reto	smith_machine	ALTERNATIVE	20
+Supino Reto	bench_flat	ALTERNATIVE	30
+Remada Curvada	barbell_olympic	PRIMARY	10
+Remada Curvada	barbell_fixed	ALTERNATIVE	20
+Remada Curvada	smith_machine	ALTERNATIVE	30
+Agachamento Livre	rack_power	PRIMARY	10
+Agachamento Livre	rack_half	PRIMARY	20
+Agachamento Livre	rack_squat	PRIMARY	30
+Agachamento Livre	smith_machine	ALTERNATIVE	40
