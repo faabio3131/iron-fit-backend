@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,10 +15,14 @@ import {
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  canNarrowFeature,
+  canNarrowLimit,
+  canNarrowPolicy,
   PRODUCT_FEATURE_CATALOG_V1,
   ProductFeatureDefinition,
 } from './contracts/product-entitlement-contract';
 import { AssignTenantProductSubscriptionDto } from './dto/assign-tenant-product-subscription.dto';
+import { SetProductConfigurationValueDto } from './dto/set-product-configuration-value.dto';
 
 const SERIALIZABLE_ATTEMPTS = 3;
 
@@ -26,6 +31,38 @@ type ResolvedValue = boolean | number | readonly string[] | null;
 type TenantResolutionContext = {
   gymActive: boolean;
   subscription: any | null;
+};
+
+type LayerSource =
+  | 'FAIL_CLOSED_DEFAULT'
+  | 'PLAN_ENTITLEMENT'
+  | 'TENANT_CONFIGURATION'
+  | 'USER_PREFERENCE';
+
+type EffectiveResolution = {
+  featureKey: string;
+  kind: ProductFeatureDefinition['kind'];
+  value: ResolvedValue;
+  source: LayerSource;
+  reason: string | null;
+  subscriptionId: string | null;
+  plan: {
+    code: string;
+    version: number;
+    status: ProductPlanVersionStatus;
+  } | null;
+  tenantConfigurationId: string | null;
+  userPreferenceId: string | null;
+};
+
+type StoredLayerValue = {
+  value: ResolvedValue;
+  data: {
+    kind: ProductEntitlementKind;
+    featureEnabled: boolean | null;
+    limitValue: number | null;
+    policyValues: Prisma.InputJsonValue | typeof Prisma.DbNull;
+  };
 };
 
 @Injectable()
@@ -42,6 +79,13 @@ export class TenantProductEntitlementsService {
     return gymId;
   }
 
+  private requireUserId(userId?: string): string {
+    if (!userId?.trim()) {
+      throw new BadRequestException('Usuario autenticado obrigatorio');
+    }
+    return userId;
+  }
+
   private featureDefinition(featureKey: string): Readonly<ProductFeatureDefinition> {
     const definition = PRODUCT_FEATURE_CATALOG_V1.find(
       (candidate) => candidate.key === featureKey,
@@ -50,6 +94,14 @@ export class TenantProductEntitlementsService {
       throw new BadRequestException(`Capability nao canonica: ${featureKey}`);
     }
     return definition;
+  }
+
+  private kindForDefinition(
+    definition: Readonly<ProductFeatureDefinition>,
+  ): ProductEntitlementKind {
+    if (definition.kind === 'FEATURE') return ProductEntitlementKind.FEATURE;
+    if (definition.kind === 'LIMIT') return ProductEntitlementKind.LIMIT;
+    return ProductEntitlementKind.POLICY;
   }
 
   private async serializable<T>(
@@ -67,7 +119,7 @@ export class TenantProductEntitlementsService {
         if (!retryable || attempt === SERIALIZABLE_ATTEMPTS) throw error;
       }
     }
-    throw new ConflictException('Falha de concorrencia ao atribuir plano ao tenant');
+    throw new ConflictException('Falha de concorrencia em product entitlements');
   }
 
   private extractEntitlementValue(
@@ -118,16 +170,63 @@ export class TenantProductEntitlementsService {
     return { valid: false };
   }
 
+  private extractConfiguredValue(
+    record: any,
+    definition: Readonly<ProductFeatureDefinition>,
+  ): { valid: true; value: ResolvedValue } | { valid: false } {
+    if (
+      definition.kind === 'FEATURE' &&
+      record.kind === ProductEntitlementKind.FEATURE &&
+      typeof record.featureEnabled === 'boolean' &&
+      record.limitValue === null &&
+      record.policyValues === null
+    ) {
+      return { valid: true, value: record.featureEnabled };
+    }
+
+    if (
+      definition.kind === 'LIMIT' &&
+      record.kind === ProductEntitlementKind.LIMIT &&
+      record.featureEnabled === null &&
+      Number.isInteger(record.limitValue) &&
+      (record.limitValue ?? -1) >= 0 &&
+      record.policyValues === null
+    ) {
+      return { valid: true, value: record.limitValue as number };
+    }
+
+    if (
+      definition.kind === 'POLICY' &&
+      record.kind === ProductEntitlementKind.POLICY &&
+      record.featureEnabled === null &&
+      record.limitValue === null &&
+      Array.isArray(record.policyValues)
+    ) {
+      const raw = record.policyValues as unknown[];
+      const values = raw.filter((value): value is string => typeof value === 'string');
+      const allowed = new Set(definition.allowedPolicyValues ?? []);
+      if (
+        values.length === raw.length &&
+        new Set(values).size === values.length &&
+        values.every((value) => allowed.has(value))
+      ) {
+        return { valid: true, value: [...values] };
+      }
+    }
+
+    return { valid: false };
+  }
+
   private failClosed(
     definition: Readonly<ProductFeatureDefinition>,
     reason: string,
     subscription?: any | null,
-  ) {
+  ): EffectiveResolution {
     return {
       featureKey: definition.key,
       kind: definition.kind,
       value: definition.failClosedDefault,
-      source: 'FAIL_CLOSED_DEFAULT' as const,
+      source: 'FAIL_CLOSED_DEFAULT',
       reason,
       subscriptionId: subscription?.id ?? null,
       plan: subscription
@@ -137,13 +236,28 @@ export class TenantProductEntitlementsService {
             status: subscription.planVersion.status,
           }
         : null,
+      tenantConfigurationId: null,
+      userPreferenceId: null,
     };
   }
 
-  private resolveFromContext(
+  private failClosedFromResolution(
+    definition: Readonly<ProductFeatureDefinition>,
+    parent: EffectiveResolution,
+    reason: string,
+  ): EffectiveResolution {
+    return {
+      ...parent,
+      value: definition.failClosedDefault,
+      source: 'FAIL_CLOSED_DEFAULT',
+      reason,
+    };
+  }
+
+  private resolvePlanFromContext(
     definition: Readonly<ProductFeatureDefinition>,
     context: TenantResolutionContext,
-  ) {
+  ): EffectiveResolution {
     if (!context.gymActive) {
       return this.failClosed(definition, 'TENANT_INACTIVE_OR_MISSING');
     }
@@ -177,7 +291,7 @@ export class TenantProductEntitlementsService {
       featureKey: definition.key,
       kind: definition.kind,
       value: extracted.value,
-      source: 'PLAN_ENTITLEMENT' as const,
+      source: 'PLAN_ENTITLEMENT',
       reason: null,
       subscriptionId: subscription.id,
       plan: {
@@ -185,17 +299,204 @@ export class TenantProductEntitlementsService {
         version: subscription.planVersion.version,
         status: subscription.planVersion.status,
       },
+      tenantConfigurationId: null,
+      userPreferenceId: null,
     };
   }
 
-  private async loadResolutionContext(gymId: string): Promise<TenantResolutionContext> {
-    const gym = await this.prisma.gym.findUnique({
+  private isNarrowingAllowed(
+    definition: Readonly<ProductFeatureDefinition>,
+    parentValue: ResolvedValue,
+    requestedValue: ResolvedValue,
+  ): boolean {
+    if (
+      definition.kind === 'FEATURE' &&
+      typeof parentValue === 'boolean' &&
+      typeof requestedValue === 'boolean'
+    ) {
+      return canNarrowFeature(parentValue, requestedValue);
+    }
+
+    if (
+      definition.kind === 'LIMIT' &&
+      typeof parentValue === 'number' &&
+      typeof requestedValue === 'number'
+    ) {
+      return canNarrowLimit(parentValue, requestedValue);
+    }
+
+    if (
+      definition.kind === 'POLICY' &&
+      Array.isArray(parentValue) &&
+      Array.isArray(requestedValue)
+    ) {
+      return canNarrowPolicy(
+        parentValue.filter((value): value is string => typeof value === 'string'),
+        requestedValue.filter((value): value is string => typeof value === 'string'),
+      );
+    }
+
+    return false;
+  }
+
+  private applyConfigurationLayer(
+    definition: Readonly<ProductFeatureDefinition>,
+    parent: EffectiveResolution,
+    record: any | null,
+    source: 'TENANT_CONFIGURATION' | 'USER_PREFERENCE',
+  ): EffectiveResolution {
+    if (!record || parent.source === 'FAIL_CLOSED_DEFAULT') return parent;
+
+    const extracted = this.extractConfiguredValue(record, definition);
+    if (!extracted.valid) {
+      return this.failClosedFromResolution(
+        definition,
+        parent,
+        source === 'TENANT_CONFIGURATION'
+          ? 'INVALID_TENANT_CONFIGURATION'
+          : 'INVALID_USER_PREFERENCE',
+      );
+    }
+
+    if (!this.isNarrowingAllowed(definition, parent.value, extracted.value)) {
+      return this.failClosedFromResolution(
+        definition,
+        parent,
+        source === 'TENANT_CONFIGURATION'
+          ? 'TENANT_CONFIGURATION_EXCEEDS_PLAN'
+          : 'USER_PREFERENCE_EXCEEDS_TENANT_CONFIGURATION',
+      );
+    }
+
+    return {
+      ...parent,
+      value: extracted.value,
+      source,
+      reason: null,
+      tenantConfigurationId:
+        source === 'TENANT_CONFIGURATION'
+          ? record.id
+          : parent.tenantConfigurationId,
+      userPreferenceId:
+        source === 'USER_PREFERENCE' ? record.id : parent.userPreferenceId,
+    };
+  }
+
+  private buildStoredLayerValue(
+    definition: Readonly<ProductFeatureDefinition>,
+    dto: SetProductConfigurationValueDto,
+  ): StoredLayerValue {
+    if (definition.kind === 'FEATURE') {
+      if (
+        typeof dto.featureEnabled !== 'boolean' ||
+        dto.limitValue !== undefined ||
+        dto.policyValues !== undefined
+      ) {
+        throw new BadRequestException(
+          `FEATURE ${definition.key} exige somente featureEnabled boolean`,
+        );
+      }
+      return {
+        value: dto.featureEnabled,
+        data: {
+          kind: ProductEntitlementKind.FEATURE,
+          featureEnabled: dto.featureEnabled,
+          limitValue: null,
+          policyValues: Prisma.DbNull,
+        },
+      };
+    }
+
+    if (definition.kind === 'LIMIT') {
+      if (
+        !Number.isInteger(dto.limitValue) ||
+        (dto.limitValue ?? -1) < 0 ||
+        dto.featureEnabled !== undefined ||
+        dto.policyValues !== undefined
+      ) {
+        throw new BadRequestException(
+          `LIMIT ${definition.key} exige somente limitValue inteiro nao negativo`,
+        );
+      }
+      return {
+        value: dto.limitValue as number,
+        data: {
+          kind: ProductEntitlementKind.LIMIT,
+          featureEnabled: null,
+          limitValue: dto.limitValue as number,
+          policyValues: Prisma.DbNull,
+        },
+      };
+    }
+
+    if (
+      dto.featureEnabled !== undefined ||
+      dto.limitValue !== undefined ||
+      !Array.isArray(dto.policyValues)
+    ) {
+      throw new BadRequestException(
+        `POLICY ${definition.key} exige somente policyValues`,
+      );
+    }
+
+    const values = [...dto.policyValues].sort();
+    if (new Set(values).size !== values.length) {
+      throw new BadRequestException(`POLICY ${definition.key} possui valores duplicados`);
+    }
+    const allowed = new Set(definition.allowedPolicyValues ?? []);
+    if (values.some((value) => !allowed.has(value))) {
+      throw new BadRequestException(`POLICY ${definition.key} contem valor nao autorizado`);
+    }
+
+    return {
+      value: values,
+      data: {
+        kind: ProductEntitlementKind.POLICY,
+        featureEnabled: null,
+        limitValue: null,
+        policyValues: values as Prisma.InputJsonValue,
+      },
+    };
+  }
+
+  private sameStoredValue(record: any, built: StoredLayerValue): boolean {
+    if (!record) return false;
+    if (record.kind !== built.data.kind) return false;
+    if (record.featureEnabled !== built.data.featureEnabled) return false;
+    if (record.limitValue !== built.data.limitValue) return false;
+
+    if (built.data.kind !== ProductEntitlementKind.POLICY) {
+      return record.policyValues === null;
+    }
+
+    const recordValues = Array.isArray(record.policyValues)
+      ? [...record.policyValues].sort()
+      : null;
+    return JSON.stringify(recordValues) === JSON.stringify(built.value);
+  }
+
+  private auditValue(record: any | null) {
+    if (!record) return null;
+    return {
+      featureKey: record.featureKey,
+      kind: record.kind,
+      featureEnabled: record.featureEnabled,
+      limitValue: record.limitValue,
+      policyValues: record.policyValues,
+    };
+  }
+
+  private async loadResolutionContext(
+    gymId: string,
+    db: any = this.prisma,
+  ): Promise<TenantResolutionContext> {
+    const gym = await db.gym.findUnique({
       where: { id: gymId },
       select: { id: true, active: true },
     });
     if (!gym?.active) return { gymActive: false, subscription: null };
 
-    const subscription = await this.prisma.tenantProductSubscription.findFirst({
+    const subscription = await db.tenantProductSubscription.findFirst({
       where: {
         gymId,
         status: TenantProductSubscriptionStatus.ACTIVE,
@@ -212,6 +513,101 @@ export class TenantProductEntitlementsService {
     });
 
     return { gymActive: true, subscription };
+  }
+
+  private async loadTenantConfiguration(
+    db: any,
+    gymId: string,
+    featureKey: string,
+  ) {
+    if (!db.tenantProductConfiguration?.findUnique) return null;
+    return db.tenantProductConfiguration.findUnique({
+      where: { gymId_featureKey: { gymId, featureKey } },
+    });
+  }
+
+  private async loadTenantConfigurations(db: any, gymId: string) {
+    if (!db.tenantProductConfiguration?.findMany) return [];
+    return db.tenantProductConfiguration.findMany({
+      where: { gymId },
+      orderBy: { featureKey: 'asc' },
+    });
+  }
+
+  private async loadUserPreference(
+    db: any,
+    gymId: string,
+    userId: string,
+    featureKey: string,
+  ) {
+    if (!db.userProductPreference?.findUnique) return null;
+    return db.userProductPreference.findUnique({
+      where: { gymId_userId_featureKey: { gymId, userId, featureKey } },
+    });
+  }
+
+  private async loadUserPreferences(db: any, gymId: string, userId: string) {
+    if (!db.userProductPreference?.findMany) return [];
+    return db.userProductPreference.findMany({
+      where: { gymId, userId },
+      orderBy: { featureKey: 'asc' },
+    });
+  }
+
+  private async assertStudentInTenant(db: any, gymId: string, userId: string) {
+    const student = await db.student.findFirst({
+      where: { gymId, userId },
+      select: { id: true },
+    });
+    if (!student) {
+      throw new ForbiddenException('Preferencia restrita ao aluno do tenant ativo');
+    }
+    return student;
+  }
+
+  private async resolveTenantFeatureWithDb(
+    db: any,
+    gymId: string,
+    definition: Readonly<ProductFeatureDefinition>,
+  ): Promise<EffectiveResolution> {
+    const context = await this.loadResolutionContext(gymId, db);
+    const planResolution = this.resolvePlanFromContext(definition, context);
+    const configuration = await this.loadTenantConfiguration(
+      db,
+      gymId,
+      definition.key,
+    );
+    return this.applyConfigurationLayer(
+      definition,
+      planResolution,
+      configuration,
+      'TENANT_CONFIGURATION',
+    );
+  }
+
+  private async resolveUserFeatureWithDb(
+    db: any,
+    gymId: string,
+    userId: string,
+    definition: Readonly<ProductFeatureDefinition>,
+  ): Promise<EffectiveResolution> {
+    const tenantResolution = await this.resolveTenantFeatureWithDb(
+      db,
+      gymId,
+      definition,
+    );
+    const preference = await this.loadUserPreference(
+      db,
+      gymId,
+      userId,
+      definition.key,
+    );
+    return this.applyConfigurationLayer(
+      definition,
+      tenantResolution,
+      preference,
+      'USER_PREFERENCE',
+    );
   }
 
   async assignInitialSubscription(
@@ -289,18 +685,296 @@ export class TenantProductEntitlementsService {
     return context.subscription;
   }
 
+  async listTenantConfigurations(gymId?: string) {
+    const scopedGymId = this.requireGymId(gymId);
+    const context = await this.loadResolutionContext(scopedGymId);
+    if (!context.gymActive) throw new NotFoundException('Tenant ativo nao encontrado');
+    return this.loadTenantConfigurations(this.prisma, scopedGymId);
+  }
+
+  async setTenantConfiguration(
+    gymId: string | undefined,
+    featureKey: string,
+    dto: SetProductConfigurationValueDto,
+    actorUserId?: string,
+  ) {
+    const scopedGymId = this.requireGymId(gymId);
+    const definition = this.featureDefinition(featureKey);
+    const built = this.buildStoredLayerValue(definition, dto);
+
+    return this.serializable(async (tx) => {
+      const context = await this.loadResolutionContext(scopedGymId, tx);
+      const parent = this.resolvePlanFromContext(definition, context);
+      if (parent.source === 'FAIL_CLOSED_DEFAULT') {
+        throw new ConflictException(
+          `Capability ${featureKey} nao esta disponivel no plano efetivo`,
+        );
+      }
+      if (!this.isNarrowingAllowed(definition, parent.value, built.value)) {
+        throw new ConflictException(
+          `Configuracao do tenant nao pode ampliar ${featureKey} alem do plano`,
+        );
+      }
+
+      const existing = await tx.tenantProductConfiguration.findUnique({
+        where: { gymId_featureKey: { gymId: scopedGymId, featureKey } },
+      });
+      if (this.sameStoredValue(existing, built)) return existing;
+
+      const record = await tx.tenantProductConfiguration.upsert({
+        where: { gymId_featureKey: { gymId: scopedGymId, featureKey } },
+        create: {
+          gymId: scopedGymId,
+          featureKey,
+          ...built.data,
+        },
+        update: built.data,
+      });
+
+      await this.audit.record(
+        {
+          gymId: scopedGymId,
+          userId: actorUserId ?? null,
+          action: 'TENANT_PRODUCT_CONFIGURATION_SET',
+          entity: 'TenantProductConfiguration',
+          entityId: record.id,
+          previous: this.auditValue(existing),
+          next: this.auditValue(record),
+        },
+        tx,
+      );
+
+      return record;
+    });
+  }
+
+  async resetTenantConfiguration(
+    gymId: string | undefined,
+    featureKey: string,
+    actorUserId?: string,
+  ) {
+    const scopedGymId = this.requireGymId(gymId);
+    this.featureDefinition(featureKey);
+
+    return this.serializable(async (tx) => {
+      const existing = await tx.tenantProductConfiguration.findUnique({
+        where: { gymId_featureKey: { gymId: scopedGymId, featureKey } },
+      });
+      if (!existing) return { removed: false, featureKey };
+
+      await tx.tenantProductConfiguration.delete({ where: { id: existing.id } });
+      await this.audit.record(
+        {
+          gymId: scopedGymId,
+          userId: actorUserId ?? null,
+          action: 'TENANT_PRODUCT_CONFIGURATION_RESET',
+          entity: 'TenantProductConfiguration',
+          entityId: existing.id,
+          previous: this.auditValue(existing),
+          next: null,
+        },
+        tx,
+      );
+      return { removed: true, featureKey };
+    });
+  }
+
+  async listUserPreferences(gymId: string | undefined, userId?: string) {
+    const scopedGymId = this.requireGymId(gymId);
+    const scopedUserId = this.requireUserId(userId);
+    await this.assertStudentInTenant(this.prisma, scopedGymId, scopedUserId);
+    return this.loadUserPreferences(this.prisma, scopedGymId, scopedUserId);
+  }
+
+  async setUserPreference(
+    gymId: string | undefined,
+    userId: string | undefined,
+    featureKey: string,
+    dto: SetProductConfigurationValueDto,
+  ) {
+    const scopedGymId = this.requireGymId(gymId);
+    const scopedUserId = this.requireUserId(userId);
+    const definition = this.featureDefinition(featureKey);
+    const built = this.buildStoredLayerValue(definition, dto);
+
+    return this.serializable(async (tx) => {
+      await this.assertStudentInTenant(tx, scopedGymId, scopedUserId);
+      const parent = await this.resolveTenantFeatureWithDb(
+        tx,
+        scopedGymId,
+        definition,
+      );
+      if (parent.source === 'FAIL_CLOSED_DEFAULT') {
+        throw new ConflictException(
+          `Capability ${featureKey} nao esta disponivel para preferencia`,
+        );
+      }
+      if (!this.isNarrowingAllowed(definition, parent.value, built.value)) {
+        throw new ConflictException(
+          `Preferencia do aluno nao pode ampliar ${featureKey} alem da configuracao do tenant`,
+        );
+      }
+
+      const existing = await tx.userProductPreference.findUnique({
+        where: {
+          gymId_userId_featureKey: {
+            gymId: scopedGymId,
+            userId: scopedUserId,
+            featureKey,
+          },
+        },
+      });
+      if (this.sameStoredValue(existing, built)) return existing;
+
+      const record = await tx.userProductPreference.upsert({
+        where: {
+          gymId_userId_featureKey: {
+            gymId: scopedGymId,
+            userId: scopedUserId,
+            featureKey,
+          },
+        },
+        create: {
+          gymId: scopedGymId,
+          userId: scopedUserId,
+          featureKey,
+          ...built.data,
+        },
+        update: built.data,
+      });
+
+      await this.audit.record(
+        {
+          gymId: scopedGymId,
+          userId: scopedUserId,
+          action: 'USER_PRODUCT_PREFERENCE_SET',
+          entity: 'UserProductPreference',
+          entityId: record.id,
+          previous: this.auditValue(existing),
+          next: this.auditValue(record),
+        },
+        tx,
+      );
+
+      return record;
+    });
+  }
+
+  async resetUserPreference(
+    gymId: string | undefined,
+    userId: string | undefined,
+    featureKey: string,
+  ) {
+    const scopedGymId = this.requireGymId(gymId);
+    const scopedUserId = this.requireUserId(userId);
+    this.featureDefinition(featureKey);
+
+    return this.serializable(async (tx) => {
+      await this.assertStudentInTenant(tx, scopedGymId, scopedUserId);
+      const existing = await tx.userProductPreference.findUnique({
+        where: {
+          gymId_userId_featureKey: {
+            gymId: scopedGymId,
+            userId: scopedUserId,
+            featureKey,
+          },
+        },
+      });
+      if (!existing) return { removed: false, featureKey };
+
+      await tx.userProductPreference.delete({ where: { id: existing.id } });
+      await this.audit.record(
+        {
+          gymId: scopedGymId,
+          userId: scopedUserId,
+          action: 'USER_PRODUCT_PREFERENCE_RESET',
+          entity: 'UserProductPreference',
+          entityId: existing.id,
+          previous: this.auditValue(existing),
+          next: null,
+        },
+        tx,
+      );
+      return { removed: true, featureKey };
+    });
+  }
+
   async resolveFeature(gymId: string | undefined, featureKey: string) {
     const scopedGymId = this.requireGymId(gymId);
     const definition = this.featureDefinition(featureKey);
-    const context = await this.loadResolutionContext(scopedGymId);
-    return this.resolveFromContext(definition, context);
+    return this.resolveTenantFeatureWithDb(this.prisma, scopedGymId, definition);
   }
 
   async resolveAll(gymId?: string) {
     const scopedGymId = this.requireGymId(gymId);
     const context = await this.loadResolutionContext(scopedGymId);
-    return PRODUCT_FEATURE_CATALOG_V1.map((definition) =>
-      this.resolveFromContext(definition, context),
+    const configurations = await this.loadTenantConfigurations(
+      this.prisma,
+      scopedGymId,
     );
+    const byFeature = new Map(
+      configurations.map((record: any) => [record.featureKey, record]),
+    );
+
+    return PRODUCT_FEATURE_CATALOG_V1.map((definition) => {
+      const planResolution = this.resolvePlanFromContext(definition, context);
+      return this.applyConfigurationLayer(
+        definition,
+        planResolution,
+        byFeature.get(definition.key) ?? null,
+        'TENANT_CONFIGURATION',
+      );
+    });
+  }
+
+  async resolveFeatureForUser(
+    gymId: string | undefined,
+    userId: string | undefined,
+    featureKey: string,
+  ) {
+    const scopedGymId = this.requireGymId(gymId);
+    const scopedUserId = this.requireUserId(userId);
+    const definition = this.featureDefinition(featureKey);
+    await this.assertStudentInTenant(this.prisma, scopedGymId, scopedUserId);
+    return this.resolveUserFeatureWithDb(
+      this.prisma,
+      scopedGymId,
+      scopedUserId,
+      definition,
+    );
+  }
+
+  async resolveAllForUser(gymId: string | undefined, userId?: string) {
+    const scopedGymId = this.requireGymId(gymId);
+    const scopedUserId = this.requireUserId(userId);
+    await this.assertStudentInTenant(this.prisma, scopedGymId, scopedUserId);
+
+    const [context, configurations, preferences] = await Promise.all([
+      this.loadResolutionContext(scopedGymId),
+      this.loadTenantConfigurations(this.prisma, scopedGymId),
+      this.loadUserPreferences(this.prisma, scopedGymId, scopedUserId),
+    ]);
+    const configByFeature = new Map(
+      configurations.map((record: any) => [record.featureKey, record]),
+    );
+    const preferenceByFeature = new Map(
+      preferences.map((record: any) => [record.featureKey, record]),
+    );
+
+    return PRODUCT_FEATURE_CATALOG_V1.map((definition) => {
+      const planResolution = this.resolvePlanFromContext(definition, context);
+      const tenantResolution = this.applyConfigurationLayer(
+        definition,
+        planResolution,
+        configByFeature.get(definition.key) ?? null,
+        'TENANT_CONFIGURATION',
+      );
+      return this.applyConfigurationLayer(
+        definition,
+        tenantResolution,
+        preferenceByFeature.get(definition.key) ?? null,
+        'USER_PREFERENCE',
+      );
+    });
   }
 }
