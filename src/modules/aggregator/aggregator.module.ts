@@ -13,6 +13,8 @@ import { AggregatorSettlementController } from './settlements/aggregator-settlem
 import { AggregatorSettlementLedgerService } from './settlements/aggregator-settlement-ledger.service';
 import { AggregatorReconciliationController } from './reconciliation/aggregator-reconciliation.controller';
 import { AggregatorReconciliationService } from './reconciliation/aggregator-reconciliation.service';
+import { AggregatorOperationsController } from './operations/aggregator-operations.controller';
+import { AggregatorOperationsService } from './operations/aggregator-operations.service';
 import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.service';
 import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter.service';
 
@@ -24,6 +26,7 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorProvisionalAccessController,
     AggregatorSettlementController,
     AggregatorReconciliationController,
+    AggregatorOperationsController,
   ],
   providers: [
     AggregatorAgreementsService,
@@ -32,6 +35,7 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorProvisionalAccessService,
     AggregatorSettlementLedgerService,
     AggregatorReconciliationService,
+    AggregatorOperationsService,
     WellhubAdapterService,
     TotalPassAdapterService,
     PrismaService,
