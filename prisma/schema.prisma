@@ -218,6 +218,7 @@ model User {
   userRoles    UserRole[]
   students     Student[]
   auditLogs    AuditLog[]
+  productPreferences UserProductPreference[]
   equipmentCandidatesSubmitted EquipmentCatalogCandidate[] @relation("EquipmentCandidateSubmittedBy")
   equipmentCandidatesReviewed  EquipmentCatalogCandidate[] @relation("EquipmentCandidateReviewedBy")
 }
@@ -308,6 +309,8 @@ model Gym {
   payables  Payable[]
   subscriptions Subscription[]
   productSubscriptions TenantProductSubscription[]
+  productConfigurations TenantProductConfiguration[]
+  productPreferences UserProductPreference[]
   charges   Charge[]
   communicationTemplates CommunicationTemplate[]
   communicationAutomations CommunicationAutomation[]
@@ -1069,4 +1072,37 @@ model TenantProductSubscription {
   planVersion    ProductPlanVersion              @relation(fields: [planVersionId], references: [id], onDelete: Restrict)
   @@index([gymId, status])
   @@index([planVersionId, status])
+}
+
+model TenantProductConfiguration {
+  id             String                 @id @default(uuid())
+  gymId          String
+  featureKey     String
+  kind           ProductEntitlementKind
+  featureEnabled Boolean?
+  limitValue     Int?
+  policyValues   Json?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  gym            Gym                    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  @@unique([gymId, featureKey])
+  @@index([gymId, kind])
+}
+
+model UserProductPreference {
+  id             String                 @id @default(uuid())
+  gymId          String
+  userId         String
+  featureKey     String
+  kind           ProductEntitlementKind
+  featureEnabled Boolean?
+  limitValue     Int?
+  policyValues   Json?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  gym            Gym                    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([gymId, userId, featureKey])
+  @@index([gymId, userId])
+  @@index([featureKey])
 }
