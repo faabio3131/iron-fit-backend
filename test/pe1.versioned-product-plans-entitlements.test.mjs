@@ -301,6 +301,6 @@ test('PE1 stays outside tenant subscription, runtime resolution, pricing and Cre
     assert.equal(service.includes(forbidden), false, forbidden);
     assert.equal(controller.includes(forbidden), false, forbidden);
   }
-  assert.match(doc, /ligacao de academia a uma versao de produto pertence ao PE2/i);
-  assert.match(doc, /nao implementa:[\s\S]*assinatura SaaS de academia/i);
+  assert.match(doc, /ligação de academia a uma versão de produto pertence ao PE2/i);
+  assert.match(doc, /não implementa:[\s\S]*assinatura SaaS de academia/i);
 });
