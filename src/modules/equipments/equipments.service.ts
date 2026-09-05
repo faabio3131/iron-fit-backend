@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
+import { findEquipmentExerciseMapping } from '../../common/equipment/equipment-exercise-mapping';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { EquipmentCatalogQueryDto } from './dto/equipment-catalog-query.dto';
 import { SelectCatalogEquipmentDto } from './dto/select-catalog-equipment.dto';
@@ -87,6 +88,48 @@ export class EquipmentsService {
           inventoryId: inventoryItem?.id ?? null,
         };
       });
+  }
+
+  async findCompatibleForExercise(exerciseId: string, gymId: string) {
+    await this.ensureActiveGym(gymId);
+
+    const exercise = await this.prisma.exercise.findUnique({
+      where: { id: exerciseId },
+      select: { id: true, name: true },
+    });
+    if (!exercise) {
+      throw new NotFoundException('Exercicio nao encontrado');
+    }
+
+    const inventory = await this.prisma.equipment.findMany({
+      where: {
+        gymId,
+        active: true,
+        catalogItemId: { not: null },
+      },
+      include: { catalogItem: true },
+      orderBy: { name: 'asc' },
+    });
+
+    return inventory
+      .flatMap((item) => {
+        const mapping = findEquipmentExerciseMapping(
+          item.catalogItem?.metadata,
+          exercise.id,
+          exercise.name,
+        );
+        return mapping
+          ? [{
+              ...item,
+              compatibility: mapping.compatibility,
+              mappingPriority: mapping.priority,
+              mappingVersion: mapping.sourceVersion,
+            }]
+          : [];
+      })
+      .sort((left, right) =>
+        left.mappingPriority - right.mappingPriority || left.name.localeCompare(right.name),
+      );
   }
 
   async selectCatalog(
