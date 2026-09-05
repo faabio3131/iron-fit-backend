@@ -66,6 +66,8 @@ test('CN2 physically constrains scope, validity, hashes and one ACTIVE version',
 test('CN2 rights holder remains independent from Creator identity', async () => {
   const domain = await source(DOMAIN);
   const service = await source(SERVICE);
+  const identityModel =
+    domain.match(/model CreatorIdentity\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
 
   assert.match(domain, /enum CreatorRightsHolderKind[\s\S]*CREATOR[\s\S]*PERSON[\s\S]*ORGANIZATION[\s\S]*TENANT/);
   assert.match(service, /Rights holder CREATOR exige creatorId/);
@@ -73,7 +75,7 @@ test('CN2 rights holder remains independent from Creator identity', async () => 
     service,
     /creatorId somente e permitido para rights holder CREATOR/,
   );
-  assert.doesNotMatch(domain, /CreatorIdentity[\s\S]*rightsHolderId/);
+  assert.doesNotMatch(identityModel, /rightsHolderId|grantVersions|rightsConsents/);
 });
 
 test('CN2 API derives tenant from authenticated context and never accepts gymId in DTO', async () => {
