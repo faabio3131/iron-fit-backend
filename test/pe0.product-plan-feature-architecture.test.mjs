@@ -125,17 +125,16 @@ test('PE0 formalizes YouTube launch bridge without removing legacy Exercise.vide
   assert.match(docs, /EXTERNAL_REFERENCE/);
 });
 
-test('PE0 does not introduce persistence, pricing or runtime tenant entitlement mutation', async () => {
-  const schema = await source('prisma/schema.prisma');
+test('PE0 contract remains persistence-free and delegates persistence/runtime to later PE blocks', async () => {
   const contract = await source(
     'src/modules/product-entitlements/contracts/product-entitlement-contract.ts',
   );
   const docs = await source('docs/PE0_PRODUCT_PLAN_FEATURE_ARCHITECTURE.md');
 
-  assert.equal(/model\s+ProductPlan\b/.test(schema), false);
-  assert.equal(/model\s+PlanEntitlement\b/.test(schema), false);
   assert.equal(contract.includes('@prisma/client'), false);
+  assert.equal(contract.includes('PrismaService'), false);
   assert.equal(contract.includes('price'), false);
   assert.match(docs, /Nenhuma migration é criada em PE0/);
+  assert.match(docs, /domínio persistente[\s\S]*PE1\/PE2/);
   assert.match(docs, /resolução runtime de entitlements/);
 });

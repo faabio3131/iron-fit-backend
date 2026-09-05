@@ -995,3 +995,55 @@ model AggregatorRiskCase {
   @@index([connectionId, status])
   @@index([visitAuthorizationId])
 }
+
+enum ProductPlanVersionStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum ProductEntitlementKind {
+  FEATURE
+  LIMIT
+  POLICY
+}
+
+model ProductPlan {
+  id          String               @id @default(uuid())
+  code        String               @unique
+  name        String
+  description String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  versions    ProductPlanVersion[]
+}
+
+model ProductPlanVersion {
+  id            String                   @id @default(uuid())
+  productPlanId String
+  version       Int
+  status        ProductPlanVersionStatus @default(DRAFT)
+  publishedAt   DateTime?
+  retiredAt     DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  productPlan   ProductPlan              @relation(fields: [productPlanId], references: [id], onDelete: Restrict)
+  entitlements  ProductPlanEntitlement[]
+  @@unique([productPlanId, version])
+  @@index([status, publishedAt])
+}
+
+model ProductPlanEntitlement {
+  id             String                 @id @default(uuid())
+  planVersionId  String
+  featureKey     String
+  kind           ProductEntitlementKind
+  featureEnabled Boolean?
+  limitValue     Int?
+  policyValues   Json?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  planVersion    ProductPlanVersion     @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+  @@unique([planVersionId, featureKey])
+  @@index([featureKey])
+}
