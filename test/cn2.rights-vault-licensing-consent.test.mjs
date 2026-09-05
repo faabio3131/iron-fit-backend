@@ -15,14 +15,21 @@ async function source(path) {
   return readFile(path, 'utf8');
 }
 
-test('CN2 materializes holder, versioned grant and consent without creating content/media domain', async () => {
+test('CN2 materializes holder, versioned grant and consent while its rights records remain content-agnostic', async () => {
   const domain = await source(DOMAIN);
+  const grantVersion =
+    domain.match(/model CreatorRightsGrantVersion\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+  const consent =
+    domain.match(/model CreatorRightsConsent\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
 
   assert.match(domain, /model CreatorRightsHolder\s*\{/);
   assert.match(domain, /model CreatorRightsGrant\s*\{/);
   assert.match(domain, /model CreatorRightsGrantVersion\s*\{/);
   assert.match(domain, /model CreatorRightsConsent\s*\{/);
-  assert.doesNotMatch(domain, /model (Content|MediaAsset)|\bcontentId\b|\bmediaAssetId\b/);
+  assert.doesNotMatch(
+    `${grantVersion}\n${consent}`,
+    /\bcontentId\b|\bmediaAssetId\b|\bstorageKey\b|\bproviderId\b/,
+  );
 });
 
 test('CN2 keeps EXTERNAL_REFERENCE outside managed rights grants', async () => {

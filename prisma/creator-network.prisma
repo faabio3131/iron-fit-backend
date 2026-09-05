@@ -64,17 +64,24 @@ enum CreatorRightsConsentStatus {
   REVOKED
 }
 
+enum CreatorMediaAssetKind {
+  VIDEO
+  AUDIO
+  IMAGE
+}
+
 model Creator {
-  id                   String                @id @default(uuid())
-  slug                 String                @unique
+  id                   String                 @id @default(uuid())
+  slug                 String                 @unique
   displayName          String
   bio                  String?
-  status               CreatorStatus         @default(PENDING)
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  status               CreatorStatus          @default(PENDING)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   identities           CreatorIdentity[]
   rightsHolderProfiles CreatorRightsHolder[]
   rightsConsents       CreatorRightsConsent[]
+  contents             CreatorContent[]
   @@index([status, displayName])
 }
 
@@ -122,6 +129,7 @@ model CreatorRightsGrant {
   createdAt    DateTime                   @default(now())
   updatedAt    DateTime                   @updatedAt
   versions     CreatorRightsGrantVersion[]
+  contents     CreatorContent[]
   @@index([scope, gymId, relationKind])
 }
 
@@ -181,4 +189,43 @@ model CreatorRightsConsent {
   @@unique([grantVersionId, creatorId, kind, version])
   @@index([grantVersionId, status])
   @@index([creatorId, status])
+}
+
+model CreatorContent {
+  id            String                     @id @default(uuid())
+  scope         CreatorRightsScope
+  gymId         String?
+  canonicalKey  String
+  title         String
+  description   String?
+  relationKind  CreatorManagedRelationKind
+  creatorId     String?
+  rightsGrantId String
+  fingerprint   String                     @unique
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  creator       Creator?                   @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  rightsGrant   CreatorRightsGrant         @relation(fields: [rightsGrantId], references: [id], onDelete: Restrict)
+  mediaAssets   CreatorMediaAsset[]
+  @@index([scope, gymId, createdAt])
+  @@index([creatorId, createdAt])
+  @@index([rightsGrantId])
+}
+
+model CreatorMediaAsset {
+  id              String                @id @default(uuid())
+  contentId       String
+  kind            CreatorMediaAssetKind
+  integritySha256 String
+  mimeType        String
+  durationMs      Int?
+  width           Int?
+  height          Int?
+  languageCode    String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  content         CreatorContent        @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  @@unique([contentId, integritySha256])
+  @@index([contentId, kind])
+  @@index([integritySha256])
 }
