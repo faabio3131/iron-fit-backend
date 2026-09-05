@@ -15,6 +15,8 @@ import { AggregatorReconciliationController } from './reconciliation/aggregator-
 import { AggregatorReconciliationService } from './reconciliation/aggregator-reconciliation.service';
 import { AggregatorOperationsController } from './operations/aggregator-operations.controller';
 import { AggregatorOperationsService } from './operations/aggregator-operations.service';
+import { AggregatorIntelligenceController } from './intelligence/aggregator-intelligence.controller';
+import { AggregatorIntelligenceService } from './intelligence/aggregator-intelligence.service';
 import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.service';
 import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter.service';
 
@@ -27,6 +29,7 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorSettlementController,
     AggregatorReconciliationController,
     AggregatorOperationsController,
+    AggregatorIntelligenceController,
   ],
   providers: [
     AggregatorAgreementsService,
@@ -36,6 +39,7 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorSettlementLedgerService,
     AggregatorReconciliationService,
     AggregatorOperationsService,
+    AggregatorIntelligenceService,
     WellhubAdapterService,
     TotalPassAdapterService,
     PrismaService,
