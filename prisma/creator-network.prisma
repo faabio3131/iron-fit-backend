@@ -11,15 +11,70 @@ enum CreatorIdentityStatus {
   REVOKED
 }
 
+enum CreatorRightsScope {
+  GLOBAL
+  TENANT
+}
+
+enum CreatorRightsHolderKind {
+  CREATOR
+  PERSON
+  ORGANIZATION
+  TENANT
+}
+
+enum CreatorRightsHolderStatus {
+  ACTIVE
+  RETIRED
+}
+
+enum CreatorManagedRelationKind {
+  LICENSED_CONTENT
+  IRON_OWNED
+  TENANT_OWNED
+}
+
+enum CreatorRightsBasisKind {
+  LICENSE
+  ASSIGNMENT
+  CONSENT
+  OWNERSHIP_ATTESTATION
+  OTHER
+}
+
+enum CreatorRightsGrantStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  SUSPENDED
+  REVOKED
+}
+
+enum CreatorRightsConsentKind {
+  CONTENT_USE
+  LIKENESS
+  VOICE
+  PERFORMANCE
+  OTHER
+}
+
+enum CreatorRightsConsentStatus {
+  ACTIVE
+  SUPERSEDED
+  REVOKED
+}
+
 model Creator {
-  id          String        @id @default(uuid())
-  slug        String        @unique
-  displayName String
-  bio         String?
-  status      CreatorStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  identities  CreatorIdentity[]
+  id                   String                @id @default(uuid())
+  slug                 String                @unique
+  displayName          String
+  bio                  String?
+  status               CreatorStatus         @default(PENDING)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  identities           CreatorIdentity[]
+  rightsHolderProfiles CreatorRightsHolder[]
+  rightsConsents       CreatorRightsConsent[]
   @@index([status, displayName])
 }
 
@@ -39,4 +94,91 @@ model CreatorIdentity {
   @@unique([providerCode, externalSubject])
   @@index([creatorId, status])
   @@index([providerCode, handle])
+}
+
+model CreatorRightsHolder {
+  id                String                    @id @default(uuid())
+  scope             CreatorRightsScope
+  gymId             String?
+  kind              CreatorRightsHolderKind
+  creatorId         String?
+  legalName         String
+  externalReference String?
+  fingerprint       String                    @unique
+  status            CreatorRightsHolderStatus @default(ACTIVE)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  creator           Creator?                  @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  grantVersions     CreatorRightsGrantVersion[]
+  @@index([scope, gymId, status])
+  @@index([creatorId, status])
+}
+
+model CreatorRightsGrant {
+  id           String                     @id @default(uuid())
+  scope        CreatorRightsScope
+  gymId        String?
+  relationKind CreatorManagedRelationKind
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  versions     CreatorRightsGrantVersion[]
+  @@index([scope, gymId, relationKind])
+}
+
+model CreatorRightsGrantVersion {
+  id                     String                   @id @default(uuid())
+  grantId                String
+  version                Int
+  rightsHolderId         String
+  basisKind              CreatorRightsBasisKind
+  status                 CreatorRightsGrantStatus @default(DRAFT)
+  usageScopes            String[]
+  deliveryScopes         String[]
+  territories            String[]
+  validFrom              DateTime
+  validUntil             DateTime?
+  attributionRequired    Boolean                  @default(false)
+  attributionText        String?
+  evidenceReference      String
+  evidenceSha256         String
+  termsSha256            String?
+  requiresCreatorConsent Boolean                  @default(false)
+  fingerprint            String                   @unique
+  activatedAt            DateTime?
+  suspendedAt            DateTime?
+  suspensionReason       String?
+  revokedAt              DateTime?
+  revocationReason       String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  grant                  CreatorRightsGrant       @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  rightsHolder           CreatorRightsHolder      @relation(fields: [rightsHolderId], references: [id], onDelete: Restrict)
+  consents               CreatorRightsConsent[]
+  @@unique([grantId, version])
+  @@index([grantId, status])
+  @@index([rightsHolderId, status])
+}
+
+model CreatorRightsConsent {
+  id                String                     @id @default(uuid())
+  grantVersionId    String
+  creatorId         String
+  kind              CreatorRightsConsentKind
+  version           Int
+  status            CreatorRightsConsentStatus @default(ACTIVE)
+  purposeScopes     String[]
+  validFrom         DateTime
+  validUntil        DateTime?
+  evidenceReference String
+  evidenceSha256    String
+  fingerprint       String                     @unique
+  revokedAt         DateTime?
+  revocationReason  String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  grantVersion      CreatorRightsGrantVersion  @relation(fields: [grantVersionId], references: [id], onDelete: Restrict)
+  creator           Creator                    @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  @@unique([grantVersionId, creatorId, kind, version])
+  @@index([grantVersionId, status])
+  @@index([creatorId, status])
 }

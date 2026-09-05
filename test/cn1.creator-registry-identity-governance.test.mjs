@@ -13,6 +13,10 @@ async function source(path) {
   return readFile(path, 'utf8');
 }
 
+function prismaModel(domain, name) {
+  return domain.match(new RegExp(`model ${name}\\s*\\{[\\s\\S]*?\\n\\}`))?.[0] ?? '';
+}
+
 test('CN1 enables Prisma multi-file schema without relocating canonical migrations', async () => {
   const pkg = JSON.parse(await source('package.json'));
   const schema = await source('prisma/schema.prisma');
@@ -25,11 +29,19 @@ test('CN1 enables Prisma multi-file schema without relocating canonical migratio
   assert.match(domain, /model CreatorIdentity\s*\{/);
 });
 
-test('CN1 Creator Registry is global and does not encode tenant ownership or content rights', async () => {
+test('CN1 Creator Registry remains global and identity does not encode tenant ownership or content rights', async () => {
   const domain = await source(DOMAIN);
+  const creator = prismaModel(domain, 'Creator');
+  const identity = prismaModel(domain, 'CreatorIdentity');
 
-  assert.doesNotMatch(domain, /\bgymId\b/);
-  assert.doesNotMatch(domain, /rightsHolder|license|consent|contentId|mediaAsset/i);
+  assert.ok(creator, 'Creator model must remain present');
+  assert.ok(identity, 'CreatorIdentity model must remain present');
+  assert.doesNotMatch(creator, /\bgymId\b/);
+  assert.doesNotMatch(identity, /\bgymId\b/);
+  assert.doesNotMatch(
+    identity,
+    /rightsHolder|license|consent|contentId|mediaAsset|grantVersion/i,
+  );
   assert.match(domain, /enum CreatorStatus\s*\{[\s\S]*PENDING[\s\S]*ACTIVE[\s\S]*SUSPENDED[\s\S]*RETIRED/);
   assert.match(domain, /enum CreatorIdentityStatus\s*\{[\s\S]*UNVERIFIED[\s\S]*VERIFIED[\s\S]*REVOKED/);
 });
