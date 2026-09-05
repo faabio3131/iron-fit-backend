@@ -248,15 +248,13 @@ test('PE2 initial assignment is serializable, tenant-bound, idempotent and refus
   );
 });
 
-test('PE2 remains outside PE3 configuration, PE4 transitions, pricing, Creator Network and student finance', async () => {
+test('PE2 historical boundary remains documented while PE3 may now extend the resolver', async () => {
   const service = await source(
     'src/modules/product-entitlements/tenant-product-entitlements.service.ts',
   );
   const doc = await source('docs/PE2_TENANT_SUBSCRIPTION_FEATURE_RESOLUTION.md');
 
   for (const forbidden of [
-    'TenantConfiguration',
-    'UserPreference',
     'priceCents',
     'gatewayCharge',
     'creatorNetwork',
