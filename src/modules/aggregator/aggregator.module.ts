@@ -8,6 +8,7 @@ import { AggregatorEligibilityService } from './eligibility/aggregator-eligibili
 import { AggregatorVisitAuthorizationController } from './visits/aggregator-visit-authorization.controller';
 import { AggregatorVisitAuthorizationService } from './visits/aggregator-visit-authorization.service';
 import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.service';
+import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter.service';
 
 @Module({
   controllers: [
@@ -20,6 +21,7 @@ import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.servi
     AggregatorEligibilityService,
     AggregatorVisitAuthorizationService,
     WellhubAdapterService,
+    TotalPassAdapterService,
     PrismaService,
     AuditService,
   ],
@@ -28,6 +30,7 @@ import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.servi
     AggregatorEligibilityService,
     AggregatorVisitAuthorizationService,
     WellhubAdapterService,
+    TotalPassAdapterService,
   ],
 })
 export class AggregatorModule {}
