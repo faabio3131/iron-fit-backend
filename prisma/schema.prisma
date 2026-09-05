@@ -184,6 +184,18 @@ enum AggregatorRiskStatus {
   DISMISSED
 }
 
+enum EquipmentCatalogCategory {
+  CARDIO
+  SELECTORIZED_STRENGTH
+  PLATE_LOADED
+  CABLE_FUNCTIONAL
+  RACKS_BENCHES
+  FREE_WEIGHTS
+  FUNCTIONAL_CONDITIONING
+  PILATES_REHAB
+  SPECIALIZED_STRENGTH
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -338,9 +350,28 @@ model Assessment {
   @@index([studentId])
 }
 
+model EquipmentCatalogItem {
+  id                 String                   @id @default(uuid())
+  slug               String                   @unique
+  name               String
+  category           EquipmentCatalogCategory
+  aliases            Json?
+  primaryMuscle      String?
+  secondaryMuscles   Json?
+  movementPatterns   Json?
+  contraindications  Json?
+  metadata           Json?
+  active             Boolean                  @default(true)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  gymEquipments      Equipment[]
+  @@index([category, active])
+}
+
 model Equipment {
   id            String @id @default(uuid())
   gymId         String
+  catalogItemId String?
   name          String
   standardName  String?
   type          String?
@@ -352,8 +383,11 @@ model Equipment {
   videoUrl      String?
   active        Boolean @default(true)
   gym           Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  catalogItem   EquipmentCatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
   workoutExercises WorkoutExercise[]
   @@index([gymId])
+  @@index([catalogItemId])
+  @@unique([gymId, catalogItemId])
 }
 
 model Exercise {
