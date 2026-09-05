@@ -23,7 +23,7 @@ PE3 adiciona duas entidades fisicamente separadas da assinatura financeira do al
 
 Ambas reutilizam `ProductEntitlementKind` (`FEATURE`, `LIMIT`, `POLICY`) e armazenam exatamente um shape de valor coerente com o kind. A migration contém constraints de shape, índices compostos, FKs tenant/user e é estritamente aditiva.
 
-O modelo financeiro `Subscription` do aluno não é alterado.
+O modelo financeiro `Subscription` do aluno não é alterado. O `Subscription` financeiro do aluno não é alterado pelo PE3.
 
 ## 3. Autoridade e isolamento
 
