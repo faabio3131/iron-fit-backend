@@ -29,11 +29,10 @@ export class EquipmentsController {
   findCatalog(
     @Query() query: EquipmentCatalogQueryDto,
     @CurrentUser() user: any,
-    @Query('gymId') requestedGymId?: string,
   ) {
     const gymId = resolveTenantOperationGymId({
       activeGymId: user.activeGymId ?? user.gymId,
-      requestedGymId,
+      requestedGymId: query.gymId,
       isSuperAdmin: user.isSuperAdmin === true,
     });
     return this.equipmentsService.findCatalog(query, gymId);
