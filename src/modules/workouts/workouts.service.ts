@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
+import { findEquipmentExerciseMapping } from '../../common/equipment/equipment-exercise-mapping';
 import { CreateWorkoutDto } from './dto/create-workout.dto';
 
 @Injectable()
@@ -65,6 +66,13 @@ export class WorkoutsService {
     }
 
     const sessions = dto.sessions || [];
+    const exerciseIds = [
+      ...new Set(
+        sessions.flatMap((session) =>
+          (session.exercises || []).map((exercise) => exercise.exerciseId),
+        ),
+      ),
+    ];
     const equipmentIds = [
       ...new Set(
         sessions.flatMap((session) =>
@@ -75,13 +83,85 @@ export class WorkoutsService {
       ),
     ];
 
+    const exercises = exerciseIds.length > 0
+      ? await this.prisma.exercise.findMany({
+          where: { id: { in: exerciseIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    if (exercises.length !== exerciseIds.length) {
+      throw new NotFoundException('Exercicio nao encontrado');
+    }
+
+    const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
+
     if (equipmentIds.length > 0) {
-      const scopedEquipment = await this.prisma.equipment.findMany({
-        where: { id: { in: equipmentIds }, gymId, active: true },
-        select: { id: true },
-      });
+      const [scopedEquipment, canonicalCatalog] = await Promise.all([
+        this.prisma.equipment.findMany({
+          where: { id: { in: equipmentIds }, gymId, active: true },
+          select: {
+            id: true,
+            catalogItemId: true,
+            catalogItem: {
+              select: {
+                id: true,
+                active: true,
+                metadata: true,
+              },
+            },
+          },
+        }),
+        this.prisma.equipmentCatalogItem.findMany({
+          where: { active: true },
+          select: { id: true, metadata: true },
+        }),
+      ]);
+
       if (scopedEquipment.length !== equipmentIds.length) {
         throw new NotFoundException('Equipamento nao encontrado');
+      }
+
+      const equipmentById = new Map(scopedEquipment.map((equipment) => [equipment.id, equipment]));
+      const compatibleCatalogByExercise = new Map<string, Set<string>>();
+      for (const exercise of exercises) {
+        const compatibleCatalogIds = new Set(
+          canonicalCatalog
+            .filter((item) =>
+              Boolean(findEquipmentExerciseMapping(item.metadata, exercise.id, exercise.name)),
+            )
+            .map((item) => item.id),
+        );
+        compatibleCatalogByExercise.set(exercise.id, compatibleCatalogIds);
+      }
+
+      for (const session of sessions) {
+        for (const workoutExercise of session.exercises || []) {
+          if (!workoutExercise.equipmentId) continue;
+
+          const equipment = equipmentById.get(workoutExercise.equipmentId);
+          const exercise = exerciseById.get(workoutExercise.exerciseId);
+          if (!equipment || !exercise) {
+            throw new NotFoundException('Exercicio ou equipamento nao encontrado');
+          }
+
+          if (!equipment.catalogItemId) {
+            continue;
+          }
+
+          if (!equipment.catalogItem?.active) {
+            throw new BadRequestException('Capacidade canonica do equipamento esta inativa');
+          }
+
+          const knownCompatibleCatalog = compatibleCatalogByExercise.get(exercise.id) ?? new Set<string>();
+          if (
+            knownCompatibleCatalog.size > 0 &&
+            !knownCompatibleCatalog.has(equipment.catalogItemId)
+          ) {
+            throw new BadRequestException(
+              `Equipamento incompativel com o exercicio ${exercise.name}`,
+            );
+          }
+        }
       }
     }
 
