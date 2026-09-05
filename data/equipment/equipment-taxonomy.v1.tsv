@@ -1,0 +1,166 @@
+id	category	name	aliases
+treadmill_motorized	CARDIO	Esteira motorizada	treadmill
+treadmill_slat_belt	CARDIO	Esteira de lâminas / slat belt	slat belt treadmill
+treadmill_curved_manual	CARDIO	Esteira curva manual	curved treadmill;non-motorized treadmill
+bike_upright	CARDIO	Bicicleta vertical	upright bike
+bike_recumbent	CARDIO	Bicicleta horizontal	recumbent bike
+bike_indoor_cycle	CARDIO	Bicicleta de ciclismo indoor	spin bike;spinning bike;indoor cycle
+bike_air	CARDIO	Air Bike	fan bike;assault bike
+bike_ergometer	CARDIO	Bike Ergometer	BikeErg;cycle ergometer
+elliptical	CARDIO	Elíptico	elliptical trainer
+cross_trainer_ascent	CARDIO	Ascent / Variable-stride Cross Trainer	ascent trainer
+adaptive_motion_trainer	CARDIO	Adaptive Motion Trainer	AMT
+stair_climber	CARDIO	Escada ergométrica	stair climber;stairmill
+stepper	CARDIO	Stepper	step machine
+vertical_climber	CARDIO	Simulador de escalada vertical	vertical climber
+row_ergometer	CARDIO	Remo ergométrico	rower;RowErg
+ski_ergometer	CARDIO	Ski ergometer	SkiErg;ski trainer
+upper_body_ergometer	CARDIO	Ergômetro de membros superiores	upper body ergometer;arm crank ergometer
+recumbent_stepper	CARDIO	Stepper reclinado de corpo inteiro	recumbent stepper;total body recumbent stepper
+sel_chest_press	SELECTORIZED_STRENGTH	Chest Press seletorizado	supino máquina;machine chest press
+sel_incline_chest_press	SELECTORIZED_STRENGTH	Incline Chest Press seletorizado	supino inclinado máquina
+sel_decline_chest_press	SELECTORIZED_STRENGTH	Decline Chest Press seletorizado	supino declinado máquina
+sel_pec_fly	SELECTORIZED_STRENGTH	Peck Deck / Voador peitoral	pec fly;chest fly
+sel_rear_delt	SELECTORIZED_STRENGTH	Posterior de ombro / Rear Delt	reverse fly;deltoide posterior
+sel_pec_rear_combo	SELECTORIZED_STRENGTH	Peck Deck + Rear Delt combinado	pec/rear delt
+sel_shoulder_press	SELECTORIZED_STRENGTH	Shoulder Press seletorizado	desenvolvimento máquina
+sel_lateral_raise	SELECTORIZED_STRENGTH	Elevação lateral seletorizada	lateral raise machine
+sel_lat_pulldown	SELECTORIZED_STRENGTH	Pulldown / Puxada alta seletorizada	lat pulldown;pulley alto
+sel_seated_row	SELECTORIZED_STRENGTH	Remada sentada seletorizada	seated row;remada baixa
+sel_high_row	SELECTORIZED_STRENGTH	Remada alta seletorizada	high row
+sel_pullover	SELECTORIZED_STRENGTH	Pullover seletorizado	pullover machine
+sel_biceps_curl	SELECTORIZED_STRENGTH	Rosca bíceps seletorizada	biceps curl machine
+sel_triceps_extension	SELECTORIZED_STRENGTH	Extensão de tríceps seletorizada	triceps extension machine
+sel_assisted_chin_dip	SELECTORIZED_STRENGTH	Barra fixa / mergulho assistidos	assisted chin dip;graviton
+sel_abdominal_crunch	SELECTORIZED_STRENGTH	Abdominal crunch seletorizado	ab crunch machine
+sel_rotary_torso	SELECTORIZED_STRENGTH	Rotação de tronco seletorizada	rotary torso
+sel_back_extension	SELECTORIZED_STRENGTH	Extensão lombar seletorizada	back extension machine
+sel_leg_extension	SELECTORIZED_STRENGTH	Cadeira extensora	leg extension
+sel_leg_curl_seated	SELECTORIZED_STRENGTH	Mesa flexora sentada	seated leg curl
+sel_leg_curl_lying	SELECTORIZED_STRENGTH	Mesa flexora deitada	lying leg curl;prone leg curl
+sel_leg_curl_standing	SELECTORIZED_STRENGTH	Flexora em pé	standing leg curl
+sel_leg_press	SELECTORIZED_STRENGTH	Leg Press seletorizado	selectorized leg press
+sel_hip_abductor	SELECTORIZED_STRENGTH	Cadeira abdutora	hip abductor
+sel_hip_adductor	SELECTORIZED_STRENGTH	Cadeira adutora	hip adductor
+sel_abductor_adductor_combo	SELECTORIZED_STRENGTH	Adutora + Abdutora combinada	inner outer thigh
+sel_glute_kickback	SELECTORIZED_STRENGTH	Glúteo / coice seletorizado	glute kickback
+sel_multi_hip	SELECTORIZED_STRENGTH	Multi Hip	multi hip machine
+sel_calf_seated	SELECTORIZED_STRENGTH	Panturrilha sentada seletorizada	seated calf
+sel_calf_standing	SELECTORIZED_STRENGTH	Panturrilha em pé seletorizada	standing calf
+pl_leg_press_45	PLATE_LOADED	Leg Press 45°	leg press inclinado;45 degree leg press
+pl_leg_press_horizontal	PLATE_LOADED	Leg Press horizontal	horizontal leg press
+pl_leg_press_vertical	PLATE_LOADED	Leg Press vertical	vertical leg press
+pl_leg_press_unilateral	PLATE_LOADED	Leg Press unilateral	single leg press
+pl_hack_squat	PLATE_LOADED	Hack Squat	agachamento hack
+pl_pendulum_squat	PLATE_LOADED	Pendulum Squat	agachamento pêndulo
+pl_belt_squat	PLATE_LOADED	Belt Squat	agachamento com cinto
+pl_v_squat	PLATE_LOADED	V-Squat	v squat
+pl_lever_squat	PLATE_LOADED	Lever / Power Squat	power squat;lever squat
+pl_squat_press	PLATE_LOADED	Squat Press	super squat press
+pl_hip_thrust	PLATE_LOADED	Hip Thrust / Glute Drive	glute drive;hip thrust machine
+pl_leg_extension	PLATE_LOADED	Extensora plate loaded	plate loaded leg extension
+pl_leg_curl	PLATE_LOADED	Flexora plate loaded	plate loaded leg curl
+pl_calf_seated	PLATE_LOADED	Panturrilha sentada plate loaded	seated calf plate loaded
+pl_calf_standing	PLATE_LOADED	Panturrilha em pé plate loaded	standing calf plate loaded
+pl_tibialis	PLATE_LOADED	Tibial anterior	tibialis trainer
+pl_chest_press	PLATE_LOADED	Chest Press plate loaded	supino máquina com anilhas
+pl_incline_chest_press	PLATE_LOADED	Incline Chest Press plate loaded	supino inclinado plate loaded
+pl_decline_chest_press	PLATE_LOADED	Decline Chest Press plate loaded	supino declinado plate loaded
+pl_converging_chest_press	PLATE_LOADED	Chest Press convergente	converging chest press
+pl_shoulder_press	PLATE_LOADED	Shoulder Press plate loaded	desenvolvimento plate loaded
+pl_lateral_raise	PLATE_LOADED	Elevação lateral plate loaded	plate loaded lateral raise
+pl_high_row	PLATE_LOADED	High Row plate loaded	remada alta plate loaded
+pl_low_row	PLATE_LOADED	Low Row plate loaded	remada baixa plate loaded
+pl_seated_row	PLATE_LOADED	Seated Row plate loaded	remada sentada plate loaded
+pl_lat_pulldown	PLATE_LOADED	Lat Pulldown plate loaded	puxada alta plate loaded
+pl_pullover	PLATE_LOADED	Pullover plate loaded	pullover machine plate loaded
+pl_biceps_curl	PLATE_LOADED	Bíceps plate loaded	biceps curl plate loaded
+pl_triceps_dip	PLATE_LOADED	Tríceps / Dip plate loaded	triceps press;dip press
+pl_shrug	PLATE_LOADED	Encolhimento / Shrug	shrug machine
+cable_dual_adjustable_pulley	CABLE_FUNCTIONAL	Dual Adjustable Pulley	DAP;polia dupla ajustável
+cable_crossover	CABLE_FUNCTIONAL	Crossover	cable crossover
+cable_functional_trainer	CABLE_FUNCTIONAL	Functional Trainer	treinador funcional
+cable_single_column	CABLE_FUNCTIONAL	Coluna de cabo simples	single cable column
+cable_lat_low_row_combo	CABLE_FUNCTIONAL	Pulldown + Low Row combinado	lat pulldown low row combo
+cable_multi_jungle	CABLE_FUNCTIONAL	Multi-Jungle	multi jungle
+cable_multi_station	CABLE_FUNCTIONAL	Multiestação de cabos	multi station
+cable_four_station	CABLE_FUNCTIONAL	Estação de 4 postos	4 station jungle
+cable_eight_station	CABLE_FUNCTIONAL	Estação de 8 postos	8 station jungle
+cable_rack_integrated	CABLE_FUNCTIONAL	Rack com cabos integrados	functional rack;cable rack
+rack_power	RACKS_BENCHES	Power Rack	full rack
+rack_half	RACKS_BENCHES	Half Rack	meio rack
+rack_squat	RACKS_BENCHES	Squat Rack / Squat Stand	squat stand
+rack_wall	RACKS_BENCHES	Wall-Mounted Rack	wall rack
+smith_machine	RACKS_BENCHES	Smith Machine	máquina smith
+smith_counterbalanced	RACKS_BENCHES	Smith Machine contrabalançada	counterbalanced smith
+smith_cable_combo	RACKS_BENCHES	Smith + Cabos combinados	smith cable combo
+platform_olympic	RACKS_BENCHES	Plataforma olímpica	lifting platform
+bench_flat	RACKS_BENCHES	Banco reto	flat bench
+bench_adjustable	RACKS_BENCHES	Banco ajustável	adjustable bench;FID bench
+bench_incline	RACKS_BENCHES	Banco inclinado	incline bench
+bench_decline	RACKS_BENCHES	Banco declinado	decline bench
+bench_olympic_flat	RACKS_BENCHES	Banco olímpico reto	olympic flat bench
+bench_olympic_incline	RACKS_BENCHES	Banco olímpico inclinado	olympic incline bench
+bench_olympic_decline	RACKS_BENCHES	Banco olímpico declinado	olympic decline bench
+bench_preacher	RACKS_BENCHES	Banco Scott / Preacher	preacher bench;banco scott
+ghd	RACKS_BENCHES	Glute Ham Developer	GHD
+reverse_hyper	RACKS_BENCHES	Reverse Hyper	reverse hyperextension
+roman_chair	RACKS_BENCHES	Banco romano / Hyperextension	roman chair;45 back extension
+sissy_squat	RACKS_BENCHES	Sissy Squat	sissy squat bench
+nordic_bench	RACKS_BENCHES	Banco Nordic Curl	nordic bench
+hip_thrust_bench	RACKS_BENCHES	Banco de Hip Thrust	glute bridge bench
+dip_station	RACKS_BENCHES	Estação de paralelas	dip station
+pullup_station	RACKS_BENCHES	Estação de barra fixa	pull-up station
+captains_chair	RACKS_BENCHES	Captain's Chair / Vertical Knee Raise	VKR;abdominal tower
+storage_weight_rack	RACKS_BENCHES	Rack de armazenamento de pesos	weight storage
+dumbbell_fixed	FREE_WEIGHTS	Halteres	dumbbells
+dumbbell_adjustable	FREE_WEIGHTS	Halter ajustável	adjustable dumbbell
+barbell_fixed	FREE_WEIGHTS	Barras fixas com peso	fixed barbells
+barbell_olympic	FREE_WEIGHTS	Barra olímpica	olympic barbell
+barbell_power	FREE_WEIGHTS	Barra de powerlifting	power bar
+barbell_trap	FREE_WEIGHTS	Trap Bar / Hex Bar	hex bar
+barbell_safety_squat	FREE_WEIGHTS	Safety Squat Bar	SSB
+barbell_swiss_multi_grip	FREE_WEIGHTS	Barra Swiss / Multi-Grip	swiss bar;football bar
+barbell_cambered	FREE_WEIGHTS	Barra Cambered	cambered bar
+barbell_ez	FREE_WEIGHTS	Barra EZ	barra W
+plates_iron	FREE_WEIGHTS	Anilhas de ferro	iron plates
+plates_bumper	FREE_WEIGHTS	Bumper Plates	anilhas bumper
+plates_competition	FREE_WEIGHTS	Anilhas de competição	competition plates
+kettlebell	FREE_WEIGHTS	Kettlebells	kettlebell
+medicine_ball	FREE_WEIGHTS	Medicine Ball	medicine balls
+slam_ball	FREE_WEIGHTS	Slam Ball	slam balls
+sandbag	FREE_WEIGHTS	Sandbag	sand bag
+club_mace	FREE_WEIGHTS	Clubs / Maces	steel club;macebell
+sled_push_pull	FUNCTIONAL_CONDITIONING	Sled de empurrar/puxar	prowler sled
+yoke	FUNCTIONAL_CONDITIONING	Yoke	strongman yoke
+farmers_handles	FUNCTIONAL_CONDITIONING	Farmer's Walk Handles	farmer carry handles
+battle_rope	FUNCTIONAL_CONDITIONING	Battle Rope	corda naval
+plyo_box	FUNCTIONAL_CONDITIONING	Caixa pliométrica	plyo box
+jump_rope	FUNCTIONAL_CONDITIONING	Corda de pular	speed rope
+agility_ladder	FUNCTIONAL_CONDITIONING	Escada de agilidade	agility ladder
+agility_hurdles	FUNCTIONAL_CONDITIONING	Barreiras de agilidade	hurdles
+cones_markers	FUNCTIONAL_CONDITIONING	Cones / marcadores	cones
+suspension_trainer	FUNCTIONAL_CONDITIONING	Treinador de suspensão	TRX;suspension straps
+resistance_bands	FUNCTIONAL_CONDITIONING	Faixas elásticas	bands;power bands
+landmine	FUNCTIONAL_CONDITIONING	Landmine	landmine attachment
+jammer_arms	FUNCTIONAL_CONDITIONING	Jammer Arms	lever arms
+heavy_bag	FUNCTIONAL_CONDITIONING	Saco de pancadas	heavy bag
+climbing_rope	FUNCTIONAL_CONDITIONING	Corda de escalada	climbing rope
+peg_board	FUNCTIONAL_CONDITIONING	Peg Board	pegboard
+gymnastic_rings	FUNCTIONAL_CONDITIONING	Argolas	gymnastic rings
+parallettes	FUNCTIONAL_CONDITIONING	Paralelas baixas / Parallettes	parallettes
+ab_wheel	FUNCTIONAL_CONDITIONING	Roda abdominal	ab wheel
+weighted_vest	FUNCTIONAL_CONDITIONING	Colete com peso	weighted vest
+balance_trainer	FUNCTIONAL_CONDITIONING	Meia bola de equilíbrio	BOSU;balance trainer
+stability_ball	FUNCTIONAL_CONDITIONING	Bola suíça	stability ball;swiss ball
+step_platform	FUNCTIONAL_CONDITIONING	Step aeróbico	step platform
+foam_roller	FUNCTIONAL_CONDITIONING	Rolo de liberação miofascial	foam roller
+pilates_reformer	PILATES_REHAB	Pilates Reformer	reformer
+pilates_cadillac	PILATES_REHAB	Pilates Cadillac / Trapeze Table	cadillac;trapeze table
+pilates_chair	PILATES_REHAB	Pilates Chair	wunda chair
+pilates_ladder_barrel	PILATES_REHAB	Ladder Barrel	ladder barrel
+pilates_spine_corrector	PILATES_REHAB	Spine Corrector	spine corrector
+pneumatic_strength_machine	SPECIALIZED_STRENGTH	Máquina de resistência pneumática	pneumatic strength machine
+digital_resistance_machine	SPECIALIZED_STRENGTH	Máquina de resistência digital	digital strength machine
+isokinetic_dynamometer	SPECIALIZED_STRENGTH	Dinamômetro / máquina isocinética	isokinetic machine
+air_resistance_strength_erg	SPECIALIZED_STRENGTH	Ergômetro de força por resistência de ar	StrengthErg
