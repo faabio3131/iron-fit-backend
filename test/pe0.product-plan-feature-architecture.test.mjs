@@ -121,7 +121,7 @@ test('PE0 formalizes YouTube launch bridge without removing legacy Exercise.vide
   assert.equal(delivery?.kind, 'POLICY');
   assert.ok(delivery.allowedPolicyValues.includes('YOUTUBE_EXTERNAL'));
   assert.match(schema, /model Exercise[\s\S]*?videoUrl\s+String\?/);
-  assert.match(docs, /Exercise\.videoUrl permanece fallback compatível/);
+  assert.match(docs, /`Exercise\.videoUrl` permanece fallback compatível/);
   assert.match(docs, /EXTERNAL_REFERENCE/);
 });
 
