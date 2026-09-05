@@ -28,7 +28,7 @@ As duas usam o enum já existente `ProductEntitlementKind` e armazenam exatament
 
 CHECK constraints físicas impedem mistura de shapes. FKs preservam isolamento e lifecycle: configuração tenant referencia `Gym`; preferência referencia `Student`.
 
-Nesta etapa o acesso é feito por SQL parametrizado através do cliente Prisma para manter o bloco mínimo e não ampliar o generated client antes da certificação PE4. A migration é explícita e é a fonte física da mudança de banco PE3.
+A migration explícita e o `prisma/schema.prisma` representam as duas tabelas e suas relações, evitando schema drift entre o banco e o modelo canônico do repositório. O serviço usa SQL parametrizado através do cliente Prisma para manter validação dos shapes e UPSERTs atômicos diretamente sobre as constraints físicas; não há ampliação de autoridade nem bypass de isolamento tenant.
 
 ## 3. Regras de estreitamento
 
@@ -123,4 +123,4 @@ PE3 não implementa:
 
 ## 9. Critério de saída
 
-PE3 somente pode ser aprovado após migration auditada, lint/typecheck, build, npm audit high e regressão completa verdes, com testes permanentes para monotonicidade FEATURE/LIMIT/POLICY, isolamento Gym A/Gym B, student self-resolution, fail-closed e ausência de antecipação PE4.
+PE3 somente pode ser aprovado após migration e schema auditados em conjunto, Prisma generate, lint/typecheck, build, npm audit high e regressão completa verdes, com testes permanentes para monotonicidade FEATURE/LIMIT/POLICY, isolamento Gym A/Gym B, student self-resolution, fail-closed, alinhamento migration/schema e ausência de antecipação PE4.
