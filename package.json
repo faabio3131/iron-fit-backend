@@ -51,6 +51,7 @@
     "deepmerge-ts": "^8.0.0"
   },
   "prisma": {
+    "schema": "./prisma",
     "seed": "ts-node prisma/seed.ts"
   }
 }
