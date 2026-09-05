@@ -9,6 +9,10 @@ import { AggregatorVisitAuthorizationController } from './visits/aggregator-visi
 import { AggregatorVisitAuthorizationService } from './visits/aggregator-visit-authorization.service';
 import { AggregatorProvisionalAccessController } from './provisional/aggregator-provisional-access.controller';
 import { AggregatorProvisionalAccessService } from './provisional/aggregator-provisional-access.service';
+import { AggregatorSettlementController } from './settlements/aggregator-settlement.controller';
+import { AggregatorSettlementLedgerService } from './settlements/aggregator-settlement-ledger.service';
+import { AggregatorReconciliationController } from './reconciliation/aggregator-reconciliation.controller';
+import { AggregatorReconciliationService } from './reconciliation/aggregator-reconciliation.service';
 import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.service';
 import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter.service';
 
@@ -18,12 +22,16 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorEligibilityController,
     AggregatorVisitAuthorizationController,
     AggregatorProvisionalAccessController,
+    AggregatorSettlementController,
+    AggregatorReconciliationController,
   ],
   providers: [
     AggregatorAgreementsService,
     AggregatorEligibilityService,
     AggregatorVisitAuthorizationService,
     AggregatorProvisionalAccessService,
+    AggregatorSettlementLedgerService,
+    AggregatorReconciliationService,
     WellhubAdapterService,
     TotalPassAdapterService,
     PrismaService,
@@ -34,6 +42,8 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorEligibilityService,
     AggregatorVisitAuthorizationService,
     AggregatorProvisionalAccessService,
+    AggregatorSettlementLedgerService,
+    AggregatorReconciliationService,
     WellhubAdapterService,
     TotalPassAdapterService,
   ],
