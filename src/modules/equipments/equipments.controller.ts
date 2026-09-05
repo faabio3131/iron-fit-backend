@@ -13,6 +13,9 @@ import { EquipmentsService } from './equipments.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { EquipmentCatalogQueryDto } from './dto/equipment-catalog-query.dto';
 import { SelectCatalogEquipmentDto } from './dto/select-catalog-equipment.dto';
+import { SubmitEquipmentCatalogCandidateDto } from './dto/submit-equipment-catalog-candidate.dto';
+import { EquipmentCatalogCandidateQueryDto } from './dto/equipment-catalog-candidate-query.dto';
+import { ReviewEquipmentCatalogCandidateDto } from './dto/review-equipment-catalog-candidate.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -36,6 +39,53 @@ export class EquipmentsController {
       isSuperAdmin: user.isSuperAdmin === true,
     });
     return this.equipmentsService.findCatalog(query, gymId);
+  }
+
+  @Get('catalog/candidates')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
+  findCatalogCandidates(
+    @Query() query: EquipmentCatalogCandidateQueryDto,
+    @CurrentUser() user: any,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId: query.gymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.equipmentsService.findCatalogCandidates(query, gymId);
+  }
+
+  @Post('catalog/candidates')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
+  submitCatalogCandidate(
+    @Body() dto: SubmitEquipmentCatalogCandidateDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.equipmentsService.submitCatalogCandidate(dto, gymId, user.id);
+  }
+
+  @Get('catalog/governance/candidates')
+  @Roles('SUPER_ADMIN')
+  findGovernanceCatalogCandidates(
+    @Query() query: EquipmentCatalogCandidateQueryDto,
+  ) {
+    return this.equipmentsService.findGovernanceCatalogCandidates(query);
+  }
+
+  @Post('catalog/governance/candidates/:candidateId/review')
+  @Roles('SUPER_ADMIN')
+  reviewCatalogCandidate(
+    @Param('candidateId', new ParseUUIDPipe()) candidateId: string,
+    @Body() dto: ReviewEquipmentCatalogCandidateDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.equipmentsService.reviewCatalogCandidate(candidateId, dto, user.id);
   }
 
   @Get('exercises/:exerciseId/compatible')
