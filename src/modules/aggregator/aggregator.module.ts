@@ -7,6 +7,8 @@ import { AggregatorEligibilityController } from './eligibility/aggregator-eligib
 import { AggregatorEligibilityService } from './eligibility/aggregator-eligibility.service';
 import { AggregatorVisitAuthorizationController } from './visits/aggregator-visit-authorization.controller';
 import { AggregatorVisitAuthorizationService } from './visits/aggregator-visit-authorization.service';
+import { AggregatorProvisionalAccessController } from './provisional/aggregator-provisional-access.controller';
+import { AggregatorProvisionalAccessService } from './provisional/aggregator-provisional-access.service';
 import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.service';
 import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter.service';
 
@@ -15,11 +17,13 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorAgreementsController,
     AggregatorEligibilityController,
     AggregatorVisitAuthorizationController,
+    AggregatorProvisionalAccessController,
   ],
   providers: [
     AggregatorAgreementsService,
     AggregatorEligibilityService,
     AggregatorVisitAuthorizationService,
+    AggregatorProvisionalAccessService,
     WellhubAdapterService,
     TotalPassAdapterService,
     PrismaService,
@@ -29,6 +33,7 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorAgreementsService,
     AggregatorEligibilityService,
     AggregatorVisitAuthorizationService,
+    AggregatorProvisionalAccessService,
     WellhubAdapterService,
     TotalPassAdapterService,
   ],
