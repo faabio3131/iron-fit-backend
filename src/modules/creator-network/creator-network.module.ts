@@ -7,8 +7,11 @@ import { ContentCatalogService } from './content-catalog.service';
 import { ContentLifecycleController } from './content-lifecycle.controller';
 import { ContentLifecycleService } from './content-lifecycle.service';
 import { ContentUsageService } from './content-usage.service';
+import { CreatorAnalyticsService } from './creator-analytics.service';
 import { CreatorCommercialController } from './creator-commercial.controller';
 import { CreatorCommercialService } from './creator-commercial.service';
+import { CreatorOperationsConsoleService } from './creator-operations-console.service';
+import { CreatorOperationsController } from './creator-operations.controller';
 import { CreatorRegistryController } from './creator-registry.controller';
 import { CreatorRegistryService } from './creator-registry.service';
 import { ExerciseContentPublishingController } from './exercise-content-publishing.controller';
@@ -29,6 +32,7 @@ import { RightsVaultService } from './rights-vault.service';
     ExerciseContentPublishingController,
     ContentLifecycleController,
     CreatorCommercialController,
+    CreatorOperationsController,
   ],
   providers: [
     CreatorRegistryService,
@@ -39,6 +43,8 @@ import { RightsVaultService } from './rights-vault.service';
     ContentLifecycleService,
     ContentUsageService,
     CreatorCommercialService,
+    CreatorOperationsConsoleService,
+    CreatorAnalyticsService,
     CreatorMediaProviderRegistry,
     PrismaService,
     AuditService,
@@ -52,6 +58,8 @@ import { RightsVaultService } from './rights-vault.service';
     ContentLifecycleService,
     ContentUsageService,
     CreatorCommercialService,
+    CreatorOperationsConsoleService,
+    CreatorAnalyticsService,
     CreatorMediaProviderRegistry,
   ],
 })
