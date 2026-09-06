@@ -3,6 +3,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Post,
@@ -14,6 +15,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { ContentCatalogContext } from './content-catalog.service';
+import { ContentUsageService } from './content-usage.service';
+import { RecordContentEngagementDto } from './dto/content-usage.dto';
 import {
   CreateExerciseContentMappingDto,
   UnpublishExerciseContentMappingDto,
@@ -23,7 +26,10 @@ import { ExerciseContentPublishingService } from './exercise-content-publishing.
 @Controller('creator-network/exercises')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ExerciseContentPublishingController {
-  constructor(private readonly service: ExerciseContentPublishingService) {}
+  constructor(
+    private readonly service: ExerciseContentPublishingService,
+    private readonly usage: ContentUsageService,
+  ) {}
 
   private context(scope: string, user: any): ContentCatalogContext {
     if (scope === 'global') {
@@ -43,6 +49,14 @@ export class ExerciseContentPublishingController {
     }
 
     throw new ForbiddenException('Mapping scope invalido');
+  }
+
+  private audienceRole(user: any) {
+    const roles = Array.isArray(user.roles) ? user.roles : [];
+    for (const role of ['STUDENT', 'TRAINER', 'MANAGER', 'OWNER']) {
+      if (roles.includes(role)) return role;
+    }
+    throw new ForbiddenException('Usuario sem papel elegivel para consumo de conteudo');
   }
 
   @Get(':scope/:exerciseId/content-mappings')
@@ -109,16 +123,39 @@ export class ExerciseContentPublishingController {
   @Roles('OWNER', 'MANAGER', 'TRAINER', 'STUDENT')
   resolveExerciseContent(
     @Param('exerciseId', new ParseUUIDPipe()) exerciseId: string,
+    @Headers('x-iron-usage-key') usageKey: string | undefined,
     @CurrentUser() user: any,
   ) {
     if (!user.activeGymId || user.isSuperAdmin) {
       throw new ForbiddenException('Resolucao exige tenant autenticado');
     }
-    return this.service.resolveExerciseContent(
+    return this.usage.resolveExerciseContent(
       user.activeGymId,
       exerciseId,
       user.id,
+      this.audienceRole(user),
       user.roles?.includes('STUDENT') === true,
+      usageKey,
+    );
+  }
+
+  @Post(':exerciseId/content-usage/:sessionId/events')
+  @Roles('OWNER', 'MANAGER', 'TRAINER', 'STUDENT')
+  recordContentEngagement(
+    @Param('exerciseId', new ParseUUIDPipe()) exerciseId: string,
+    @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
+    @Body() dto: RecordContentEngagementDto,
+    @CurrentUser() user: any,
+  ) {
+    if (!user.activeGymId || user.isSuperAdmin) {
+      throw new ForbiddenException('Engagement exige tenant autenticado');
+    }
+    return this.usage.recordEngagement(
+      user.activeGymId,
+      user.id,
+      exerciseId,
+      sessionId,
+      dto,
     );
   }
 }

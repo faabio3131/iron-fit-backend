@@ -121,6 +121,24 @@ enum CreatorContentQualityVerdict {
   NOT_APPLICABLE
 }
 
+enum CreatorUsageDeliveryKind {
+  MANAGED_CONTENT
+  EXTERNAL_REFERENCE
+}
+
+enum CreatorUsageEventType {
+  DELIVERY_RESOLVED
+  CONTENT_OPENED
+  CONTENT_PROGRESS
+  CONTENT_COMPLETED
+  CONTENT_DISMISSED
+}
+
+enum CreatorUsageObservationSource {
+  SERVER_OBSERVED
+  CLIENT_REPORTED
+}
+
 model Creator {
   id                   String                 @id @default(uuid())
   slug                 String                 @unique
@@ -133,6 +151,7 @@ model Creator {
   rightsHolderProfiles CreatorRightsHolder[]
   rightsConsents       CreatorRightsConsent[]
   contents             CreatorContent[]
+  attributionSnapshots CreatorContentAttributionSnapshot[]
   @@index([status, displayName])
 }
 
@@ -168,6 +187,7 @@ model CreatorRightsHolder {
   updatedAt         DateTime                  @updatedAt
   creator           Creator?                  @relation(fields: [creatorId], references: [id], onDelete: Restrict)
   grantVersions     CreatorRightsGrantVersion[]
+  attributionSnapshots CreatorContentAttributionSnapshot[]
   @@index([scope, gymId, status])
   @@index([creatorId, status])
 }
@@ -213,6 +233,7 @@ model CreatorRightsGrantVersion {
   grant                  CreatorRightsGrant       @relation(fields: [grantId], references: [id], onDelete: Restrict)
   rightsHolder           CreatorRightsHolder      @relation(fields: [rightsHolderId], references: [id], onDelete: Restrict)
   consents               CreatorRightsConsent[]
+  attributionSnapshots   CreatorContentAttributionSnapshot[]
   @@unique([grantId, version])
   @@index([grantId, status])
   @@index([rightsHolderId, status])
@@ -265,6 +286,8 @@ model CreatorContent {
   mediaAssets   CreatorMediaAsset[]
   exerciseMappings CreatorExerciseContentMapping[]
   versions CreatorContentVersion[]
+  attributionSnapshots CreatorContentAttributionSnapshot[]
+  usageSessions CreatorContentUsageSession[]
   @@index([scope, gymId, createdAt])
   @@index([scope, gymId, lifecycleStatus])
   @@index([creatorId, createdAt])
@@ -288,6 +311,7 @@ model CreatorMediaAsset {
   storageObjects  CreatorMediaStorageObject[]
   exerciseMappings CreatorExerciseContentMapping[]
   contentVersions CreatorContentVersion[]
+  usageSessions CreatorContentUsageSession[]
   @@unique([contentId, integritySha256])
   @@index([contentId, kind])
   @@index([integritySha256])
@@ -352,6 +376,7 @@ model CreatorExerciseContentMapping {
   updatedAt       DateTime                                @updatedAt
   content         CreatorContent                          @relation(fields: [contentId], references: [id], onDelete: Restrict)
   mediaAsset      CreatorMediaAsset                       @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  usageSessions   CreatorContentUsageSession[]
   @@index([scope, gymId, exerciseId, status])
   @@index([contentId, status])
   @@index([mediaAssetId, status])
@@ -372,6 +397,8 @@ model CreatorContentVersion {
   content              CreatorContent              @relation(fields: [contentId], references: [id], onDelete: Restrict)
   mediaAsset           CreatorMediaAsset           @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
   review               CreatorContentReview?
+  attributionSnapshots CreatorContentAttributionSnapshot[]
+  usageSessions        CreatorContentUsageSession[]
   @@unique([contentId, version])
   @@index([contentId, status, version])
   @@index([mediaAssetId, status])
@@ -392,4 +419,75 @@ model CreatorContentReview {
   version              CreatorContentVersion            @relation(fields: [contentVersionId], references: [id], onDelete: Restrict)
   @@index([decision, reviewedAt])
   @@index([reviewerUserId, reviewedAt])
+}
+
+model CreatorContentAttributionSnapshot {
+  id                    String   @id @default(uuid())
+  contentId             String
+  contentVersionId      String
+  rightsGrantVersionId  String
+  rightsHolderId        String
+  creatorId             String?
+  creatorDisplayName    String?
+  attributionRequired   Boolean  @default(false)
+  attributionText       String?
+  fingerprint           String   @unique
+  createdAt             DateTime @default(now())
+  content               CreatorContent @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  contentVersion        CreatorContentVersion @relation(fields: [contentVersionId], references: [id], onDelete: Restrict)
+  rightsGrantVersion    CreatorRightsGrantVersion @relation(fields: [rightsGrantVersionId], references: [id], onDelete: Restrict)
+  rightsHolder          CreatorRightsHolder @relation(fields: [rightsHolderId], references: [id], onDelete: Restrict)
+  creator               Creator? @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  usageSessions         CreatorContentUsageSession[]
+  @@index([contentId, createdAt])
+  @@index([contentVersionId])
+  @@index([rightsGrantVersionId])
+  @@index([rightsHolderId])
+  @@index([creatorId, createdAt])
+}
+
+model CreatorContentUsageSession {
+  id                    String                   @id @default(uuid())
+  gymId                 String
+  actorUserId           String
+  audienceRole          String
+  exerciseId            String
+  resolutionKey         String
+  deliveryKind          CreatorUsageDeliveryKind
+  mappingId             String?
+  contentId             String?
+  contentVersionId      String?
+  mediaAssetId          String?
+  attributionSnapshotId String?
+  policyMode            String
+  externalReferenceSource String?
+  targetFingerprint     String
+  createdAt             DateTime                 @default(now())
+  mapping               CreatorExerciseContentMapping? @relation(fields: [mappingId], references: [id], onDelete: Restrict)
+  content               CreatorContent? @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  contentVersion        CreatorContentVersion? @relation(fields: [contentVersionId], references: [id], onDelete: Restrict)
+  mediaAsset            CreatorMediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  attributionSnapshot   CreatorContentAttributionSnapshot? @relation(fields: [attributionSnapshotId], references: [id], onDelete: Restrict)
+  events                CreatorContentUsageEvent[]
+  @@unique([gymId, actorUserId, resolutionKey])
+  @@index([gymId, actorUserId, createdAt])
+  @@index([gymId, exerciseId, createdAt])
+  @@index([contentId, createdAt])
+  @@index([attributionSnapshotId, createdAt])
+}
+
+model CreatorContentUsageEvent {
+  id                String                        @id @default(uuid())
+  usageSessionId    String
+  eventKey          String
+  eventType         CreatorUsageEventType
+  observationSource CreatorUsageObservationSource
+  progressPercent   Int?
+  fingerprint       String                        @unique
+  observedAt        DateTime                      @default(now())
+  createdAt         DateTime                      @default(now())
+  usageSession      CreatorContentUsageSession    @relation(fields: [usageSessionId], references: [id], onDelete: Restrict)
+  @@unique([usageSessionId, eventKey])
+  @@index([usageSessionId, observedAt])
+  @@index([eventType, observedAt])
 }
