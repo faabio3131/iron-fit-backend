@@ -96,6 +96,31 @@ enum CreatorExerciseContentPublicationStatus {
   UNPUBLISHED
 }
 
+enum CreatorContentLifecycleStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  RETIRED
+}
+
+enum CreatorContentVersionStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+enum CreatorContentModerationDecision {
+  APPROVE
+  REJECT
+}
+
+enum CreatorContentQualityVerdict {
+  PASS
+  FAIL
+  NOT_APPLICABLE
+}
+
 model Creator {
   id                   String                 @id @default(uuid())
   slug                 String                 @unique
@@ -228,13 +253,20 @@ model CreatorContent {
   creatorId     String?
   rightsGrantId String
   fingerprint   String                     @unique
+  lifecycleStatus CreatorContentLifecycleStatus @default(DRAFT)
+  activatedAt     DateTime?
+  suspendedAt     DateTime?
+  retiredAt       DateTime?
+  lifecycleReason String?
   createdAt     DateTime                   @default(now())
   updatedAt     DateTime                   @updatedAt
   creator       Creator?                   @relation(fields: [creatorId], references: [id], onDelete: Restrict)
   rightsGrant   CreatorRightsGrant         @relation(fields: [rightsGrantId], references: [id], onDelete: Restrict)
   mediaAssets   CreatorMediaAsset[]
   exerciseMappings CreatorExerciseContentMapping[]
+  versions CreatorContentVersion[]
   @@index([scope, gymId, createdAt])
+  @@index([scope, gymId, lifecycleStatus])
   @@index([creatorId, createdAt])
   @@index([rightsGrantId])
 }
@@ -255,6 +287,7 @@ model CreatorMediaAsset {
   ingestions      CreatorMediaIngestion[]
   storageObjects  CreatorMediaStorageObject[]
   exerciseMappings CreatorExerciseContentMapping[]
+  contentVersions CreatorContentVersion[]
   @@unique([contentId, integritySha256])
   @@index([contentId, kind])
   @@index([integritySha256])
@@ -322,4 +355,41 @@ model CreatorExerciseContentMapping {
   @@index([scope, gymId, exerciseId, status])
   @@index([contentId, status])
   @@index([mediaAssetId, status])
+}
+
+model CreatorContentVersion {
+  id                   String                      @id @default(uuid())
+  contentId            String
+  version              Int
+  mediaAssetId         String
+  editorialTitle       String
+  editorialDescription String?
+  status               CreatorContentVersionStatus @default(DRAFT)
+  fingerprint          String                      @unique
+  reviewedAt           DateTime?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  content              CreatorContent              @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  mediaAsset           CreatorMediaAsset           @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+  review               CreatorContentReview?
+  @@unique([contentId, version])
+  @@index([contentId, status, version])
+  @@index([mediaAssetId, status])
+}
+
+model CreatorContentReview {
+  id                   String                           @id @default(uuid())
+  contentVersionId     String                           @unique
+  decision             CreatorContentModerationDecision
+  technicalQuality     CreatorContentQualityVerdict
+  instructionalQuality CreatorContentQualityVerdict
+  safetyQuality        CreatorContentQualityVerdict
+  accessibilityQuality CreatorContentQualityVerdict
+  notes                String?
+  reviewerUserId       String
+  reviewedAt           DateTime                         @default(now())
+  createdAt            DateTime                         @default(now())
+  version              CreatorContentVersion            @relation(fields: [contentVersionId], references: [id], onDelete: Restrict)
+  @@index([decision, reviewedAt])
+  @@index([reviewerUserId, reviewedAt])
 }

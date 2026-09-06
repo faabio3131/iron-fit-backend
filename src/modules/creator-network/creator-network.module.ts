@@ -4,6 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
 import { ContentCatalogController } from './content-catalog.controller';
 import { ContentCatalogService } from './content-catalog.service';
+import { ContentLifecycleController } from './content-lifecycle.controller';
+import { ContentLifecycleService } from './content-lifecycle.service';
 import { CreatorRegistryController } from './creator-registry.controller';
 import { CreatorRegistryService } from './creator-registry.service';
 import { ExerciseContentPublishingController } from './exercise-content-publishing.controller';
@@ -22,6 +24,7 @@ import { RightsVaultService } from './rights-vault.service';
     ContentCatalogController,
     MediaIngestionController,
     ExerciseContentPublishingController,
+    ContentLifecycleController,
   ],
   providers: [
     CreatorRegistryService,
@@ -29,6 +32,7 @@ import { RightsVaultService } from './rights-vault.service';
     ContentCatalogService,
     MediaIngestionService,
     ExerciseContentPublishingService,
+    ContentLifecycleService,
     CreatorMediaProviderRegistry,
     PrismaService,
     AuditService,
@@ -39,6 +43,7 @@ import { RightsVaultService } from './rights-vault.service';
     ContentCatalogService,
     MediaIngestionService,
     ExerciseContentPublishingService,
+    ContentLifecycleService,
     CreatorMediaProviderRegistry,
   ],
 })
