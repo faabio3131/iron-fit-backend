@@ -1,0 +1,136 @@
+enum CreatorCommercialRuleStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  REVOKED
+}
+
+enum CreatorCompensationMode {
+  FIXED_PER_EVENT
+  REVENUE_SHARE_BPS
+}
+
+enum CreatorSettlementStatus {
+  FINALIZED
+  SETTLED
+}
+
+model CreatorCommercialAgreement {
+  id                        String             @id @default(uuid())
+  scope                     CreatorRightsScope
+  gymId                     String?
+  contentId                 String
+  beneficiaryRightsHolderId String
+  beneficiaryLegalName      String
+  currency                  String
+  fingerprint               String             @unique
+  createdAt                 DateTime           @default(now())
+  versions                  CreatorCommercialRuleVersion[]
+  accruals                  CreatorCommercialAccrual[]
+  @@index([scope, gymId, contentId])
+  @@index([beneficiaryRightsHolderId, currency])
+}
+
+model CreatorCommercialRuleVersion {
+  id                   String                      @id @default(uuid())
+  agreementId          String
+  version              Int
+  status               CreatorCommercialRuleStatus @default(DRAFT)
+  compensationMode     CreatorCompensationMode
+  qualifyingEventType  CreatorUsageEventType
+  fixedAmountMinor     Int?
+  revenueShareBps      Int?
+  effectiveFrom        DateTime
+  effectiveUntil       DateTime?
+  termsReference       String
+  termsSha256          String
+  fingerprint          String                      @unique
+  activatedAt          DateTime?
+  supersededAt         DateTime?
+  revokedAt            DateTime?
+  revocationReason     String?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  agreement            CreatorCommercialAgreement  @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  accruals             CreatorCommercialAccrual[]
+  @@unique([agreementId, version])
+  @@index([agreementId, status, version])
+  @@index([qualifyingEventType, status])
+}
+
+model CreatorCommercialAccrual {
+  id                        String                         @id @default(uuid())
+  scope                     CreatorRightsScope
+  gymId                     String?
+  consumptionGymId          String
+  agreementId               String
+  ruleVersionId             String
+  usageSessionId            String
+  usageEventId              String
+  usageObservationSource    CreatorUsageObservationSource
+  attributionSnapshotId     String
+  contentId                 String
+  contentVersionId          String
+  beneficiaryRightsHolderId String
+  beneficiaryLegalName      String
+  compensationMode          CreatorCompensationMode
+  qualifyingEventType       CreatorUsageEventType
+  currency                  String
+  fixedAmountMinor          Int?
+  eligibleRevenueMinor      Int?
+  revenueShareBps           Int?
+  revenueSourceType         String?
+  revenueSourceId           String?
+  revenueEvidenceSha256     String?
+  amountMinor               Int
+  sourceEventObservedAt     DateTime
+  fingerprint               String                         @unique
+  accruedAt                 DateTime                       @default(now())
+  agreement                 CreatorCommercialAgreement     @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  ruleVersion               CreatorCommercialRuleVersion  @relation(fields: [ruleVersionId], references: [id], onDelete: Restrict)
+  settlementItem            CreatorSettlementItem?
+  @@unique([ruleVersionId, usageEventId])
+  @@index([scope, gymId, beneficiaryRightsHolderId, currency, sourceEventObservedAt])
+  @@index([consumptionGymId, sourceEventObservedAt])
+  @@index([usageSessionId])
+  @@index([usageEventId])
+  @@index([contentId, sourceEventObservedAt])
+}
+
+model CreatorSettlementBatch {
+  id                        String                  @id @default(uuid())
+  scope                     CreatorRightsScope
+  gymId                     String?
+  beneficiaryRightsHolderId String
+  beneficiaryLegalName      String
+  currency                  String
+  settlementKey             String
+  periodStart               DateTime
+  periodEnd                 DateTime
+  status                    CreatorSettlementStatus @default(FINALIZED)
+  accrualCount              Int
+  totalAmountMinor          Int
+  fingerprint               String                  @unique
+  finalizedAt               DateTime                @default(now())
+  settledAt                 DateTime?
+  settlementProvider        String?
+  externalSettlementId      String?
+  settlementEvidenceSha256  String?
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  items                     CreatorSettlementItem[]
+  @@index([scope, gymId, beneficiaryRightsHolderId, currency, periodStart, periodEnd])
+  @@index([status, finalizedAt])
+}
+
+model CreatorSettlementItem {
+  id                String                 @id @default(uuid())
+  settlementBatchId String
+  accrualId         String                 @unique
+  amountMinor       Int
+  fingerprint       String                 @unique
+  createdAt         DateTime               @default(now())
+  settlementBatch   CreatorSettlementBatch @relation(fields: [settlementBatchId], references: [id], onDelete: Restrict)
+  accrual            CreatorCommercialAccrual @relation(fields: [accrualId], references: [id], onDelete: Restrict)
+  @@index([settlementBatchId])
+}
