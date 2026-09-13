@@ -5,13 +5,12 @@ on:
     branches:
       - main
       - 'stabilization/**'
-      - 'feat/fisc-v2-16-iron-integration'
   pull_request:
     branches:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: iron-s0-${{ github.workflow }}-${{ github.ref }}
@@ -33,35 +32,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Regenerate lockfile for security override
-        run: npm install --package-lock-only --ignore-scripts
-
-      - name: Commit regenerated lockfile when needed
-        if: github.event_name == 'push'
-        env:
-          BRANCH_NAME: ${{ github.ref_name }}
-        run: |
-          if git diff --quiet -- package-lock.json; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "fix(security): refresh lockfile for patched multer"
-          git push origin "HEAD:${BRANCH_NAME}"
-
       - name: Install dependencies
         run: npm ci
-
-      - name: Capture dependency audit diagnostics
-        run: npm audit --json > npm-audit.json || true
-
-      - name: Upload dependency audit diagnostics
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-audit-${{ github.sha }}-${{ github.event_name }}
-          path: npm-audit.json
-          retention-days: 1
 
       - name: Dependency audit
         run: npm audit --audit-level=high
