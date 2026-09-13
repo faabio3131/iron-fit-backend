@@ -35,6 +35,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Capture dependency audit diagnostics
+        run: npm audit --json > npm-audit.json || true
+
+      - name: Upload dependency audit diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ github.sha }}
+          path: npm-audit.json
+          retention-days: 1
+
       - name: Dependency audit
         run: npm audit --audit-level=high
 
