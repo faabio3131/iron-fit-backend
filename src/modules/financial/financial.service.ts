@@ -6,6 +6,7 @@ import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CreateChargeDto } from './dto/create-charge.dto';
 import { PayChargeDto } from './dto/pay-charge.dto';
+import { buildIronFiscalHandoff } from './iron-fiscal-handoff';
 
 const MAX_SERIALIZABLE_RETRIES = 3;
 
@@ -218,7 +219,22 @@ export class FinancialService {
             if (!existingTransaction) {
               throw new BadRequestException('Cobranca paga sem transacao financeira correspondente');
             }
-            return { charge, transaction: existingTransaction, idempotent: true };
+            const fiscalHandoff = buildIronFiscalHandoff({
+              gymId,
+              chargeId: charge.id,
+              transactionId: existingTransaction.id,
+              studentId: charge.studentId,
+              subscriptionId: charge.subscriptionId,
+              amount: charge.amount,
+              paidAt: charge.paidAt,
+              paymentMethod: charge.paymentMethod,
+            });
+            return {
+              charge,
+              transaction: existingTransaction,
+              fiscalHandoff,
+              idempotent: true,
+            };
           }
 
           if (existingTransaction) {
@@ -244,9 +260,20 @@ export class FinancialService {
               where: { gymId, source: 'charge', sourceId: charge.id },
             });
             if (concurrentCharge?.status === 'PAID' && concurrentTransaction) {
+              const fiscalHandoff = buildIronFiscalHandoff({
+                gymId,
+                chargeId: concurrentCharge.id,
+                transactionId: concurrentTransaction.id,
+                studentId: concurrentCharge.studentId,
+                subscriptionId: concurrentCharge.subscriptionId,
+                amount: concurrentCharge.amount,
+                paidAt: concurrentCharge.paidAt,
+                paymentMethod: concurrentCharge.paymentMethod,
+              });
               return {
                 charge: concurrentCharge,
                 transaction: concurrentTransaction,
+                fiscalHandoff,
                 idempotent: true,
               };
             }
@@ -270,6 +297,16 @@ export class FinancialService {
           });
 
           const updatedCharge = await tx.charge.findUnique({ where: { id: charge.id } });
+          const fiscalHandoff = buildIronFiscalHandoff({
+            gymId,
+            chargeId: charge.id,
+            transactionId: transaction.id,
+            studentId: charge.studentId,
+            subscriptionId: charge.subscriptionId,
+            amount: transaction.amount,
+            paidAt: updatedCharge?.paidAt ?? paidAt,
+            paymentMethod: updatedCharge?.paymentMethod ?? dto.paymentMethod ?? charge.paymentMethod,
+          });
 
           await this.audit.record({
             gymId,
@@ -289,10 +326,25 @@ export class FinancialService {
               transactionId: transaction.id,
               accountId: account.id,
               amount: transaction.amount,
+              fiscalHandoff,
             },
           }, tx);
 
-          return { charge: updatedCharge, transaction, idempotent: false };
+          await this.audit.record({
+            gymId,
+            userId: actorUserId ?? null,
+            action: 'FISCAL_HANDOFF_PENDING_CAPABILITY',
+            entity: 'Charge',
+            entityId: charge.id,
+            next: fiscalHandoff,
+          }, tx);
+
+          return {
+            charge: updatedCharge,
+            transaction,
+            fiscalHandoff,
+            idempotent: false,
+          };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       ),

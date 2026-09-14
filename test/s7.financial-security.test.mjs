@@ -98,8 +98,10 @@ test('payCharge is idempotent when charge is already paid and canonical transact
     id: 'charge-a',
     gymId: 'gym-a',
     studentId: 'student-a',
+    subscriptionId: null,
     status: 'PAID',
     amount: 10000,
+    paidAt: new Date('2026-09-13T12:00:00.000Z'),
     paymentMethod: 'PIX',
     student: { id: 'student-a', gymId: 'gym-a' },
     subscription: null,
@@ -131,28 +133,36 @@ test('payCharge is idempotent when charge is already paid and canonical transact
 
   assert.equal(result.idempotent, true);
   assert.equal(result.transaction.id, 'tx-a');
+  assert.equal(result.fiscalHandoff.state, 'PENDING_CAPABILITY');
+  assert.equal(result.fiscalHandoff.idempotencyKey, 'iron:charge:charge-a:nfse:v1');
   assert.equal(creates, 0);
 });
 
-test('payCharge atomically marks charge paid, audits it and creates only its canonical income transaction', async () => {
+test('payCharge atomically marks charge paid, audits it and records governed fiscal handoff', async () => {
   const charge = {
     id: 'charge-a',
     gymId: 'gym-a',
     studentId: 'student-a',
+    subscriptionId: 'subscription-a',
     status: 'PENDING',
     amount: 10000,
     paymentMethod: null,
     paidAt: null,
     student: { id: 'student-a', gymId: 'gym-a' },
-    subscription: null,
+    subscription: { id: 'subscription-a', gymId: 'gym-a', studentId: 'student-a' },
   };
   let createdData;
-  let auditData;
+  const auditRecords = [];
   const prisma = basePrisma({
     charge: {
       findFirst: async () => charge,
       updateMany: async () => ({ count: 1 }),
-      findUnique: async () => ({ ...charge, status: 'PAID', paymentMethod: 'PIX' }),
+      findUnique: async () => ({
+        ...charge,
+        status: 'PAID',
+        paidAt: new Date('2026-09-13T12:00:00.000Z'),
+        paymentMethod: 'PIX',
+      }),
     },
     financialAccount: {
       findFirst: async () => ({ id: 'account-a', gymId: 'gym-a', active: true }),
@@ -166,8 +176,8 @@ test('payCharge atomically marks charge paid, audits it and creates only its can
     },
     auditLog: {
       create: async ({ data }) => {
-        auditData = data;
-        return { id: 'audit-pay', ...data };
+        auditRecords.push(data);
+        return { id: `audit-${auditRecords.length}`, ...data };
       },
     },
   });
@@ -187,9 +197,39 @@ test('payCharge atomically marks charge paid, audits it and creates only its can
   assert.equal(createdData.sourceId, 'charge-a');
   assert.equal(createdData.accountId, 'account-a');
   assert.equal(createdData.amount, 10000);
-  assert.equal(auditData.gymId, 'gym-a');
-  assert.equal(auditData.userId, 'actor-a');
-  assert.equal(auditData.action, 'FINANCIAL_CHARGE_PAID');
+
+  const financialAudit = auditRecords.find((item) => item.action === 'FINANCIAL_CHARGE_PAID');
+  const fiscalAudit = auditRecords.find((item) => item.action === 'FISCAL_HANDOFF_PENDING_CAPABILITY');
+  assert.ok(financialAudit);
+  assert.ok(fiscalAudit);
+  assert.equal(financialAudit.gymId, 'gym-a');
+  assert.equal(financialAudit.userId, 'actor-a');
+  assert.equal(fiscalAudit.gymId, 'gym-a');
+  assert.equal(fiscalAudit.userId, 'actor-a');
+
+  assert.equal(result.fiscalHandoff.hostNamespace, 'fm.iron');
+  assert.equal(result.fiscalHandoff.packId, 'iron');
+  assert.equal(result.fiscalHandoff.useCaseId, 'recurring-membership-billing');
+  assert.equal(result.fiscalHandoff.operationKind, 'recurring_charge');
+  assert.equal(result.fiscalHandoff.documentKind, 'nfse');
+  assert.equal(result.fiscalHandoff.state, 'PENDING_CAPABILITY');
+  assert.equal(result.fiscalHandoff.readinessRequiredBeforeIssuance, true);
+  assert.equal(result.fiscalHandoff.fiscalScopeBindingRequired, true);
+  assert.equal(result.fiscalHandoff.capabilitiesPath, '/v1/capabilities/query');
+  assert.equal(result.fiscalHandoff.issuancePath, '/v1/issuances');
+  assert.equal(result.fiscalHandoff.idempotencyKey, 'iron:charge:charge-a:nfse:v1');
+  assert.equal(result.fiscalHandoff.source.transactionId, 'tx-a');
+  assert.equal(result.fiscalHandoff.source.amountMinor, 10000);
+});
+
+test('fiscal handoff does not declare production readiness, provider or jurisdiction', async () => {
+  const source = await readFile('src/modules/financial/iron-fiscal-handoff.ts', 'utf8');
+  assert.equal(source.includes("'PENDING_CAPABILITY'"), true);
+  assert.equal(source.includes('readinessRequiredBeforeIssuance: true'), true);
+  assert.equal(source.includes('fiscalScopeBindingRequired: true'), true);
+  assert.equal(source.includes('PRODUCTION_APPROVED'), false);
+  assert.equal(source.includes('providerId'), false);
+  assert.equal(source.includes('municipalityCode'), false);
 });
 
 test('payment implementation has serializable transaction, DB uniqueness and retry protection for concurrency', async () => {
