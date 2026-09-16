@@ -1,0 +1,90 @@
+enum AiConfigurationScope {
+  GLOBAL
+  TENANT
+}
+
+enum AiConfigurationStatus {
+  ACTIVE
+  DISABLED
+  UNAVAILABLE
+}
+
+enum AiFallbackBehavior {
+  FAIL_CLOSED
+  ADVISORY_FALLBACK
+}
+
+enum AiExecutionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  UNAVAILABLE
+  REJECTED
+}
+
+enum AiFailureCategory {
+  TIMEOUT
+  OFFLINE
+  RATE_LIMIT
+  BAD_CREDENTIALS
+  UNAVAILABLE
+  INVALID_RESPONSE
+  POLICY_DENIED
+  ENTITLEMENT_DENIED
+  CONFIGURATION_UNAVAILABLE
+  PROVIDER_INTERNAL_ERROR
+}
+
+model AiConfigurationProfile {
+  id              String                @id @default(uuid())
+  scope           AiConfigurationScope
+  gymId           String?
+  capability      String
+  providerCode    String
+  modelCode       String
+  endpoint        String?
+  region          String?
+  timeoutMs       Int
+  budgetUnits     Int?
+  enabled         Boolean               @default(false)
+  fallbackBehavior AiFallbackBehavior
+  secretReference String?
+  status          AiConfigurationStatus
+  version         Int
+  createdByUserId String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  executionTraces AiExecutionTrace[]
+
+  @@index([scope, gymId, capability, status, version])
+  @@index([providerCode, modelCode])
+}
+
+model AiExecutionTrace {
+  id                     String             @id @default(uuid())
+  gymId                  String
+  actorId                String?
+  studentId              String?
+  capability             String
+  providerCode           String
+  modelCode              String
+  promptKey              String
+  promptVersion          Int
+  configurationProfileId String?
+  configurationVersion   Int
+  inputHash              String
+  outputHash             String?
+  confidence             Float?
+  flags                  Json?
+  status                 AiExecutionStatus
+  failureCategory        AiFailureCategory?
+  latencyMs              Int
+  requestId              String             @unique
+  createdAt              DateTime           @default(now())
+  configurationProfile   AiConfigurationProfile? @relation(fields: [configurationProfileId], references: [id], onDelete: Restrict)
+
+  @@index([gymId, capability, createdAt])
+  @@index([studentId, createdAt])
+  @@index([providerCode, modelCode, createdAt])
+  @@index([configurationProfileId])
+}
