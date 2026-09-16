@@ -4,6 +4,12 @@ import { AuditService } from '../../common/audit/audit.service';
 import { findEquipmentExerciseMapping } from '../../common/equipment/equipment-exercise-mapping';
 import { CreateWorkoutDto } from './dto/create-workout.dto';
 
+interface WorkoutCreateOptions {
+  createdByAI?: boolean;
+  status?: 'DRAFT' | 'PENDING_REVIEW';
+  provenanceRequestId?: string;
+}
+
 @Injectable()
 export class WorkoutsService {
   private readonly audit: AuditService;
@@ -39,6 +45,7 @@ export class WorkoutsService {
     dto: CreateWorkoutDto,
     userGymId?: string,
     actorUserId?: string,
+    options: WorkoutCreateOptions = {},
   ) {
     const gymId = this.requireGymId(userGymId);
     const student = await this.prisma.student.findFirst({
@@ -165,6 +172,15 @@ export class WorkoutsService {
       }
     }
 
+    const createdByAI = options.createdByAI === true;
+    const status = options.status ?? 'DRAFT';
+    if (createdByAI && status !== 'PENDING_REVIEW') {
+      throw new BadRequestException('Treino criado por IA deve iniciar em PENDING_REVIEW');
+    }
+    if (!createdByAI && status !== 'DRAFT') {
+      throw new BadRequestException('Fluxo humano de criacao deve iniciar em DRAFT');
+    }
+
     const workout = await this.prisma.workout.create({
       data: {
         studentId: dto.studentId,
@@ -175,7 +191,9 @@ export class WorkoutsService {
         startDate: dto.startDate ? new Date(dto.startDate) : null,
         validUntil: dto.validUntil ? new Date(dto.validUntil) : null,
         notes: dto.notes,
-        status: 'DRAFT',
+        createdByAI,
+        approvedById: null,
+        status,
         sessions: {
           create: sessions.map((s, si) => ({
             name: s.name,
@@ -211,18 +229,37 @@ export class WorkoutsService {
     await this.audit.record({
       gymId,
       userId: actorUserId ?? null,
-      action: 'WORKOUT_CREATED',
+      action: createdByAI ? 'AI_WORKOUT_CANDIDATE_CREATED' : 'WORKOUT_CREATED',
       entity: 'Workout',
       entityId: workout.id,
       next: {
         studentId: workout.studentId,
         assessmentId: workout.assessmentId,
         status: workout.status,
+        createdByAI: workout.createdByAI,
+        approvedById: workout.approvedById,
         weeklyFrequency: workout.weeklyFrequency,
+        provenanceRequestId: options.provenanceRequestId ?? null,
       },
     });
 
     return workout;
+  }
+
+  async createAiCandidate(
+    dto: CreateWorkoutDto,
+    userGymId: string,
+    actorUserId: string,
+    provenanceRequestId: string,
+  ) {
+    if (!provenanceRequestId?.trim()) {
+      throw new BadRequestException('Candidato AI exige requestId de proveniencia');
+    }
+    return this.create(dto, userGymId, actorUserId, {
+      createdByAI: true,
+      status: 'PENDING_REVIEW',
+      provenanceRequestId,
+    });
   }
 
   async findAllByStudent(studentId: string, userGymId?: string) {
