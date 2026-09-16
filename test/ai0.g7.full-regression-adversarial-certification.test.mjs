@@ -25,15 +25,25 @@ const paths = {
 
 test('G7 cross-tenant: AI surfaces derive tenant from authenticated identity and server-side context filters by gym', async () => {
   const mobileController = await source(paths.mobileController);
+  const mobileService = await source(paths.mobileService);
   const candidateController = await source(paths.candidateController);
   const candidate = await source(paths.candidateService);
   const context = await source(paths.context);
 
-  assert.match(mobileController, /resolveTenantOperationGymId/);
+  // Student advisory is a /me surface: it accepts no client gymId and resolves
+  // activeGymId/gymId only from the authenticated user inside the service.
+  assert.equal(mobileController.includes("@Query('gymId')"), false);
+  assert.match(mobileService, /user\?\.activeGymId \?\? user\?\.gymId/);
+  assert.match(mobileService, /resolveIdentity\(user\)/);
+
+  // Professional generation uses the canonical tenant-operation resolver; a
+  // requested gym is only advisory to that resolver and never comes from DTO.
   assert.match(candidateController, /resolveTenantOperationGymId/);
   assert.equal(mobileController.includes('dto.gymId'), false);
   assert.equal(candidateController.includes('dto.gymId'), false);
   assert.equal(candidate.includes('dto.gymId'), false);
+
+  // Provider context is built from server-side tenant-scoped reads.
   assert.match(context, /gymId: request\.gymId/);
   assert.match(context, /where:[\s\S]*?gymId: request\.gymId/);
 });
