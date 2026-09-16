@@ -97,7 +97,7 @@ test('AI0 G1 rejects inline secrets and insecure endpoints', () => {
     assertSecretReference('iron/tenant/gym-a/ai/provider-key'),
     'iron/tenant/gym-a/ai/provider-key',
   );
-  assert.throws(() => assertSecretReference('api_key=secret-value'), /referencia/);
+  assert.throws(() => assertSecretReference('api_key=secret-value'), /secretReference/);
   assert.throws(
     () =>
       defineAiExternalConfiguration({
