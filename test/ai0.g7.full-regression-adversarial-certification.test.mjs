@@ -30,20 +30,13 @@ test('G7 cross-tenant: AI surfaces derive tenant from authenticated identity and
   const candidate = await source(paths.candidateService);
   const context = await source(paths.context);
 
-  // Student advisory is a /me surface: it accepts no client gymId and resolves
-  // activeGymId/gymId only from the authenticated user inside the service.
   assert.equal(mobileController.includes("@Query('gymId')"), false);
   assert.match(mobileService, /user\?\.activeGymId \?\? user\?\.gymId/);
   assert.match(mobileService, /resolveIdentity\(user\)/);
-
-  // Professional generation uses the canonical tenant-operation resolver; a
-  // requested gym is only advisory to that resolver and never comes from DTO.
   assert.match(candidateController, /resolveTenantOperationGymId/);
   assert.equal(mobileController.includes('dto.gymId'), false);
   assert.equal(candidateController.includes('dto.gymId'), false);
   assert.equal(candidate.includes('dto.gymId'), false);
-
-  // Provider context is built from server-side tenant-scoped reads.
   assert.match(context, /gymId: request\.gymId/);
   assert.match(context, /where:[\s\S]*?gymId: request\.gymId/);
 });
@@ -62,16 +55,17 @@ test('G7 prompt-injection boundary: untrusted instructions remain input, never p
 
 test('G7 context exfiltration and secret injection: sanitizer strips credential, token, finance and fiscal material', async () => {
   const sanitizer = await source(paths.sanitizer);
-  assert.match(sanitizer, /access\.?token/);
-  assert.match(sanitizer, /refresh\.?token/);
+  assert.ok(sanitizer.includes('access.?token'));
+  assert.ok(sanitizer.includes('refresh.?token'));
   assert.match(sanitizer, /authorization/);
   assert.match(sanitizer, /password/);
-  assert.match(sanitizer, /api\.\?key/);
+  assert.ok(sanitizer.includes('api.?key'));
   assert.match(sanitizer, /secret/);
   assert.match(sanitizer, /financial/);
   assert.match(sanitizer, /fiscal/);
-  assert.match(sanitizer, /Bearer/);
+  assert.match(sanitizer, /BEARER_PATTERN/);
   assert.match(sanitizer, /JWT_PATTERN/);
+  assert.match(sanitizer, /INLINE_SECRET_PATTERN/);
   assert.match(sanitizer, /CARD_PATTERN/);
   assert.match(sanitizer, /\[REDACTED\]/);
 });
