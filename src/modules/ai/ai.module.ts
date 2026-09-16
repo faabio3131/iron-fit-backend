@@ -4,6 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatorNetworkModule } from '../creator-network/creator-network.module';
 import { EquipmentsModule } from '../equipments/equipments.module';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
+import { AiController } from './ai.controller';
+import { AiMobileAdvisoryService } from './ai-mobile-advisory.service';
 import { AiPersistenceService } from './ai-persistence.service';
 import { AiConfigurationResolverService } from './configuration/ai-configuration-resolver.service';
 import { AiContextBuilderService } from './context/ai-context-builder.service';
@@ -17,6 +19,7 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
 
 @Module({
   imports: [ProductEntitlementsModule, EquipmentsModule, CreatorNetworkModule],
+  controllers: [AiController],
   providers: [
     PrismaService,
     AuditService,
@@ -30,6 +33,7 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     AiProviderRegistryService,
     AiSecretReferenceService,
     AiProviderExecutionService,
+    AiMobileAdvisoryService,
   ],
   exports: [
     AiPersistenceService,
