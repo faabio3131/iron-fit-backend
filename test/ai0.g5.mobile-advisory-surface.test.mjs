@@ -52,21 +52,19 @@ test('AI0 G5 maps provider unavailability to safe mobile fallback semantics with
   }
 });
 
-test('AI0 G5 validates successful advisory output and keeps G6 out of scope', async () => {
+test('AI0 G5 validates successful advisory output and keeps G6 out of its own mobile service', async () => {
   const service = await source('src/modules/ai/ai-mobile-advisory.service.ts');
   assert.match(service, /validateAdvisoryOutput/);
   assert.match(service, /response\.status !== 'SUCCEEDED'/);
-  const docs = await source('docs/AI0_G5_MOBILE_ADVISORY_SURFACE.md');
-  assert.match(docs, /G6\/workout candidate não foi iniciado/);
   for (const forbidden of ['WORKOUT_GENERATION', 'createWorkout', 'approveWorkout', 'candidateId']) {
     assert.equal(service.includes(forbidden), false);
   }
 });
 
-test('AI0 G5 is wired into the application module and requires no new migration', async () => {
+test('AI0 G5 remains wired after later AI0 gates extend AiModule', async () => {
   const app = await source('src/app.module.ts');
   const moduleSource = await source('src/modules/ai/ai.module.ts');
   assert.match(app, /AiModule/);
-  assert.match(moduleSource, /controllers: \[AiController\]/);
+  assert.match(moduleSource, /AiController/);
   assert.match(moduleSource, /AiMobileAdvisoryService/);
 });
