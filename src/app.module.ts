@@ -19,6 +19,7 @@ import { PortalModule } from './modules/portal/portal.module';
 import { AggregatorModule } from './modules/aggregator/aggregator.module';
 import { ProductEntitlementsModule } from './modules/product-entitlements/product-entitlements.module';
 import { CreatorNetworkModule } from './modules/creator-network/creator-network.module';
+import { AiModule } from './modules/ai/ai.module';
 import { PrismaService } from './prisma/prisma.service';
 
 @Module({
@@ -44,6 +45,7 @@ import { PrismaService } from './prisma/prisma.service';
     AggregatorModule,
     ProductEntitlementsModule,
     CreatorNetworkModule,
+    AiModule,
   ],
   controllers: [HealthController],
   providers: [PrismaService, RequestObservabilityMiddleware],
