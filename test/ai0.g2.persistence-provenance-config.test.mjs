@@ -56,10 +56,13 @@ test('AI0 G2 execution trace is idempotent by requestId and binds profile proven
   assert.match(service, /AI_EXECUTION_TRACED/);
 });
 
-test('AI0 G2 module exports persistence without provider runtime', async () => {
+test('AI0 G2 persistence remains provider-neutral when later AI0 gates extend the module', async () => {
   const moduleSource = await source('src/modules/ai/ai.module.ts');
+  const persistenceSource = await source('src/modules/ai/ai-persistence.service.ts');
   assert.match(moduleSource, /AiPersistenceService/);
-  for (const forbidden of ['openai', 'anthropic', 'gemini', 'AiProviderRegistry', 'Controller']) {
-    assert.equal(moduleSource.toLowerCase().includes(forbidden.toLowerCase()), false);
+  assert.match(persistenceSource, /AiConfigurationProfile/);
+  assert.match(persistenceSource, /AiExecutionTrace/);
+  for (const forbidden of ['openai', 'anthropic', 'gemini', '@Controller', 'Controller(']) {
+    assert.equal(persistenceSource.toLowerCase().includes(forbidden.toLowerCase()), false);
   }
 });
