@@ -7,6 +7,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 const SCAN_MAX_AGE_MS = 2 * 60 * 1000;
 const NONCE_TTL_MS = 5 * 60 * 1000;
+const ACCESS_EVENT_HISTORY_LIMIT = 200;
 
 @Injectable()
 export class AccessService {
@@ -57,6 +58,22 @@ export class AccessService {
     });
 
     return event;
+  }
+
+  async findRecentEvents(gymId: string) {
+    return this.prisma.accessEvent.findMany({
+      where: { gymId },
+      orderBy: { createdAt: 'desc' },
+      take: ACCESS_EVENT_HISTORY_LIMIT,
+      select: {
+        id: true,
+        deviceId: true,
+        studentId: true,
+        allowed: true,
+        denialReason: true,
+        createdAt: true,
+      },
+    });
   }
 
   async createCredential(
