@@ -63,7 +63,7 @@ export class AccessService {
   async findRecentEvents(gymId: string) {
     return this.prisma.accessEvent.findMany({
       where: { gymId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { occurredAt: 'desc' },
       take: ACCESS_EVENT_HISTORY_LIMIT,
       select: {
         id: true,
@@ -71,7 +71,7 @@ export class AccessService {
         studentId: true,
         allowed: true,
         denialReason: true,
-        createdAt: true,
+        occurredAt: true,
       },
     });
   }
