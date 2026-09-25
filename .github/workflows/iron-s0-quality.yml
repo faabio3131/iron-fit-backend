@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - 'stabilization/**'
+      - 'feat/**'
+      - 'fix/**'
   pull_request:
     branches:
       - main
