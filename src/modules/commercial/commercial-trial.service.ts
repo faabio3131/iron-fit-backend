@@ -23,9 +23,9 @@ const ONBOARDING_ACTION = 'COMMERCIAL_ONBOARDING_STEP_COMPLETED';
 const PROVISIONED_ACTION = 'COMMERCIAL_TRIAL_PROVISIONED';
 const TRIAL_EXPIRED_ACTION = 'COMMERCIAL_TRIAL_EXPIRED';
 
-@Injectable()
 type CommercialDb = Prisma.TransactionClient | PrismaService;
 
+@Injectable()
 export class CommercialTrialService {
   constructor(
     private readonly prisma: PrismaService,
