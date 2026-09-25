@@ -15,8 +15,9 @@ visitante → trial → User/OWNER → Gym → TenantProductSubscription → aut
 - User/Auth/RBAC existentes continuam autoridade de identidade e autorização.
 - Gym continua autoridade de tenant.
 - ProductPlanVersion/TenantProductSubscription PE0-PE4 continuam autoridade comercial de entitlement.
-- AuditLog continua trilha de auditoria; não é mecanismo de idempotência.
+- AuditLog continua trilha de auditoria; não é mecanismo de idempotência nem banco de estado do onboarding.
 - CommercialTrialProvisioning é a barreira física exclusiva de idempotência do requestId do signup.
+- CommercialOnboardingCheckpoint é a autoridade operacional dos checkpoints do onboarding.
 
 ## Idempotência e concorrência
 
@@ -43,7 +44,7 @@ Ordem:
 3. TEAM_REVIEW
 4. FINISH
 
-Leitura dos checkpoints e gravação da próxima etapa ocorrem na mesma transação Serializable. Replay da etapa concluída é idempotente e avanço fora de ordem falha fechado.
+Leitura dos checkpoints e gravação da próxima etapa ocorrem na mesma transação Serializable. A unicidade física gymId + step impede duplicidade concorrente. Replay da etapa concluída é idempotente e avanço fora de ordem falha fechado. O AuditLog é escrito atomicamente como evidência, sem comandar o workflow.
 
 ## CI
 
