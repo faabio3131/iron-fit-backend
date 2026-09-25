@@ -286,6 +286,21 @@ model AuditLog {
   @@index([gymId])
 }
 
+
+model CommercialTrialProvisioning {
+  requestId          String   @id
+  requestFingerprint String
+  userId             String
+  gymId              String
+  subscriptionId     String
+  trialStartedAt     DateTime
+  trialEndsAt        DateTime
+  createdAt          DateTime @default(now())
+
+  @@index([gymId, createdAt])
+  @@index([userId, createdAt])
+}
+
 model Gym {
   id        String   @id @default(uuid())
   name      String
