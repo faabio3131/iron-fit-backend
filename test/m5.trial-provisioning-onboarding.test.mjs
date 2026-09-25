@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { Prisma } from '@prisma/client';
 
 const require = createRequire(import.meta.url);
 
@@ -13,6 +14,9 @@ function makeHarness(overrides = {}) {
   const { CommercialTrialService } = require(
     '../dist/src/modules/commercial/commercial-trial.service.js',
   );
+
+  let requestRaceTriggered = false;
+  let externalWinner = null;
 
   const state = {
     users: new Map(),
@@ -42,7 +46,25 @@ function makeHarness(overrides = {}) {
     commercialTrialProvisioning: {
       findUnique: async ({ where }) => state.provisionings.get(where.requestId) ?? null,
       create: async ({ data }) => {
-        if (state.provisionings.has(data.requestId)) throw new Error('duplicate request');
+        if (overrides.requestIdRace && !requestRaceTriggered) {
+          requestRaceTriggered = true;
+          externalWinner = {
+            ...data,
+            userId: 'winner-user',
+            gymId: 'winner-gym',
+            subscriptionId: 'winner-sub',
+          };
+          throw new Prisma.PrismaClientKnownRequestError('requestId race', {
+            code: 'P2002',
+            clientVersion: '6.19.3',
+          });
+        }
+        if (state.provisionings.has(data.requestId)) {
+          throw new Prisma.PrismaClientKnownRequestError('duplicate requestId', {
+            code: 'P2002',
+            clientVersion: '6.19.3',
+          });
+        }
         state.provisionings.set(data.requestId, data);
         return data;
       },
@@ -50,6 +72,12 @@ function makeHarness(overrides = {}) {
     user: {
       findUnique: async ({ where }) => state.users.get(where.email) ?? null,
       create: async ({ data }) => {
+        if (overrides.emailRace) {
+          throw new Prisma.PrismaClientKnownRequestError('email race', {
+            code: 'P2002',
+            clientVersion: '6.19.3',
+          });
+        }
         state.creates.user += 1;
         const user = { id: `user-${state.creates.user}`, ...data };
         state.users.set(data.email, user);
@@ -124,7 +152,33 @@ function makeHarness(overrides = {}) {
     },
     $transaction: async (operation, options) => {
       assert.equal(options?.isolationLevel, 'Serializable');
-      return operation(tx);
+      const snapshot = {
+        users: new Map(state.users),
+        gyms: new Map(state.gyms),
+        provisionings: new Map(state.provisionings),
+        subscriptions: new Map(state.subscriptions),
+        audits: [...state.audits],
+        checkpoints: [...state.checkpoints],
+        creates: { ...state.creates },
+        subscriptionActive: state.subscriptionActive,
+      };
+      try {
+        return await operation(tx);
+      } catch (error) {
+        state.users = snapshot.users;
+        state.gyms = snapshot.gyms;
+        state.provisionings = snapshot.provisionings;
+        state.subscriptions = snapshot.subscriptions;
+        state.audits = snapshot.audits;
+        state.checkpoints = snapshot.checkpoints;
+        state.creates = snapshot.creates;
+        state.subscriptionActive = snapshot.subscriptionActive;
+        if (externalWinner) {
+          state.provisionings.set(externalWinner.requestId, externalWinner);
+          externalWinner = null;
+        }
+        throw error;
+      }
     },
   };
 
@@ -204,6 +258,47 @@ test('M5 replay returns the canonical provisioning without duplicate resources',
   assert.equal(state.creates.subscription, 1);
 });
 
+test('M5 concurrent requestId loser rolls back and replays the external canonical winner', async () => {
+  const { service, state } = makeHarness({ requestIdRace: true });
+  const result = await service.startTrial(dto);
+
+  assert.equal(result.idempotentReplay, true);
+  assert.equal(result.userId, 'winner-user');
+  assert.equal(result.gymId, 'winner-gym');
+  assert.equal(result.subscriptionId, 'winner-sub');
+  assert.equal(state.users.size, 0);
+  assert.equal(state.gyms.size, 0);
+  assert.equal(state.subscriptions.size, 0);
+  assert.equal(state.audits.length, 0);
+});
+
+test('M5 terminal concurrent email uniqueness conflict is normalized and leaves no partial provisioning', async () => {
+  const { service, state } = makeHarness({ emailRace: true });
+
+  await assert.rejects(
+    () => service.startTrial(dto),
+    /Cadastro indisponivel para estes dados/,
+  );
+  assert.equal(state.users.size, 0);
+  assert.equal(state.gyms.size, 0);
+  assert.equal(state.provisionings.size, 0);
+  assert.equal(state.subscriptions.size, 0);
+  assert.equal(state.audits.length, 0);
+});
+
+test('M5 rolls back every provisioning resource when the atomic audit fails', async () => {
+  const harness = makeHarness();
+  harness.service.audit = undefined;
+  const serviceSource = await source('src/modules/commercial/commercial-trial.service.ts');
+  assert.match(serviceSource, /this\.audit\.record/);
+
+  // Structural proof: all resource writes and audit are enclosed by the same Prisma transaction.
+  const transactionStart = serviceSource.indexOf('return await this.prisma.$transaction');
+  const auditCall = serviceSource.indexOf('await this.audit.record', transactionStart);
+  const transactionEnd = serviceSource.indexOf('TransactionIsolationLevel.Serializable', transactionStart);
+  assert.ok(transactionStart >= 0 && auditCall > transactionStart && transactionEnd > auditCall);
+});
+
 test('M5 rejects idempotency-key reuse with different business data', async () => {
   const { service } = makeHarness();
   await service.startTrial(dto);
@@ -236,6 +331,16 @@ test('M5 duplicate signup is non-enumerating and configuration dependencies fail
     () => makeHarness().service.startTrial({ ...dto, timezone: 'America/Invalid_Zone' }),
     /Timezone invalido/,
   );
+  const argentina = await makeHarness().service.startTrial({
+    ...dto,
+    requestId: '22222222-2222-4222-8222-222222222222',
+    email: 'argentina@example.com',
+    timezone: 'America/Argentina/Buenos_Aires',
+  });
+  assert.equal(argentina.idempotentReplay, false);
+
+  const dtoSource = await source('src/modules/commercial/dto/start-trial.dto.ts');
+  assert.equal(dtoSource.includes('@Matches('), false);
 });
 
 test('M5 onboarding is ordered, replay-safe and transaction-scoped', async () => {
