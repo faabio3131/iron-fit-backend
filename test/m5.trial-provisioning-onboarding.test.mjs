@@ -2,9 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { Prisma } from '@prisma/client';
-
 const require = createRequire(import.meta.url);
+const { Prisma } = require('@prisma/client');
 
 async function source(path) {
   return readFile(path, 'utf8');
@@ -191,7 +190,10 @@ function makeHarness(overrides = {}) {
   };
 
   const audit = {
-    record: async (entry, db = prisma) => db.auditLog.create({ data: entry }),
+    record: async (entry, db = prisma) => {
+      if (overrides.auditFailure) throw new Error('audit unavailable');
+      return db.auditLog.create({ data: entry });
+    },
   };
 
   return { service: new CommercialTrialService(prisma, config, audit), state };
@@ -287,16 +289,18 @@ test('M5 terminal concurrent email uniqueness conflict is normalized and leaves 
 });
 
 test('M5 rolls back every provisioning resource when the atomic audit fails', async () => {
-  const harness = makeHarness();
-  harness.service.audit = undefined;
-  const serviceSource = await source('src/modules/commercial/commercial-trial.service.ts');
-  assert.match(serviceSource, /this\.audit\.record/);
+  const { service, state } = makeHarness({ auditFailure: true });
 
-  // Structural proof: all resource writes and audit are enclosed by the same Prisma transaction.
-  const transactionStart = serviceSource.indexOf('return await this.prisma.$transaction');
-  const auditCall = serviceSource.indexOf('await this.audit.record', transactionStart);
-  const transactionEnd = serviceSource.indexOf('TransactionIsolationLevel.Serializable', transactionStart);
-  assert.ok(transactionStart >= 0 && auditCall > transactionStart && transactionEnd > auditCall);
+  await assert.rejects(
+    () => service.startTrial(dto),
+    /audit unavailable/,
+  );
+
+  assert.equal(state.users.size, 0);
+  assert.equal(state.gyms.size, 0);
+  assert.equal(state.provisionings.size, 0);
+  assert.equal(state.subscriptions.size, 0);
+  assert.equal(state.audits.length, 0);
 });
 
 test('M5 rejects idempotency-key reuse with different business data', async () => {
