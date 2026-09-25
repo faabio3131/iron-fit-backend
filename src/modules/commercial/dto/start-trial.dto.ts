@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
+import { IsEmail, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 
 export class StartTrialDto {
   @IsUUID()
@@ -26,6 +26,5 @@ export class StartTrialDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^[A-Za-z_]+\/[A-Za-z_]+$/)
   timezone?: string;
 }
