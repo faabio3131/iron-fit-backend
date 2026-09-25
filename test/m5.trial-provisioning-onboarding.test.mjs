@@ -21,6 +21,7 @@ function makeHarness(overrides = {}) {
     subscriptions: new Map(),
     audits: [],
     onboarding: [],
+    checkpoints: [],
     creates: { user: 0, gym: 0, subscription: 0 },
     subscriptionActive: true,
   };
@@ -33,12 +34,8 @@ function makeHarness(overrides = {}) {
   const auditLog = {
     create: async ({ data }) => {
       state.audits.push(data);
-      if (data.action === 'COMMERCIAL_ONBOARDING_STEP_COMPLETED') {
-        state.onboarding.push({ next: data.next });
-      }
       return { id: `audit-${state.audits.length}`, ...data };
     },
-    findMany: async () => state.onboarding,
   };
 
   const tx = {
@@ -93,6 +90,24 @@ function makeHarness(overrides = {}) {
         state.subscriptions.set(where.id, { ...current, ...data });
         state.subscriptionActive = data.status === 'ACTIVE';
         return { count: 1 };
+      },
+    },
+    commercialOnboardingCheckpoint: {
+      findMany: async ({ where }) =>
+        state.checkpoints.filter((checkpoint) => checkpoint.gymId === where.gymId),
+      create: async ({ data }) => {
+        if (state.checkpoints.some((checkpoint) =>
+          checkpoint.gymId === data.gymId && checkpoint.step === data.step
+        )) {
+          throw new Error('duplicate onboarding step');
+        }
+        const record = {
+          id: `checkpoint-${state.checkpoints.length + 1}`,
+          completedAt: new Date(),
+          ...data,
+        };
+        state.checkpoints.push(record);
+        return record;
       },
     },
     auditLog,
@@ -172,7 +187,7 @@ test('M5 happy provisioning normalizes email, hashes password and creates one te
   const user = [...state.users.values()][0];
   assert.equal(user.email, 'owner@example.com');
   assert.notEqual(user.passwordHash, dto.password);
-  assert.equal(JSON.stringify(state.provisionings).includes(dto.password), false);
+  assert.equal(JSON.stringify([...state.provisionings.values()]).includes(dto.password), false);
   assert.equal(JSON.stringify(state.audits).includes(dto.password), false);
 });
 
@@ -255,7 +270,11 @@ test('M5 onboarding is ordered, replay-safe and transaction-scoped', async () =>
   assert.equal(state.audits.filter((a) => a.action === 'COMMERCIAL_ONBOARDING_STEP_COMPLETED').length, 4);
 
   const serviceSource = await source('src/modules/commercial/commercial-trial.service.ts');
+  const schema = await source('prisma/schema.prisma');
   assert.match(serviceSource, /completedSteps\(gymId, tx\)/);
+  assert.match(serviceSource, /commercialOnboardingCheckpoint\.create/);
+  assert.equal(serviceSource.includes('auditLog.findMany'), false);
+  assert.match(schema, /@@unique\(\[gymId, step\]\)/);
 });
 
 test('M5 expiration is materialized once while entitlements fail closed by effective window', async () => {
