@@ -232,6 +232,10 @@ test('M5 duplicate signup is non-enumerating and configuration dependencies fail
     () => makeHarness({ planMissing: true }).service.startTrial(dto),
     /Plano de trial PUBLISHED nao configurado/,
   );
+  await assert.rejects(
+    () => makeHarness().service.startTrial({ ...dto, timezone: 'America/Invalid_Zone' }),
+    /Timezone invalido/,
+  );
 });
 
 test('M5 onboarding is ordered, replay-safe and transaction-scoped', async () => {
@@ -275,6 +279,21 @@ test('M5 onboarding is ordered, replay-safe and transaction-scoped', async () =>
   assert.match(serviceSource, /commercialOnboardingCheckpoint\.create/);
   assert.equal(serviceSource.includes('auditLog.findMany'), false);
   assert.match(schema, /@@unique\(\[gymId, step\]\)/);
+});
+
+test('M5 bounded non-trial subscription is not mislabeled or suspended as trial', async () => {
+  const paid = {
+    id: 'sub-paid',
+    status: 'ACTIVE',
+    effectiveFrom: new Date('2026-09-01T00:00:00.000Z'),
+    effectiveUntil: new Date('2026-09-02T00:00:00.000Z'),
+    planVersion: { productPlan: { code: 'IRON_PRO' } },
+  };
+  const { service, state } = makeHarness({ expiringSubscription: paid });
+  state.subscriptions.set(paid.id, paid);
+  const result = await service.synchronizeTrial('gym-a', 'owner-a');
+  assert.equal(result.status, 'ACTIVE');
+  assert.equal(state.audits.filter((a) => a.action === 'COMMERCIAL_TRIAL_EXPIRED').length, 0);
 });
 
 test('M5 expiration is materialized once while entitlements fail closed by effective window', async () => {
