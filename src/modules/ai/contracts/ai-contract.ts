@@ -133,11 +133,11 @@ const PROMPT_KEY_PATTERN = /^[a-z][a-z0-9_.-]{1,127}$/;
 const SECRET_REFERENCE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9/_:.-]{2,255}$/;
 
 export function assertSecretReference(secretReference: string): string {
-  if (!SECRET_REFERENCE_PATTERN.test(secretReference)) {
-    throw new Error('secretReference invalida');
-  }
   if (/\s/.test(secretReference) || secretReference.includes('=')) {
     throw new Error('secretReference deve ser uma referencia, nunca um segredo inline');
+  }
+  if (!SECRET_REFERENCE_PATTERN.test(secretReference)) {
+    throw new Error('secretReference invalida');
   }
   return secretReference;
 }
