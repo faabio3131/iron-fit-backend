@@ -219,6 +219,7 @@ model User {
   students     Student[]
   auditLogs    AuditLog[]
   productPreferences UserProductPreference[]
+  commercialOnboardingCheckpoints CommercialOnboardingCheckpoint[]
   equipmentCandidatesSubmitted EquipmentCatalogCandidate[] @relation("EquipmentCandidateSubmittedBy")
   equipmentCandidatesReviewed  EquipmentCatalogCandidate[] @relation("EquipmentCandidateReviewedBy")
 }
@@ -301,6 +302,21 @@ model CommercialTrialProvisioning {
   @@index([userId, createdAt])
 }
 
+
+model CommercialOnboardingCheckpoint {
+  id                String   @id @default(uuid())
+  gymId             String
+  step              String
+  completedByUserId String
+  completedAt       DateTime @default(now())
+  gym               Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  completedBy       User     @relation(fields: [completedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([gymId, step])
+  @@index([gymId, completedAt])
+  @@index([completedByUserId, completedAt])
+}
+
 model Gym {
   id        String   @id @default(uuid())
   name      String
@@ -331,6 +347,7 @@ model Gym {
   communicationAutomations CommunicationAutomation[]
   communicationMessages CommunicationMessage[]
   aggregatorConnections AggregatorProviderConnection[]
+  commercialOnboardingCheckpoints CommercialOnboardingCheckpoint[]
   @@index([slug])
 }
 
