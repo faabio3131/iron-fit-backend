@@ -1,5 +1,4 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { TenantProductSubscriptionStatus } from '@prisma/client';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -17,37 +16,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: requireJwtSecret(configService),
-    });
-  }
-
-  private async synchronizeBoundedSubscription(gymId: string, userId: string) {
-    const expired = await this.prisma.tenantProductSubscription.findFirst({
-      where: {
-        gymId,
-        status: TenantProductSubscriptionStatus.ACTIVE,
-        effectiveUntil: { lte: new Date() },
-      },
-      select: { id: true, effectiveUntil: true },
-    });
-    if (!expired) return;
-
-    await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.tenantProductSubscription.updateMany({
-        where: { id: expired.id, status: TenantProductSubscriptionStatus.ACTIVE },
-        data: { status: TenantProductSubscriptionStatus.SUSPENDED },
-      });
-      if (updated.count > 0) {
-        await tx.auditLog.create({
-          data: {
-            gymId,
-            userId,
-            action: 'COMMERCIAL_TRIAL_EXPIRED',
-            entity: 'TenantProductSubscription',
-            entityId: expired.id,
-            next: { status: 'SUSPENDED', effectiveUntil: expired.effectiveUntil?.toISOString() ?? null },
-          },
-        });
-      }
     });
   }
 
@@ -97,10 +65,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (payload.scope && payload.scope !== context.scope) {
       throw new UnauthorizedException();
-    }
-
-    if (context.activeGymId) {
-      await this.synchronizeBoundedSubscription(context.activeGymId, user.id);
     }
 
     return {
