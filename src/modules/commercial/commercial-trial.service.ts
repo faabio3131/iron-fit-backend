@@ -87,6 +87,11 @@ export class CommercialTrialService {
     };
   }
 
+  private retryable(error: unknown) {
+    return error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === 'P2034' || error.code === 'P2002');
+  }
+
   async startTrial(dto: StartTrialDto) {
     const config = this.trialConfig();
     const email = dto.email.trim().toLowerCase();
@@ -196,9 +201,7 @@ export class CommercialTrialService {
           };
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (error) {
-        const retryable = error instanceof Prisma.PrismaClientKnownRequestError &&
-          (error.code === 'P2034' || error.code === 'P2002');
-        if (!retryable || attempt === SERIALIZABLE_ATTEMPTS) throw error;
+        if (!this.retryable(error) || attempt === SERIALIZABLE_ATTEMPTS) throw error;
       }
     }
 
@@ -245,17 +248,18 @@ export class CommercialTrialService {
   }
 
   private async completedSteps(gymId: string, db: CommercialDb = this.prisma) {
-    const events = await db.auditLog.findMany({
-      where: { gymId, action: ONBOARDING_ACTION, entity: 'Gym', entityId: gymId },
-      orderBy: { createdAt: 'asc' },
-      select: { next: true },
+    const checkpoints = await db.commercialOnboardingCheckpoint.findMany({
+      where: { gymId },
+      orderBy: { completedAt: 'asc' },
+      select: { step: true },
     });
     const completed = new Set<CommercialOnboardingStep>();
-    for (const event of events) {
-      if (!event.next || typeof event.next !== 'object' || Array.isArray(event.next)) continue;
-      const step = (event.next as Prisma.JsonObject).step;
-      if (typeof step === 'string' && COMMERCIAL_ONBOARDING_STEPS.includes(step as CommercialOnboardingStep)) {
-        completed.add(step as CommercialOnboardingStep);
+    for (const checkpoint of checkpoints) {
+      if (
+        typeof checkpoint.step === 'string' &&
+        COMMERCIAL_ONBOARDING_STEPS.includes(checkpoint.step as CommercialOnboardingStep)
+      ) {
+        completed.add(checkpoint.step as CommercialOnboardingStep);
       }
     }
     return completed;
@@ -286,43 +290,59 @@ export class CommercialTrialService {
   async updateOnboarding(gymId: string | undefined, userId: string | undefined, dto: UpdateOnboardingDto) {
     if (!gymId || !userId) throw new BadRequestException('Tenant e usuario autenticados obrigatorios');
 
-    return this.prisma.$transaction(async (tx) => {
-      const gym = await tx.gym.findUnique({
-        where: { id: gymId },
-        select: { id: true, active: true },
-      });
-      if (!gym?.active) throw new NotFoundException('Gym ativa nao encontrada');
+    for (let attempt = 1; attempt <= SERIALIZABLE_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const gym = await tx.gym.findUnique({
+            where: { id: gymId },
+            select: { id: true, active: true },
+          });
+          if (!gym?.active) throw new NotFoundException('Gym ativa nao encontrada');
 
-      const current = await this.completedSteps(gymId, tx);
-      if (current.has(dto.step)) return this.onboardingState(current);
+          const current = await this.completedSteps(gymId, tx);
+          if (current.has(dto.step)) return this.onboardingState(current);
 
-      const index = COMMERCIAL_ONBOARDING_STEPS.indexOf(dto.step);
-      const required = COMMERCIAL_ONBOARDING_STEPS.slice(0, index);
-      if (required.some((step) => !current.has(step))) {
-        throw new ConflictException('Etapas anteriores do onboarding ainda nao foram concluidas');
+          const index = COMMERCIAL_ONBOARDING_STEPS.indexOf(dto.step);
+          const required = COMMERCIAL_ONBOARDING_STEPS.slice(0, index);
+          if (required.some((step) => !current.has(step))) {
+            throw new ConflictException('Etapas anteriores do onboarding ainda nao foram concluidas');
+          }
+
+          if (dto.step === 'ACADEMY_PROFILE') {
+            const name = typeof dto.data?.name === 'string' ? dto.data.name.trim() : '';
+            const timezone = typeof dto.data?.timezone === 'string' ? dto.data.timezone.trim() : '';
+            if (name.length < 2 || !/^[A-Za-z_]+\/[A-Za-z_]+$/.test(timezone)) {
+              throw new BadRequestException('Perfil da academia invalido');
+            }
+            await tx.gym.update({ where: { id: gymId }, data: { name, timezone } });
+          }
+
+          await tx.commercialOnboardingCheckpoint.create({
+            data: {
+              gymId,
+              step: dto.step,
+              completedByUserId: userId,
+            },
+          });
+
+          await this.audit.record({
+            gymId,
+            userId,
+            action: ONBOARDING_ACTION,
+            entity: 'Gym',
+            entityId: gymId,
+            next: { step: dto.step },
+          }, tx);
+
+          const completed = new Set(current);
+          completed.add(dto.step);
+          return this.onboardingState(completed);
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (error) {
+        if (!this.retryable(error) || attempt === SERIALIZABLE_ATTEMPTS) throw error;
       }
+    }
 
-      if (dto.step === 'ACADEMY_PROFILE') {
-        const name = typeof dto.data?.name === 'string' ? dto.data.name.trim() : '';
-        const timezone = typeof dto.data?.timezone === 'string' ? dto.data.timezone.trim() : '';
-        if (name.length < 2 || !/^[A-Za-z_]+\/[A-Za-z_]+$/.test(timezone)) {
-          throw new BadRequestException('Perfil da academia invalido');
-        }
-        await tx.gym.update({ where: { id: gymId }, data: { name, timezone } });
-      }
-
-      await this.audit.record({
-        gymId,
-        userId,
-        action: ONBOARDING_ACTION,
-        entity: 'Gym',
-        entityId: gymId,
-        next: { step: dto.step },
-      }, tx);
-
-      const completed = new Set(current);
-      completed.add(dto.step);
-      return this.onboardingState(completed);
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    throw new ConflictException('Falha de concorrencia ao atualizar onboarding');
   }
 }
