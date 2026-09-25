@@ -24,15 +24,14 @@ const PROVISIONED_ACTION = 'COMMERCIAL_TRIAL_PROVISIONED';
 const TRIAL_EXPIRED_ACTION = 'COMMERCIAL_TRIAL_EXPIRED';
 
 @Injectable()
-export class CommercialTrialService {
-  private readonly audit: AuditService;
+type CommercialDb = Prisma.TransactionClient | PrismaService;
 
+export class CommercialTrialService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) {
-    this.audit = new AuditService(prisma);
-  }
+    private readonly audit: AuditService,
+  ) {}
 
   private trialConfig() {
     const planCode = this.config.get<string>('IRON_FIT_TRIAL_PLAN_CODE')?.trim();
@@ -56,33 +55,53 @@ export class CommercialTrialService {
     return `${base}-${suffix}`;
   }
 
-  private async previousProvisioning(db: Prisma.TransactionClient | PrismaService, requestId: string) {
-    const audit = await db.auditLog.findFirst({
-      where: { action: PROVISIONED_ACTION, entity: 'CommercialTrial', entityId: requestId },
-      orderBy: { createdAt: 'asc' },
+  private requestFingerprint(input: {
+    email: string;
+    name: string;
+    phone: string | null;
+    gymName: string;
+    timezone: string;
+  }) {
+    return createHash('sha256').update(JSON.stringify(input)).digest('hex');
+  }
+
+  private async previousProvisioning(
+    db: CommercialDb,
+    requestId: string,
+    requestFingerprint: string,
+  ) {
+    const previous = await db.commercialTrialProvisioning.findUnique({
+      where: { requestId },
     });
-    if (!audit?.next || typeof audit.next !== 'object' || Array.isArray(audit.next)) return null;
-    const next = audit.next as Prisma.JsonObject;
-    const userId = typeof next.userId === 'string' ? next.userId : null;
-    const gymId = typeof next.gymId === 'string' ? next.gymId : null;
-    const subscriptionId = typeof next.subscriptionId === 'string' ? next.subscriptionId : null;
-    if (!userId || !gymId || !subscriptionId) return null;
-    return { requestId, userId, gymId, subscriptionId, idempotentReplay: true };
+    if (!previous) return null;
+    if (previous.requestFingerprint !== requestFingerprint) {
+      throw new ConflictException('Chave de idempotencia reutilizada com dados diferentes');
+    }
+    return {
+      requestId,
+      userId: previous.userId,
+      gymId: previous.gymId,
+      subscriptionId: previous.subscriptionId,
+      trialEndsAt: previous.trialEndsAt,
+      idempotentReplay: true,
+    };
   }
 
   async startTrial(dto: StartTrialDto) {
     const config = this.trialConfig();
     const email = dto.email.trim().toLowerCase();
     const name = dto.name.trim();
+    const phone = dto.phone?.trim() || null;
     const gymName = dto.gymName.trim();
     const slug = this.gymSlug(gymName, dto.requestId);
     const timezone = dto.timezone?.trim() || 'America/Sao_Paulo';
+    const fingerprint = this.requestFingerprint({ email, name, phone, gymName, timezone });
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
     for (let attempt = 1; attempt <= SERIALIZABLE_ATTEMPTS; attempt += 1) {
       try {
         return await this.prisma.$transaction(async (tx) => {
-          const replay = await this.previousProvisioning(tx, dto.requestId);
+          const replay = await this.previousProvisioning(tx, dto.requestId, fingerprint);
           if (replay) return replay;
 
           const existingUser = await tx.user.findUnique({ where: { email } });
@@ -114,7 +133,7 @@ export class CommercialTrialService {
             data: {
               email,
               name,
-              phone: dto.phone?.trim() || null,
+              phone,
               passwordHash,
             },
           });
@@ -134,6 +153,18 @@ export class CommercialTrialService {
               status: TenantProductSubscriptionStatus.ACTIVE,
               effectiveFrom: startedAt,
               effectiveUntil: endsAt,
+            },
+          });
+
+          await tx.commercialTrialProvisioning.create({
+            data: {
+              requestId: dto.requestId,
+              requestFingerprint: fingerprint,
+              userId: user.id,
+              gymId: gym.id,
+              subscriptionId: subscription.id,
+              trialStartedAt: startedAt,
+              trialEndsAt: endsAt,
             },
           });
 
@@ -200,7 +231,7 @@ export class CommercialTrialService {
           }, tx);
         }
         return updated.count;
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       return { status: 'EXPIRED', subscriptionId: subscription.id, changed: expired > 0 };
     }
 
@@ -213,8 +244,8 @@ export class CommercialTrialService {
     };
   }
 
-  private async completedSteps(gymId: string) {
-    const events = await this.prisma.auditLog.findMany({
+  private async completedSteps(gymId: string, db: CommercialDb = this.prisma) {
+    const events = await db.auditLog.findMany({
       where: { gymId, action: ONBOARDING_ACTION, entity: 'Gym', entityId: gymId },
       orderBy: { createdAt: 'asc' },
       select: { next: true },
@@ -230,24 +261,40 @@ export class CommercialTrialService {
     return completed;
   }
 
-  async getOnboarding(gymId?: string) {
-    if (!gymId) throw new BadRequestException('Tenant ativo obrigatorio');
-    const gym = await this.prisma.gym.findUnique({ where: { id: gymId } });
-    if (!gym) throw new NotFoundException('Gym nao encontrada');
-    const completed = await this.completedSteps(gymId);
+  private onboardingState(completed: Set<CommercialOnboardingStep>) {
     return {
-      status: completed.has('FINISH') ? 'COMPLETED' : completed.size > 0 ? 'IN_PROGRESS' : 'NOT_STARTED',
+      status: completed.has('FINISH')
+        ? 'COMPLETED'
+        : completed.size > 0
+          ? 'IN_PROGRESS'
+          : 'NOT_STARTED',
       completedSteps: COMMERCIAL_ONBOARDING_STEPS.filter((step) => completed.has(step)),
       nextStep: COMMERCIAL_ONBOARDING_STEPS.find((step) => !completed.has(step)) ?? null,
     };
+  }
+
+  async getOnboarding(gymId?: string) {
+    if (!gymId) throw new BadRequestException('Tenant ativo obrigatorio');
+    const gym = await this.prisma.gym.findUnique({
+      where: { id: gymId },
+      select: { id: true, active: true },
+    });
+    if (!gym?.active) throw new NotFoundException('Gym ativa nao encontrada');
+    return this.onboardingState(await this.completedSteps(gymId));
   }
 
   async updateOnboarding(gymId: string | undefined, userId: string | undefined, dto: UpdateOnboardingDto) {
     if (!gymId || !userId) throw new BadRequestException('Tenant e usuario autenticados obrigatorios');
 
     return this.prisma.$transaction(async (tx) => {
-      const current = await this.completedSteps(gymId);
-      if (current.has(dto.step)) return this.getOnboarding(gymId);
+      const gym = await tx.gym.findUnique({
+        where: { id: gymId },
+        select: { id: true, active: true },
+      });
+      if (!gym?.active) throw new NotFoundException('Gym ativa nao encontrada');
+
+      const current = await this.completedSteps(gymId, tx);
+      if (current.has(dto.step)) return this.onboardingState(current);
 
       const index = COMMERCIAL_ONBOARDING_STEPS.indexOf(dto.step);
       const required = COMMERCIAL_ONBOARDING_STEPS.slice(0, index);
@@ -255,9 +302,9 @@ export class CommercialTrialService {
         throw new ConflictException('Etapas anteriores do onboarding ainda nao foram concluidas');
       }
 
-      if (dto.step === 'ACADEMY_PROFILE' && dto.data) {
-        const name = typeof dto.data.name === 'string' ? dto.data.name.trim() : '';
-        const timezone = typeof dto.data.timezone === 'string' ? dto.data.timezone.trim() : '';
+      if (dto.step === 'ACADEMY_PROFILE') {
+        const name = typeof dto.data?.name === 'string' ? dto.data.name.trim() : '';
+        const timezone = typeof dto.data?.timezone === 'string' ? dto.data.timezone.trim() : '';
         if (name.length < 2 || !/^[A-Za-z_]+\/[A-Za-z_]+$/.test(timezone)) {
           throw new BadRequestException('Perfil da academia invalido');
         }
@@ -275,11 +322,7 @@ export class CommercialTrialService {
 
       const completed = new Set(current);
       completed.add(dto.step);
-      return {
-        status: completed.has('FINISH') ? 'COMPLETED' : 'IN_PROGRESS',
-        completedSteps: COMMERCIAL_ONBOARDING_STEPS.filter((step) => completed.has(step)),
-        nextStep: COMMERCIAL_ONBOARDING_STEPS.find((step) => !completed.has(step)) ?? null,
-      };
+      return this.onboardingState(completed);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }
