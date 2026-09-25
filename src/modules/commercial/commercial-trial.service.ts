@@ -213,7 +213,16 @@ export class CommercialTrialService {
           };
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (error) {
-        if (!this.retryable(error) || attempt === SERIALIZABLE_ATTEMPTS) throw error;
+        if (this.retryable(error) && attempt < SERIALIZABLE_ATTEMPTS) continue;
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+          if (error.code === 'P2002') {
+            throw new ConflictException('Cadastro indisponivel para estes dados');
+          }
+          if (error.code === 'P2034') {
+            throw new ConflictException('Falha de concorrencia ao provisionar trial');
+          }
+        }
+        throw error;
       }
     }
 
@@ -358,7 +367,12 @@ export class CommercialTrialService {
           return this.onboardingState(completed);
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (error) {
-        if (!this.retryable(error) || attempt === SERIALIZABLE_ATTEMPTS) throw error;
+        if (this.retryable(error) && attempt < SERIALIZABLE_ATTEMPTS) continue;
+        if (error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === 'P2002' || error.code === 'P2034')) {
+          throw new ConflictException('Falha de concorrencia ao atualizar onboarding');
+        }
+        throw error;
       }
     }
 
