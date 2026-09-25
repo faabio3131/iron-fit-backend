@@ -55,6 +55,15 @@ export class CommercialTrialService {
     return `${base}-${suffix}`;
   }
 
+  private validTimezone(timezone: string) {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private requestFingerprint(input: {
     email: string;
     name: string;
@@ -100,6 +109,9 @@ export class CommercialTrialService {
     const gymName = dto.gymName.trim();
     const slug = this.gymSlug(gymName, dto.requestId);
     const timezone = dto.timezone?.trim() || 'America/Sao_Paulo';
+    if (!this.validTimezone(timezone)) {
+      throw new BadRequestException('Timezone invalido');
+    }
     const fingerprint = this.requestFingerprint({ email, name, phone, gymName, timezone });
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
@@ -217,7 +229,14 @@ export class CommercialTrialService {
     });
     if (!subscription) return { status: 'INACTIVE', subscription: null };
 
-    if (subscription.effectiveUntil && subscription.effectiveUntil.getTime() <= Date.now()) {
+    const trialPlanCode = this.config.get<string>('IRON_FIT_TRIAL_PLAN_CODE')?.trim();
+    const isTrial = Boolean(
+      trialPlanCode &&
+      subscription.planVersion.productPlan.code === trialPlanCode &&
+      subscription.effectiveUntil,
+    );
+
+    if (isTrial && subscription.effectiveUntil!.getTime() <= Date.now()) {
       const expired = await this.prisma.$transaction(async (tx) => {
         const updated = await tx.tenantProductSubscription.updateMany({
           where: { id: subscription.id, status: TenantProductSubscriptionStatus.ACTIVE },
@@ -239,7 +258,7 @@ export class CommercialTrialService {
     }
 
     return {
-      status: subscription.effectiveUntil ? 'TRIALING' : 'ACTIVE',
+      status: isTrial ? 'TRIALING' : 'ACTIVE',
       subscriptionId: subscription.id,
       planCode: subscription.planVersion.productPlan.code,
       effectiveFrom: subscription.effectiveFrom,
@@ -311,7 +330,7 @@ export class CommercialTrialService {
           if (dto.step === 'ACADEMY_PROFILE') {
             const name = typeof dto.data?.name === 'string' ? dto.data.name.trim() : '';
             const timezone = typeof dto.data?.timezone === 'string' ? dto.data.timezone.trim() : '';
-            if (name.length < 2 || !/^[A-Za-z_]+\/[A-Za-z_]+$/.test(timezone)) {
+            if (name.length < 2 || !this.validTimezone(timezone)) {
               throw new BadRequestException('Perfil da academia invalido');
             }
             await tx.gym.update({ where: { id: gymId }, data: { name, timezone } });
