@@ -22,7 +22,7 @@ jobs:
   quality:
     name: Build, lint, audit and smoke tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iron_ci?schema=public
 
@@ -76,3 +76,31 @@ jobs:
 
       - name: Build production container image
         run: docker build --pull -t iron-fit-backend-ci:${{ github.sha }} .
+
+      - name: Start production container and verify liveness/readiness
+        run: |
+          CID="$(docker run -d --network host \
+            -e NODE_ENV=production \
+            -e PORT=3333 \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e JWT_SECRET=ci-runtime-jwt-secret-0123456789abcdef0123456789abcdef \
+            -e CORS_ORIGINS=http://localhost:3000 \
+            -e TRUST_PROXY_HOPS=1 \
+            -e AUTH_REQUIRE_VERIFIED_EMAIL=false \
+            -e MFA_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef \
+            -e AUTH_ACTION_TOKEN_ENCRYPTION_KEY=abcdef0123456789abcdef0123456789 \
+            -e IRON_FIT_TRIAL_PLAN_CODE=TRIAL \
+            -e IRON_FIT_TRIAL_DAYS=14 \
+            iron-fit-backend-ci:${{ github.sha }})"
+          trap 'docker logs "$CID" || true; docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          READY=0
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3333/api/v1/health/ready >/tmp/iron-ready.json; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          test "$READY" = "1"
+          curl -fsS http://127.0.0.1:3333/api/v1/health/live
+          cat /tmp/iron-ready.json
