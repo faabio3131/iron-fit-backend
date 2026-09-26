@@ -500,6 +500,11 @@ export class TenantProductEntitlementsService {
       where: {
         gymId,
         status: TenantProductSubscriptionStatus.ACTIVE,
+        effectiveFrom: { lte: new Date() },
+        OR: [
+          { effectiveUntil: null },
+          { effectiveUntil: { gt: new Date() } },
+        ],
       },
       orderBy: { effectiveFrom: 'desc' },
       include: {
