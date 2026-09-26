@@ -273,7 +273,29 @@ async function seedFoundation() {
     },
   });
 
-  return { admin, exercise };
+  const catalogA = await prisma.equipmentCatalogItem.upsert({
+    where: { slug: 'b6-leg-press-canonical' },
+    update: { active: true },
+    create: {
+      slug: 'b6-leg-press-canonical',
+      name: 'B6 Leg Press Canonical',
+      category: 'PLATE_LOADED',
+      primaryMuscle: 'LEGS',
+      active: true,
+    },
+  });
+  const catalogB = await prisma.equipmentCatalogItem.upsert({
+    where: { slug: 'b6-bike-canonical' },
+    update: { active: true },
+    create: {
+      slug: 'b6-bike-canonical',
+      name: 'B6 Bike Canonical',
+      category: 'CARDIO',
+      active: true,
+    },
+  });
+
+  return { admin, exercise, catalogA, catalogB };
 }
 
 async function login(email, password, extra = {}) {
@@ -308,7 +330,7 @@ function feature(rows, key) {
 
 async function main() {
   const startedAt = Date.now();
-  const { admin, exercise } = await seedFoundation();
+  const { admin, exercise, catalogA, catalogB } = await seedFoundation();
   startServer();
 
   try {
@@ -423,12 +445,14 @@ async function main() {
     assert.equal(ownerALogin.user.activeGymId, trialA.gymId);
     assert.equal(ownerBLogin.user.activeGymId, trialB.gymId);
 
-    const equipmentB = await api('/equipments', {
+    const equipmentBSelection = await api('/equipments/catalog/selection', {
       method: 'POST',
       token: ownerBToken,
-      body: { name: 'B6 Bike Tenant B', type: 'CARDIO' },
+      body: { catalogItemIds: [catalogB.id] },
       expect: 201,
     });
+    const equipmentB = equipmentBSelection[0];
+    assert.equal(equipmentB.catalogItemId, catalogB.id);
     const foreignEquipment = await raw('/equipments/' + equipmentB.id, {
       token: ownerAToken,
     });
@@ -505,16 +529,14 @@ async function main() {
       expect: 200,
     });
 
-    const equipmentA = await api('/equipments', {
+    const equipmentASelection = await api('/equipments/catalog/selection', {
       method: 'POST',
       token: ownerAToken,
-      body: {
-        name: 'B6 Leg Press ' + suffix,
-        type: 'MACHINE',
-        primaryMuscle: 'LEGS',
-      },
+      body: { catalogItemIds: [catalogA.id] },
       expect: 201,
     });
+    const equipmentA = equipmentASelection[0];
+    assert.equal(equipmentA.catalogItemId, catalogA.id);
 
     await api('/commercial/onboarding', {
       method: 'PATCH',
