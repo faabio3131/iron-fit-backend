@@ -114,9 +114,6 @@ export class CommercialTrialService {
         'Senha deve ter 12-128 caracteres com maiuscula, minuscula, numero e simbolo',
       );
     }
-    if (this.authSecurity) {
-      await this.authSecurity.assertSignupAllowed(email, ipAddress);
-    }
     const name = dto.name.trim();
     const phone = dto.phone?.trim() || null;
     const gymName = dto.gymName.trim();
@@ -126,6 +123,17 @@ export class CommercialTrialService {
       throw new BadRequestException('Timezone invalido');
     }
     const fingerprint = this.requestFingerprint({ email, name, phone, gymName, timezone });
+
+    const canonicalReplay = await this.previousProvisioning(
+      this.prisma,
+      dto.requestId,
+      fingerprint,
+    );
+    if (canonicalReplay) return canonicalReplay;
+
+    if (this.authSecurity) {
+      await this.authSecurity.assertSignupAllowed(email, ipAddress);
+    }
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
     for (let attempt = 1; attempt <= SERIALIZABLE_ATTEMPTS; attempt += 1) {
