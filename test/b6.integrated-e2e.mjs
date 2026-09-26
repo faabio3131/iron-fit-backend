@@ -618,7 +618,6 @@ async function main() {
             exercises: [
               {
                 exerciseId: exercise.id,
-                equipmentId: equipmentA.id,
                 order: 1,
                 sets: 4,
                 reps: '8-12',
