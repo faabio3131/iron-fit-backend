@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
+const { AuthSecurityService } = require('../dist/src/modules/auth/auth-security.service.js');
 const {
   encryptMfaSecret,
   decryptMfaSecret,
@@ -114,6 +115,53 @@ test('rate limiting is persisted outside AuditLog and covers login, signup and r
   assert.match(security, /AUTH_SIGNUP_IP/);
   assert.match(security, /AUTH_RECOVERY_IP/);
   assert.equal(security.includes('auditLog.count'), false);
+});
+
+
+test('brute-force IP lockout is enforced before another login attempt', async () => {
+  const blockedUntil = new Date(Date.now() + 60_000);
+  const buckets = new Map();
+  const keyOf = (scope, keyHash) => scope + ':' + keyHash;
+  const prisma = {
+    authRateLimitBucket: {
+      findUnique: async ({ where }) => {
+        const { scope, keyHash } = where.scope_keyHash;
+        if (scope === 'AUTH_LOGIN_FAILURE_IP') {
+          return {
+            id: 'blocked-ip',
+            scope,
+            keyHash,
+            windowStartedAt: new Date(),
+            count: 16,
+            blockedUntil,
+            updatedAt: new Date(),
+          };
+        }
+        return buckets.get(keyOf(scope, keyHash)) ?? null;
+      },
+      upsert: async ({ where, create, update }) => {
+        const { scope, keyHash } = where.scope_keyHash;
+        const key = keyOf(scope, keyHash);
+        const current = buckets.get(key);
+        const value = current
+          ? { ...current, ...update, updatedAt: new Date() }
+          : { id: 'bucket', ...create, updatedAt: new Date() };
+        buckets.set(key, value);
+        return value;
+      },
+    },
+    $transaction: async (operation) => operation(prisma),
+  };
+  const security = new AuthSecurityService(
+    prisma,
+    { get: () => undefined },
+    { record: async () => ({}) },
+  );
+
+  await assert.rejects(
+    () => security.assertLoginAllowed('victim@example.com', '203.0.113.8'),
+    (error) => error?.getStatus?.() === 429,
+  );
 });
 
 test('sensitive identity mutations require reauthentication and MFA when enabled', async () => {
