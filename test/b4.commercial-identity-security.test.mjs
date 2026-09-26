@@ -191,3 +191,23 @@ test('security environment keeps secrets external and verified-email policy expl
   assert.match(env, /AUTH_REQUIRE_VERIFIED_EMAIL=false/);
   assert.equal(env.includes('AUTH_ACTION_TOKEN_ENCRYPTION_KEY=actual'), false);
 });
+
+
+test('operational and student activation entrypoints inherit the canonical strong password policy', async () => {
+  const users = await source('src/modules/users/users.service.ts');
+  const usersDto = await source('src/modules/users/dto/create-user.dto.ts');
+  const students = await source('src/modules/students/students.service.ts');
+  const studentInviteDto = await source('src/modules/students/dto/accept-student-invite.dto.ts');
+
+  assert.match(users, /passwordPolicyViolations\(dto\.password\)/);
+  assert.match(users, /bcrypt\.hash\(dto\.password, 12\)/);
+  assert.match(usersDto, /@MinLength\(12\)/);
+
+  const activation = students.slice(
+    students.indexOf('async acceptInvite'),
+    students.indexOf('async findAll', students.indexOf('async acceptInvite')),
+  );
+  assert.match(activation, /passwordPolicyViolations\(dto\.password\)/);
+  assert.match(activation, /bcrypt\.hash\(dto\.password, 12\)/);
+  assert.match(studentInviteDto, /@MinLength\(12\)/);
+});
