@@ -16,7 +16,7 @@ Git main -> CI -> imagem reproduzível -> prisma migrate deploy -> health/readin
 
 - Node.js 22.
 - Build por Dockerfile versionado.
-- Processo: `node dist/main`.
+- Processo: `node dist/src/main.js`.
 - Porta: `PORT`, default local 3333.
 - Health: `/api/v1/health/live`.
 - Readiness: `/api/v1/health/ready`, que executa consulta real no PostgreSQL.
@@ -167,6 +167,7 @@ Os repositórios retornaram lista de rulesets vazia. O endpoint clássico de bra
 - runtime IRON externo: NÃO COMPROVADO;
 - banco homolog CURRENT: BLOQUEADO pelo drift/risco do Supabase legado;
 - produção IRON: NÃO DECLARADA;
-- CI com PostgreSQL real fresh-install + container build: COMPROVADO internamente.
+- CI com PostgreSQL real fresh-install + container build: COMPROVADO internamente;
+- o gate B6 posterior também inicia a imagem em `NODE_ENV=production` e exige readiness real antes de aceitar o runtime.
 
 Esses itens só podem ser promovidos com nova evidência física.
