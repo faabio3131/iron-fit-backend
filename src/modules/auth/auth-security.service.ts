@@ -140,7 +140,13 @@ export class AuthSecurityService {
       15 * MINUTE,
       15 * MINUTE,
     );
-    await this.assertBucketNotBlocked('AUTH_LOGIN_FAILURE_EMAIL', email);
+    await Promise.all([
+      this.assertBucketNotBlocked('AUTH_LOGIN_FAILURE_EMAIL', email),
+      this.assertBucketNotBlocked(
+        'AUTH_LOGIN_FAILURE_IP',
+        ipAddress || 'unknown',
+      ),
+    ]);
   }
 
   async recordLoginFailure(email: string, ipAddress?: string | null) {
