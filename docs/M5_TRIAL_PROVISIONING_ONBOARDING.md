@@ -1,6 +1,6 @@
 # IRON M5 — Trial, Provisioning e Onboarding Zero-Touch
 
-Status: **CANDIDATE — IMPLEMENTAÇÃO INTERNA EM CERTIFICAÇÃO**
+Status: **CERTIFIED — IMPLEMENTAÇÃO INTERNA CONCLUÍDA E CERTIFICADA**
 
 ## Objetivo
 
@@ -71,3 +71,15 @@ A promoção de M5 exige:
 - CI pós-merge verde.
 
 Este documento não autoriza declarar o IRON comercialmente disponível.
+
+
+## Evidência final de certificação
+
+- candidate HEAD: `0d71a1484b72ba175482686746024534ad25d6c7`;
+- branch CI: run `36202137523`, attempt 4 — SUCCESS;
+- PR: #57 — `feat(commercial): certify M5 trial provisioning and onboarding`;
+- PR CI: run `36204640683` — SUCCESS;
+- merge por squash em `main`: `474a103f445150ce4ff1edf18c661518f63c04a1`;
+- pós-merge CI: run `36204698725` — SUCCESS.
+
+Esta certificação fecha o M5 como implementação interna. Não representa homologação externa, produção real nem disponibilidade comercial final do IRON.
