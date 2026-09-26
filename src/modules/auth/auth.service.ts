@@ -199,6 +199,22 @@ export class AuthService {
     recoveryCode?: string,
     ipAddress?: string | null,
   ) {
+    let context;
+    try {
+      context = resolveActiveTenantContext(user.userRoles, requestedGymId);
+    } catch {
+      throw new UnauthorizedException('Tenant invalido ou indisponivel');
+    }
+
+    if (context.requiresTenantSelection) {
+      return {
+        requires_mfa: user.mfaEnabled,
+        requires_tenant_selection: true,
+        tenants: context.availableTenants,
+        user: { id: user.id, email: user.email, name: user.name },
+      };
+    }
+
     if (user.mfaEnabled && !mfaCode && !recoveryCode) {
       await this.recordLoginEvent(
         'AUTH_LOGIN_MFA_REQUIRED',
@@ -224,22 +240,6 @@ export class AuthService {
         ipAddress,
       );
       throw new UnauthorizedException('Credenciais invalidas');
-    }
-
-    let context;
-    try {
-      context = resolveActiveTenantContext(user.userRoles, requestedGymId);
-    } catch {
-      throw new UnauthorizedException('Tenant invalido ou indisponivel');
-    }
-
-    if (context.requiresTenantSelection) {
-      return {
-        requires_mfa: false,
-        requires_tenant_selection: true,
-        tenants: context.availableTenants,
-        user: { id: user.id, email: user.email, name: user.name },
-      };
     }
 
     const { session, refreshToken } = await this.createRefreshSession(
