@@ -462,7 +462,7 @@ async function main() {
       '/equipments?gymId=' + encodeURIComponent(trialB.gymId),
       { token: ownerAToken },
     );
-    assert.equal(spoof.status, 403);
+    assert.equal(spoof.status, 404);
 
     await api('/commercial/onboarding', {
       method: 'PATCH',
