@@ -5,7 +5,7 @@ export class CreateUserDto {
   email: string;
 
   @IsString()
-  @MinLength(6)
+  @MinLength(12)
   password: string;
 
   @IsString()
