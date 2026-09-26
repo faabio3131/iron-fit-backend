@@ -22,7 +22,24 @@ jobs:
   quality:
     name: Build, lint, audit and smoke tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iron_ci?schema=public
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: iron_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d iron_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout
@@ -43,6 +60,11 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Fresh-install all database migrations
+        run: |
+          npx prisma migrate deploy
+          npx prisma migrate status
+
       - name: Lint and typecheck
         run: npm run lint
 
@@ -51,3 +73,6 @@ jobs:
 
       - name: Smoke regression tests
         run: npm run test:smoke
+
+      - name: Build production container image
+        run: docker build --pull -t iron-fit-backend-ci:${{ github.sha }} .
