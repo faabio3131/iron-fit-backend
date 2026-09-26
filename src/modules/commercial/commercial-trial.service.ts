@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +11,8 @@ import { Prisma, TenantProductSubscriptionStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'node:crypto';
 import { AuditService } from '../../common/audit/audit.service';
+import { passwordPolicyViolations } from '../auth/auth-security';
+import { AuthSecurityService } from '../auth/auth-security.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartTrialDto } from './dto/start-trial.dto';
 import {
@@ -31,6 +34,7 @@ export class CommercialTrialService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly audit: AuditService,
+    @Optional() private readonly authSecurity?: AuthSecurityService,
   ) {}
 
   private trialConfig() {
@@ -101,9 +105,18 @@ export class CommercialTrialService {
       (error.code === 'P2034' || error.code === 'P2002');
   }
 
-  async startTrial(dto: StartTrialDto) {
+  async startTrial(dto: StartTrialDto, ipAddress?: string | null) {
     const config = this.trialConfig();
     const email = dto.email.trim().toLowerCase();
+    const passwordViolations = passwordPolicyViolations(dto.password);
+    if (passwordViolations.length > 0) {
+      throw new BadRequestException(
+        'Senha deve ter 12-128 caracteres com maiuscula, minuscula, numero e simbolo',
+      );
+    }
+    if (this.authSecurity) {
+      await this.authSecurity.assertSignupAllowed(email, ipAddress);
+    }
     const name = dto.name.trim();
     const phone = dto.phone?.trim() || null;
     const gymName = dto.gymName.trim();

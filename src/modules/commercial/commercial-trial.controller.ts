@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -12,14 +20,20 @@ export class CommercialTrialController {
   constructor(private readonly service: CommercialTrialService) {}
 
   @Post('trial/start')
-  startTrial(@Body() dto: StartTrialDto) {
-    return this.service.startTrial(dto);
+  startTrial(@Req() req: any, @Body() dto: StartTrialDto) {
+    return this.service.startTrial(
+      dto,
+      typeof req?.ip === 'string' ? req.ip : null,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('trial/status')
   trialStatus(@CurrentUser() user: any) {
-    return this.service.synchronizeTrial(user?.activeGymId ?? user?.gymId, user?.id);
+    return this.service.synchronizeTrial(
+      user?.activeGymId ?? user?.gymId,
+      user?.id,
+    );
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -33,6 +47,10 @@ export class CommercialTrialController {
   @Roles('OWNER', 'MANAGER')
   @Patch('onboarding')
   updateOnboarding(@CurrentUser() user: any, @Body() dto: UpdateOnboardingDto) {
-    return this.service.updateOnboarding(user?.activeGymId ?? user?.gymId, user?.id, dto);
+    return this.service.updateOnboarding(
+      user?.activeGymId ?? user?.gymId,
+      user?.id,
+      dto,
+    );
   }
 }
