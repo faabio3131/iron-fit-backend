@@ -21,6 +21,7 @@ import { ProductEntitlementsModule } from './modules/product-entitlements/produc
 import { CreatorNetworkModule } from './modules/creator-network/creator-network.module';
 import { AiModule } from './modules/ai/ai.module';
 import { CommercialModule } from './modules/commercial/commercial.module';
+import { SaasBillingModule } from './modules/saas-billing/saas-billing.module';
 import { PrismaService } from './prisma/prisma.service';
 
 @Module({
@@ -48,6 +49,7 @@ import { PrismaService } from './prisma/prisma.service';
     CreatorNetworkModule,
     AiModule,
     CommercialModule,
+    SaasBillingModule,
   ],
   controllers: [HealthController],
   providers: [PrismaService, RequestObservabilityMiddleware],

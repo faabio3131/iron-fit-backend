@@ -340,6 +340,9 @@ model Gym {
   payables  Payable[]
   subscriptions Subscription[]
   productSubscriptions TenantProductSubscription[]
+  saasBillingAgreements SaasBillingAgreement[]
+  saasCheckoutSessions SaasCheckoutSession[]
+  saasBillingInvoices SaasInvoice[]
   productConfigurations TenantProductConfiguration[]
   productPreferences UserProductPreference[]
   charges   Charge[]
@@ -1050,6 +1053,61 @@ enum TenantProductSubscriptionStatus {
   CANCELED
 }
 
+enum SaasBillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SaasBillingAgreementStatus {
+  PENDING_CHECKOUT
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELED
+}
+
+enum SaasCheckoutStatus {
+  PENDING
+  READY
+  COMPLETED
+  EXPIRED
+  CANCELED
+  FAILED
+}
+
+enum SaasInvoiceStatus {
+  OPEN
+  PAID
+  VOID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum SaasPaymentStatus {
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum SaasRefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum SaasWebhookStatus {
+  RECEIVED
+  PROCESSED
+  REJECTED
+  FAILED
+}
+
+enum SaasReconciliationStatus {
+  MATCHED
+  MISMATCH
+}
+
 model ProductPlan {
   id          String               @id @default(uuid())
   code        String               @unique
@@ -1072,6 +1130,7 @@ model ProductPlanVersion {
   productPlan         ProductPlan                 @relation(fields: [productPlanId], references: [id], onDelete: Restrict)
   entitlements        ProductPlanEntitlement[]
   tenantSubscriptions TenantProductSubscription[]
+  saasPrices            SaasPlanPrice[]
   @@unique([productPlanId, version])
   @@index([status, publishedAt])
 }
@@ -1102,8 +1161,173 @@ model TenantProductSubscription {
   updatedAt      DateTime                        @updatedAt
   gym            Gym                             @relation(fields: [gymId], references: [id], onDelete: Restrict)
   planVersion    ProductPlanVersion              @relation(fields: [planVersionId], references: [id], onDelete: Restrict)
+  saasBillingAgreement SaasBillingAgreement?
   @@index([gymId, status])
   @@index([planVersionId, status])
+}
+
+model SaasPlanPrice {
+  id             String              @id @default(uuid())
+  priceCode      String              @unique
+  planVersionId  String
+  currency       String              @default("BRL")
+  amountMinor    Int
+  interval       SaasBillingInterval
+  active         Boolean             @default(true)
+  effectiveFrom  DateTime            @default(now())
+  effectiveUntil DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  planVersion    ProductPlanVersion  @relation(fields: [planVersionId], references: [id], onDelete: Restrict)
+  agreements     SaasBillingAgreement[]
+  checkoutSessions SaasCheckoutSession[]
+  invoices       SaasInvoice[]
+  @@index([planVersionId, active])
+  @@index([currency, interval, active])
+}
+
+model SaasBillingAgreement {
+  id                          String                     @id @default(uuid())
+  gymId                       String
+  tenantProductSubscriptionId String                     @unique
+  priceId                     String?
+  status                      SaasBillingAgreementStatus @default(PENDING_CHECKOUT)
+  providerCode                String
+  providerCustomerRef         String?
+  providerSubscriptionRef     String?
+  currentPeriodStart          DateTime?
+  currentPeriodEnd            DateTime?
+  nextBillingAt               DateTime?
+  cancelAtPeriodEnd           Boolean                    @default(false)
+  canceledAt                  DateTime?
+  pastDueSince                DateTime?
+  pendingTransition           Json?
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+  gym                         Gym                        @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  productSubscription         TenantProductSubscription  @relation(fields: [tenantProductSubscriptionId], references: [id], onDelete: Restrict)
+  price                       SaasPlanPrice?             @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  checkoutSessions            SaasCheckoutSession[]
+  invoices                    SaasInvoice[]
+  reconciliations             SaasBillingReconciliation[]
+  @@unique([providerCode, providerSubscriptionRef])
+  @@index([gymId, status])
+  @@index([status, nextBillingAt])
+}
+
+model SaasCheckoutSession {
+  id                 String             @id @default(uuid())
+  requestId          String             @unique
+  gymId              String
+  agreementId        String
+  priceId            String
+  providerCode       String
+  providerSessionRef String?
+  checkoutUrl        String?
+  status             SaasCheckoutStatus @default(PENDING)
+  amountMinor        Int
+  currency           String
+  expiresAt          DateTime
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  gym                Gym                @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  agreement          SaasBillingAgreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  price              SaasPlanPrice      @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  @@unique([providerCode, providerSessionRef])
+  @@index([gymId, status, createdAt])
+  @@index([agreementId, status])
+}
+
+model SaasInvoice {
+  id                 String            @id @default(uuid())
+  idempotencyKey     String            @unique
+  agreementId        String
+  gymId              String
+  priceId            String
+  providerCode       String
+  providerInvoiceRef String?
+  periodStart        DateTime
+  periodEnd          DateTime
+  amountDueMinor     Int
+  amountPaidMinor    Int               @default(0)
+  currency           String
+  status             SaasInvoiceStatus @default(OPEN)
+  dueAt              DateTime
+  paidAt             DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  agreement          SaasBillingAgreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  gym                Gym               @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  price              SaasPlanPrice     @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  payments           SaasPayment[]
+  refunds            SaasRefund[]
+  reconciliations    SaasBillingReconciliation[]
+  @@unique([providerCode, providerInvoiceRef])
+  @@index([gymId, status, dueAt])
+  @@index([agreementId, periodStart])
+}
+
+model SaasPayment {
+  id                 String            @id @default(uuid())
+  invoiceId          String
+  providerCode       String
+  providerPaymentRef String
+  amountMinor        Int
+  currency           String
+  status             SaasPaymentStatus
+  paidAt             DateTime?
+  createdAt          DateTime          @default(now())
+  invoice            SaasInvoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  refunds            SaasRefund[]
+  @@unique([providerCode, providerPaymentRef])
+  @@index([invoiceId, status])
+}
+
+model SaasRefund {
+  id                String           @id @default(uuid())
+  requestId         String           @unique
+  invoiceId         String
+  paymentId         String?
+  providerCode      String
+  providerRefundRef String?
+  amountMinor       Int
+  status            SaasRefundStatus @default(PENDING)
+  reason            String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  invoice           SaasInvoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  payment           SaasPayment?     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  @@unique([providerCode, providerRefundRef])
+  @@index([invoiceId, status])
+}
+
+model SaasWebhookEvent {
+  id              String            @id @default(uuid())
+  providerCode    String
+  providerEventId String
+  eventType       String
+  payloadHash     String
+  status          SaasWebhookStatus @default(RECEIVED)
+  errorCode       String?
+  receivedAt      DateTime          @default(now())
+  processedAt     DateTime?
+  @@unique([providerCode, providerEventId])
+  @@index([status, receivedAt])
+}
+
+model SaasBillingReconciliation {
+  id                  String                   @id @default(uuid())
+  agreementId         String
+  invoiceId           String?
+  status              SaasReconciliationStatus
+  expectedAmountMinor Int?
+  observedAmountMinor Int?
+  details             Json?
+  checkedAt           DateTime                 @default(now())
+  agreement           SaasBillingAgreement     @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  invoice             SaasInvoice?             @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  @@index([agreementId, checkedAt])
+  @@index([status, checkedAt])
 }
 
 model TenantProductConfiguration {
