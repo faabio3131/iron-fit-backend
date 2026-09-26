@@ -74,5 +74,42 @@ jobs:
       - name: Smoke regression tests
         run: npm run test:smoke
 
+      - name: Block 6 integrated HTTP + PostgreSQL E2E
+        run: npm run test:b6:e2e
+
       - name: Build production container image
         run: docker build --pull -t iron-fit-backend-ci:${{ github.sha }} .
+
+      - name: Start production container and verify readiness
+        run: |
+          set -euo pipefail
+          docker rm -f iron-fit-backend-runtime >/dev/null 2>&1 || true
+          docker run -d --name iron-fit-backend-runtime --network host \
+            -e NODE_ENV=production \
+            -e PORT=3333 \
+            -e DATABASE_URL="${DATABASE_URL}" \
+            -e CORS_ORIGINS=https://example.invalid \
+            -e TRUST_PROXY_HOPS=0 \
+            -e JWT_SECRET="$(openssl rand -hex 32)" \
+            -e MFA_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+            -e AUTH_ACTION_TOKEN_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+            -e AUTH_REQUIRE_VERIFIED_EMAIL=false \
+            iron-fit-backend-ci:${{ github.sha }}
+
+          ready=0
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:3333/api/v1/health/ready >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 0.5
+          done
+
+          if [ "${ready}" -ne 1 ]; then
+            docker logs iron-fit-backend-runtime
+            exit 1
+          fi
+
+          curl --fail --silent http://127.0.0.1:3333/api/v1/health/live
+          docker logs iron-fit-backend-runtime 2>&1 | grep -q '"event":"service_started"'
+          docker rm -f iron-fit-backend-runtime >/dev/null
