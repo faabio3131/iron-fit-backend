@@ -13,6 +13,7 @@ import {
   canAssignRole,
   resolveAssignmentGymId,
 } from '../../common/security/rbac-policy';
+import { passwordPolicyViolations } from '../auth/auth-security';
 
 @Injectable()
 export class UsersService {
@@ -73,7 +74,14 @@ export class UsersService {
       }
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const passwordViolations = passwordPolicyViolations(dto.password);
+    if (passwordViolations.length > 0) {
+      throw new BadRequestException(
+        'Senha deve ter 12-128 caracteres com maiuscula, minuscula, numero e simbolo',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
 
     const user = await this.prisma.user.create({
       data: {
