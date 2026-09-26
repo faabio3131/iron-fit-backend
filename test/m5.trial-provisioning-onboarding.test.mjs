@@ -444,3 +444,18 @@ test('M5 CI gates implementation branches and retains the complete canonical qua
   assert.match(workflow, /npm run build/);
   assert.match(workflow, /npm run test:smoke/);
 });
+
+
+test('M5 canonical idempotent replay is resolved before signup abuse throttling', async () => {
+  const service = await source('src/modules/commercial/commercial-trial.service.ts');
+  const start = service.indexOf('async startTrial');
+  const transaction = service.indexOf('this.prisma.$transaction', start);
+  const replayBeforeRateLimit = service.indexOf('const canonicalReplay = await this.previousProvisioning', start);
+  const rateLimit = service.indexOf('assertSignupAllowed', start);
+  const transactionalReplay = service.indexOf('this.previousProvisioning(tx, dto.requestId, fingerprint)', transaction);
+
+  assert.ok(start >= 0);
+  assert.ok(replayBeforeRateLimit > start);
+  assert.ok(rateLimit > replayBeforeRateLimit);
+  assert.ok(transactionalReplay > transaction);
+});
