@@ -15,7 +15,8 @@
     "ci": "npm run lint && npm run build && npm run test:smoke",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:prod": "node dist/main"
+    "start:prod": "node dist/src/main.js",
+    "test:b6:e2e": "node test/b6.integrated-e2e.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
