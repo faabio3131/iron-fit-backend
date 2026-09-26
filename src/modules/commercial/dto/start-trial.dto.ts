@@ -1,4 +1,12 @@
-import { IsEmail, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class StartTrialDto {
   @IsUUID()
@@ -8,7 +16,8 @@ export class StartTrialDto {
   email!: string;
 
   @IsString()
-  @Length(6, 128)
+  @MinLength(12)
+  @MaxLength(128)
   password!: string;
 
   @IsString()

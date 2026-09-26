@@ -202,7 +202,7 @@ function makeHarness(overrides = {}) {
 const dto = {
   requestId: '11111111-1111-4111-8111-111111111111',
   email: ' OWNER@EXAMPLE.COM ',
-  password: 'ExamplePass123',
+  password: 'ExamplePass123!',
   name: 'Owner Example',
   phone: '11999999999',
   gymName: 'Academia Alpha',

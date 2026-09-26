@@ -4,6 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 const SENSITIVE_KEYS = new Set([
   'password',
+  'currentPassword',
+  'newPassword',
   'passwordHash',
   'token',
   'refreshToken',
@@ -11,6 +13,9 @@ const SENSITIVE_KEYS = new Set([
   'authorization',
   'cookie',
   'mfaSecret',
+  'mfaCode',
+  'recoveryCode',
+  'deliveryCiphertext',
   'apiKeyEnc',
   'accessTokenEnc',
   'refreshTokenEnc',

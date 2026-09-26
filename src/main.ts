@@ -20,10 +20,22 @@ function resolveCorsOrigins(): string[] {
     : ['http://localhost:3000', 'http://localhost:5173'];
 }
 
+function resolveTrustProxyHops(): number {
+  const raw = (process.env.TRUST_PROXY_HOPS ?? '0').trim();
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0 || value > 10) {
+    throw new Error('TRUST_PROXY_HOPS deve ser inteiro entre 0 e 10');
+  }
+  return value;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
   });
+
+  const trustProxyHops = resolveTrustProxyHops();
+  if (trustProxyHops > 0) app.set('trust proxy', trustProxyHops);
 
   app.enableShutdownHooks();
   app.setGlobalPrefix('api/v1');

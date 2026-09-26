@@ -209,12 +209,16 @@ model User {
   phone        String?
   name         String
   passwordHash String
-  mfaEnabled   Boolean  @default(false)
-  mfaSecret    String?
-  active       Boolean  @default(true)
+  mfaEnabled       Boolean  @default(false)
+  mfaSecret        String?
+  emailVerifiedAt  DateTime?
+  passwordChangedAt DateTime?
+  active           Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   sessions     Session[]
+  authActionTokens AuthActionToken[]
+  authRecoveryCodes AuthRecoveryCode[]
   userRoles    UserRole[]
   students     Student[]
   auditLogs    AuditLog[]
@@ -228,13 +232,69 @@ model Session {
   id               String   @id @default(uuid())
   userId           String
   user             User     @relation(fields: [userId], references: [id])
-  refreshTokenHash String
-  deviceName       String?
-  ipAddress        String?
-  expiresAt        DateTime
-  revokedAt        DateTime?
-  createdAt        DateTime @default(now())
+  refreshTokenHash         String
+  previousRefreshTokenHash String?
+  deviceName               String?
+  ipAddress                String?
+  expiresAt                DateTime
+  absoluteExpiresAt        DateTime?
+  lastUsedAt               DateTime @default(now())
+  revokedAt                DateTime?
+  createdAt                DateTime @default(now())
 }
+
+enum AuthActionTokenKind {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  EMAIL_CHANGE
+}
+
+enum AuthActionDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+model AuthActionToken {
+  id          String              @id @default(uuid())
+  userId      String
+  kind        AuthActionTokenKind
+  tokenHash          String                   @unique
+  deliveryCiphertext String
+  deliveryStatus     AuthActionDeliveryStatus @default(PENDING)
+  deliveredAt        DateTime?
+  targetEmail        String?
+  expiresAt          DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, kind, consumedAt])
+  @@index([expiresAt])
+}
+
+model AuthRecoveryCode {
+  id        String   @id @default(uuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, codeHash])
+  @@index([userId, usedAt])
+}
+
+model AuthRateLimitBucket {
+  id              String   @id @default(uuid())
+  scope           String
+  keyHash         String
+  windowStartedAt DateTime
+  count           Int      @default(0)
+  blockedUntil    DateTime?
+  updatedAt       DateTime @updatedAt
+  @@unique([scope, keyHash])
+  @@index([blockedUntil])
+}
+
 
 model Role {
   id              String           @id @default(uuid())
