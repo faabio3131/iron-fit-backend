@@ -554,7 +554,7 @@ export class SaasBillingService {
         throw new ConflictException('Ja existe transicao de plano pendente');
       }
 
-      const effectiveAt = snapshot.currentPeriodEnd;
+      const effectiveAt = snapshot.currentPeriodEnd!;
       const updated = await tx.saasBillingAgreement.update({
         where: { id: agreement.id },
         data: {
