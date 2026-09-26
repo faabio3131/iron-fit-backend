@@ -1,7 +1,9 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { RequestObservabilityMiddleware } from './common/middleware/request-observability.middleware';
+import { RuntimeMetricsService } from './common/observability/runtime-metrics.service';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { GymsModule } from './modules/gyms/gyms.module';
 import { UsersModule } from './modules/users/users.module';
@@ -51,8 +53,8 @@ import { PrismaService } from './prisma/prisma.service';
     CommercialModule,
     SaasBillingModule,
   ],
-  controllers: [HealthController],
-  providers: [PrismaService, RequestObservabilityMiddleware],
+  controllers: [HealthController, MetricsController],
+  providers: [PrismaService, RuntimeMetricsService, RequestObservabilityMiddleware],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
