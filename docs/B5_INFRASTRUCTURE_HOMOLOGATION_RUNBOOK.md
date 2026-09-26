@@ -141,8 +141,32 @@ A ausência de ruleset não pode ser escondida como “protegido”.
 
 ## Estado externo observado em 26/09/2026
 
-- projeto Supabase identificado como `gym-saas`; estava INACTIVE e foi solicitado restore para auditoria física;
-- Railway conectado na conta pertence a outro produto e não é autoridade do IRON;
-- nenhum deploy IRON em Railway foi considerado existente antes deste bloco.
+### Supabase `gym-saas`
 
-Esses itens devem ser atualizados somente com evidência real.
+O projeto físico foi reativado e chegou a `ACTIVE_HEALTHY`, mas **não é homologação válida do CURRENT**:
+
+- `_prisma_migrations` contém somente `20260831182410_init`;
+- não existem `TenantProductSubscription`, `SaasBillingAgreement` nem `AuthActionToken`;
+- `User.emailVerifiedAt` e `Session.absoluteExpiresAt` também não existem;
+- portanto o banco está materialmente atrás do schema atual e não pode receber claim de homologação;
+- a auditoria Supabase apontou tabelas `public` sem RLS/expostas pela Data API. Esse risco deve ser resolvido antes de qualquer uso externo do banco;
+- foram apontadas ainda 31 foreign keys sem índice de cobertura no schema legado. Esse achado é informativo para o legado e não substitui a validação do schema CURRENT, cujo fresh install é certificado no CI.
+
+Nenhum `prisma migrate deploy` foi executado sobre esse banco legado para evitar aplicar uma longa cadeia de migrations sobre uma superfície externa insegura sem antes resolver a exposição Data API/RLS.
+
+### Railway
+
+O único projeto Railway conectado na conta durante a auditoria pertence ao Kordena/FM AI Platform e foi explicitamente excluído do escopo IRON. Nenhuma mutação foi feita nele.
+
+### GitHub
+
+Os repositórios retornaram lista de rulesets vazia. O endpoint clássico de branch protection não é legível pela instalação GitHub disponível (403 administrativo), portanto proteção de `main` **não é declarada como comprovada**.
+
+### Status de homologação física
+
+- runtime IRON externo: NÃO COMPROVADO;
+- banco homolog CURRENT: BLOQUEADO pelo drift/risco do Supabase legado;
+- produção IRON: NÃO DECLARADA;
+- CI com PostgreSQL real fresh-install + container build: COMPROVADO internamente.
+
+Esses itens só podem ser promovidos com nova evidência física.
