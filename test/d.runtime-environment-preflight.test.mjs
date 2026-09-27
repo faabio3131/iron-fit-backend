@@ -163,3 +163,48 @@ test('D env example documents runtime identity and keeps observability secret bl
     /OBSERVABILITY_METRICS_TOKEN=[A-Za-z0-9_-]{32,}/,
   );
 });
+
+
+test('D keeps canonical health metadata backward-compatible while adding safe runtime identity', async () => {
+  const { HealthController } = require('../dist/src/health.controller.js');
+  const previousRuntime = process.env.IRON_RUNTIME_ENV;
+  process.env.IRON_RUNTIME_ENV = 'DEV';
+  try {
+    const result = new HealthController().check();
+    assert.equal(result.status, 'ok');
+    assert.equal(result.service, 'gym-saas-backend');
+    assert.equal(result.version, '0.1.0');
+    assert.equal(result.runtimeEnvironment, 'DEV');
+    assert.ok(typeof result.buildSha === 'string');
+  } finally {
+    if (previousRuntime === undefined) delete process.env.IRON_RUNTIME_ENV;
+    else process.env.IRON_RUNTIME_ENV = previousRuntime;
+  }
+});
+
+test('D CI masks every generated E2E credential before persisting it to runner environment', async () => {
+  const workflow = await readFile(
+    '.github/workflows/iron-s0-quality.yml',
+    'utf8',
+  );
+  const start = workflow.indexOf('- name: Generate isolated E2E credentials');
+  const end = workflow.indexOf('- name: Dependency audit', start);
+  const block = workflow.slice(start, end);
+
+  assert.match(block, /mask_and_export/);
+  assert.match(block, /::add-mask::\$value/);
+  for (const key of [
+    'JWT_SECRET',
+    'MFA_ENCRYPTION_KEY',
+    'AUTH_ACTION_TOKEN_ENCRYPTION_KEY',
+    'SAAS_BILLING_SANDBOX_SECRET',
+    'B6_OWNER_PASSWORD',
+    'B6_STAFF_PASSWORD',
+    'B6_STUDENT_PASSWORD',
+    'B6_RESET_PASSWORD',
+    'B6_ADMIN_PASSWORD',
+  ]) {
+    assert.match(block, new RegExp('mask_and_export ' + key));
+  }
+  assert.doesNotMatch(block, /echo "JWT_SECRET=\$\(openssl/);
+});
