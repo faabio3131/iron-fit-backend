@@ -3,11 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthModule } from '../auth/auth.module';
+import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
 import { IntegrationCredentialAdminService } from './integration-credential-admin.service';
 import { IntegrationCredentialGlobalController } from './integration-credential-global.controller';
 import { IntegrationCredentialTenantController } from './integration-credential-tenant.controller';
 import { IntegrationConnectionService } from './integration-connection.service';
 import { IntegrationProviderCatalogController } from './integration-provider-catalog.controller';
+import { IntegrationCredentialProbeRegistry } from './provider-credential-probe.registry';
 import { IntegrationProviderRegistry } from './provider-registry.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
 import { IntegrationSecretResolverService } from './secrets/integration-secret-resolver.service';
@@ -19,7 +21,7 @@ import { OciVaultConfigurationService } from './secrets/oci/oci-vault-configurat
 import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-integration-secret-vault.adapter';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, ProductEntitlementsModule],
   controllers: [
     IntegrationCredentialTenantController,
     IntegrationCredentialGlobalController,
@@ -29,8 +31,10 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     PrismaService,
     AuditService,
     IntegrationProviderRegistry,
+    IntegrationCredentialProbeRegistry,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
+    IntegrationCredentialProbeRegistry,
     IntegrationRuntimeEnvironmentService,
     OciVaultConfigurationService,
     OciAuthenticationProviderFactory,
