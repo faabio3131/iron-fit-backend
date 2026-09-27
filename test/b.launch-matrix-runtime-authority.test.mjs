@@ -32,6 +32,8 @@ test('B trial runtime consumes exact APPROVED launch policy instead of env plan/
     'src/modules/commercial/commercial-trial.service.ts',
   );
   const env = await source('.env.example');
+  const workflow = await source('.github/workflows/iron-s0-quality.yml');
+  const seed = await source('scripts/b6-e2e-seed.mjs');
 
   assert.match(trial, /this\.launch\.currentApproved\(\)/);
   assert.match(trial, /policy\.trialPlanVersionId/);
@@ -42,6 +44,10 @@ test('B trial runtime consumes exact APPROVED launch policy instead of env plan/
   assert.doesNotMatch(trial, /IRON_FIT_TRIAL_DAYS/);
   assert.doesNotMatch(env, /IRON_FIT_TRIAL_PLAN_CODE=/);
   assert.doesNotMatch(env, /IRON_FIT_TRIAL_DAYS=/);
+  assert.doesNotMatch(workflow, /IRON_FIT_TRIAL_PLAN_CODE:/);
+  assert.doesNotMatch(workflow, /IRON_FIT_TRIAL_DAYS:/);
+  assert.match(seed, /commercialLaunchMatrix/);
+  assert.match(seed, /snapshotHash/);
 });
 
 test('B existing trials remain identifiable after future Launch Matrix version changes', async () => {
@@ -63,6 +69,7 @@ test('B billing due and dunning grace consume APPROVED matrix policy, not deploy
     'src/modules/saas-billing/saas-billing.service.ts',
   );
   const env = await source('.env.example');
+  const workflow = await source('.github/workflows/iron-s0-quality.yml');
 
   assert.match(billing, /this\.launch\.currentApproved\(\)/);
   assert.match(billing, /commercialPolicy\.invoiceDueDays/);
@@ -71,6 +78,8 @@ test('B billing due and dunning grace consume APPROVED matrix policy, not deploy
   assert.doesNotMatch(billing, /SAAS_BILLING_DUNNING_GRACE_DAYS/);
   assert.doesNotMatch(env, /SAAS_BILLING_INVOICE_DUE_DAYS=/);
   assert.doesNotMatch(env, /SAAS_BILLING_DUNNING_GRACE_DAYS=/);
+  assert.doesNotMatch(workflow, /SAAS_BILLING_INVOICE_DUE_DAYS:/);
+  assert.doesNotMatch(workflow, /SAAS_BILLING_DUNNING_GRACE_DAYS:/);
 });
 
 test('B provider sandbox safety remains runtime-only and is not mistaken for launch policy', async () => {
