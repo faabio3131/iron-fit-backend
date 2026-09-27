@@ -152,6 +152,7 @@ test('C8 revoke disables canonical DB state before physical cleanup and stays fa
 
   let current = connection();
   const order = [];
+  const cleanupTasks = new Map();
   const prisma = {
     integrationConnection: {
       findFirst: async () => current,
@@ -161,6 +162,25 @@ test('C8 revoke disables canonical DB state before physical cleanup and stays fa
         return { count: 1 };
       },
       findUnique: async () => current,
+    },
+    integrationSecretCleanupTask: {
+      findUnique: async ({ where }) => cleanupTasks.get(where.secretReference) ?? null,
+      upsert: async ({ where, create, update }) => {
+        const existing = cleanupTasks.get(where.secretReference);
+        const next = existing
+          ? {
+              ...existing,
+              ...update,
+              attempts:
+                typeof update.attempts === 'object'
+                  ? existing.attempts + update.attempts.increment
+                  : update.attempts,
+            }
+          : { id: 'cleanup-1', ...create };
+        cleanupTasks.set(where.secretReference, next);
+        return next;
+      },
+      updateMany: async () => ({ count: 1 }),
     },
     $transaction: async (fn) => fn(prisma),
   };
@@ -229,4 +249,28 @@ test('C9 audit sanitizer treats secretValue as sensitive material', () => {
   });
   assert.equal(sanitized.secretValue, '[REDACTED]');
   assert.equal(sanitized.nested.clientSecret, '[REDACTED]');
+});
+
+
+test('C8 cleanup queue stores opaque refs outside AuditLog and supports governed retry state', async () => {
+  const schema = await readFile('prisma/integration-secrets.prisma', 'utf8');
+  const migration = await readFile(
+    'prisma/migrations/20260927183000_integration_secret_cleanup_queue/migration.sql',
+    'utf8',
+  );
+  const service = await readFile(
+    'src/modules/integrations/integration-secret-admin.service.ts',
+    'utf8',
+  );
+
+  assert.match(schema, /model IntegrationSecretCleanupTask/);
+  assert.match(schema, /secretReference\s+String\s+@unique/);
+  assert.match(migration, /No secret value is stored in this table/);
+  assert.match(migration, /IntegrationSecretCleanupStatus/);
+
+  const helperStart = service.indexOf('private async recordCleanupPending');
+  const helperEnd = service.indexOf('private async markCleanupCompleted', helperStart);
+  const helper = service.slice(helperStart, helperEnd);
+  assert.match(helper, /entityId: task\.id/);
+  assert.doesNotMatch(helper, /entityId: reference/);
 });
