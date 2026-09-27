@@ -42,6 +42,15 @@ export class IntegrationCredentialTenantController {
     return this.service.create(tenantScope(user), user.id, dto);
   }
 
+  @Post(':id/replace')
+  replace(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: RotateIntegrationCredentialDto,
+  ) {
+    return this.service.replace(tenantScope(user), id, user.id, dto);
+  }
+
   @Post(':id/rotate')
   rotate(
     @CurrentUser() user: any,

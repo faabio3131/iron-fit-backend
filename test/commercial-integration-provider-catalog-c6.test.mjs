@@ -18,6 +18,7 @@ test('C6 provider catalog returns only safe descriptor metadata and active envir
         environments: ['HOMOLOG'],
         supportsWebhook: true,
         supportsOAuth: false,
+        tenantEntitlementFeatureKey: 'integration.example',
       }],
     },
     { current: () => 'HOMOLOG' },
@@ -31,6 +32,7 @@ test('C6 provider catalog returns only safe descriptor metadata and active envir
     environments: ['HOMOLOG'],
     supportsWebhook: true,
     supportsOAuth: false,
+    tenantEntitlementFeatureKey: 'integration.example',
   }]);
   assert.equal(JSON.stringify(result).includes('secret'), false);
   assert.equal(JSON.stringify(result).includes('gymId'), false);
@@ -45,4 +47,37 @@ test('C6 provider catalog is authenticated and contains no secret/Vault fields',
   assert.match(source, /RolesGuard/);
   assert.match(source, /@Roles\('OWNER', 'SUPER_ADMIN'\)/);
   assert.doesNotMatch(source, /secretReference|vaultId|keyId|token|password/i);
+});
+
+
+test('C6 provider registry validates configurable tenant entitlement binding', () => {
+  const { IntegrationProviderRegistry } = require(
+    '../dist/src/modules/integrations/provider-registry.service.js',
+  );
+  const registry = new IntegrationProviderRegistry();
+  const registered = registry.register({
+    providerCode: 'bound_example',
+    capabilities: ['payments.charge'],
+    authModels: ['API_KEY'],
+    environments: ['HOMOLOG'],
+    supportsWebhook: false,
+    supportsOAuth: false,
+    tenantEntitlementFeatureKey: 'integration.bound_example',
+  });
+  assert.equal(
+    registered.tenantEntitlementFeatureKey,
+    'integration.bound_example',
+  );
+  assert.throws(
+    () => registry.register({
+      providerCode: 'invalid_binding',
+      capabilities: ['payments.refund'],
+      authModels: ['API_KEY'],
+      environments: ['HOMOLOG'],
+      supportsWebhook: false,
+      supportsOAuth: false,
+      tenantEntitlementFeatureKey: 'PREMIUM_HARDCODED',
+    }),
+    /tenantEntitlementFeatureKey invalida/,
+  );
 });

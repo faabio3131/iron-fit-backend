@@ -8,20 +8,13 @@ import {
   MinLength,
 } from 'class-validator';
 import { StepUpDto } from '../../auth/dto/identity-security.dto';
-import {
-  INTEGRATION_AUTH_MODELS,
-  INTEGRATION_ENVIRONMENTS,
-} from '../contracts/integration-contract';
+import { INTEGRATION_AUTH_MODELS } from '../contracts/integration-contract';
 
 export class CreateIntegrationCredentialDto extends StepUpDto {
   @IsString()
   @MinLength(2)
   @MaxLength(64)
   providerCode!: string;
-
-  @IsString()
-  @IsIn(INTEGRATION_ENVIRONMENTS)
-  environment!: (typeof INTEGRATION_ENVIRONMENTS)[number];
 
   @IsString()
   @IsIn(INTEGRATION_AUTH_MODELS)

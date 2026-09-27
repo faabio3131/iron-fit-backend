@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   ServiceUnavailableException,
@@ -9,27 +10,31 @@ import {
   IntegrationConnectionStatus,
   IntegrationEnvironment,
   IntegrationScope,
-  Prisma,
+  IntegrationSecretCleanupStatus,
 } from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthSecurityService } from '../auth/auth-security.service';
+import { TenantProductEntitlementsService } from '../product-entitlements/tenant-product-entitlements.service';
 import {
   assertCapability,
   assertIntegrationScope,
   assertPublicIntegrationConfiguration,
   assertProviderCode,
   IntegrationConnectionScope,
+  IntegrationProviderDescriptor,
   newIntegrationSecretReference,
 } from './contracts/integration-contract';
 import {
   CreateIntegrationCredentialDto,
   RotateIntegrationCredentialDto,
 } from './dto/integration-credential-admin.dto';
+import { IntegrationCredentialProbeRegistry } from './provider-credential-probe.registry';
 import { IntegrationProviderRegistry } from './provider-registry.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
 import {
   INTEGRATION_SECRET_VAULT,
+  IntegrationSecretValue,
   IntegrationSecretVaultPort,
 } from './secrets/integration-secret-vault.port';
 
@@ -72,6 +77,7 @@ function safeView(connection: any): IntegrationCredentialSafeView {
     capabilities: connection.capabilities,
     publicConfiguration: connection.publicConfiguration ?? null,
     credentialConfigured: Boolean(
+      connection.secretReference &&
       connection.secretVersion &&
       connection.secretRotatedAt &&
       !connection.secretRevokedAt,
@@ -95,6 +101,8 @@ export class IntegrationCredentialAdminService {
     private readonly providers: IntegrationProviderRegistry,
     private readonly runtimeEnvironment: IntegrationRuntimeEnvironmentService,
     private readonly audit: AuditService,
+    private readonly entitlements: TenantProductEntitlementsService,
+    private readonly probes: IntegrationCredentialProbeRegistry,
     @Inject(INTEGRATION_SECRET_VAULT)
     private readonly vault: IntegrationSecretVaultPort,
   ) {}
@@ -108,18 +116,6 @@ export class IntegrationCredentialAdminService {
     );
   }
 
-  private async requireActiveRuntimeEnvironment(
-    requested: string,
-  ): Promise<IntegrationEnvironment> {
-    const runtime = this.runtimeEnvironment.current();
-    if (requested !== runtime) {
-      throw new BadRequestException(
-        'Integracao so pode ser administrada pelo runtime do mesmo ambiente',
-      );
-    }
-    return runtime as IntegrationEnvironment;
-  }
-
   private whereScope(scope: IntegrationConnectionScope) {
     assertIntegrationScope(scope);
     return {
@@ -128,7 +124,88 @@ export class IntegrationCredentialAdminService {
     };
   }
 
-  async list(scope: IntegrationConnectionScope): Promise<IntegrationCredentialSafeView[]> {
+  private async assertTenantProviderAllowed(
+    scope: IntegrationConnectionScope,
+    provider: Readonly<IntegrationProviderDescriptor>,
+  ) {
+    if (scope.scope !== 'TENANT') return;
+
+    const featureKey = provider.tenantEntitlementFeatureKey;
+    if (!featureKey) {
+      throw new ForbiddenException(
+        'Provider nao possui entitlement comercial configurado para tenant',
+      );
+    }
+
+    const resolution = await this.entitlements.resolveFeature(
+      scope.gymId,
+      featureKey,
+    );
+    if (resolution.kind !== 'FEATURE' || resolution.value !== true) {
+      throw new ForbiddenException(
+        'Plano/configuracao do tenant nao autoriza esta integracao',
+      );
+    }
+  }
+
+  private async recordCleanupPending(
+    connectionId: string | null,
+    reference: string,
+    reason: string,
+    userId: string,
+    gymId: string | null,
+  ) {
+    const now = new Date();
+    const task = await this.prisma.integrationSecretCleanupTask.upsert({
+      where: { secretReference: reference },
+      create: {
+        integrationConnectionId: connectionId,
+        secretReference: reference,
+        reason,
+        status: IntegrationSecretCleanupStatus.PENDING,
+        attempts: 1,
+        lastAttemptAt: now,
+      },
+      update: {
+        integrationConnectionId: connectionId,
+        reason,
+        status: IntegrationSecretCleanupStatus.PENDING,
+        attempts: { increment: 1 },
+        lastAttemptAt: now,
+        completedAt: null,
+      },
+    });
+
+    await this.audit.record({
+      gymId,
+      userId,
+      action: 'INTEGRATION_SECRET_CLEANUP_PENDING',
+      entity: 'IntegrationSecretCleanupTask',
+      entityId: task.id,
+      next: {
+        reason,
+        cleanupPending: true,
+      },
+    });
+  }
+
+  private async markCleanupCompleted(reference: string) {
+    await this.prisma.integrationSecretCleanupTask.updateMany({
+      where: {
+        secretReference: reference,
+        status: IntegrationSecretCleanupStatus.PENDING,
+      },
+      data: {
+        status: IntegrationSecretCleanupStatus.COMPLETED,
+        completedAt: new Date(),
+        lastAttemptAt: new Date(),
+      },
+    });
+  }
+
+  async list(
+    scope: IntegrationConnectionScope,
+  ): Promise<IntegrationCredentialSafeView[]> {
     const where = this.whereScope(scope);
     const runtime = this.runtimeEnvironment.current() as IntegrationEnvironment;
     const rows = await this.prisma.integrationConnection.findMany({
@@ -148,13 +225,17 @@ export class IntegrationCredentialAdminService {
   ): Promise<IntegrationCredentialSafeView> {
     await this.stepUp(userId, dto);
     const where = this.whereScope(scope);
-    const environment = await this.requireActiveRuntimeEnvironment(dto.environment);
+    const environment = this.runtimeEnvironment.current() as IntegrationEnvironment;
     assertPublicIntegrationConfiguration(dto.publicConfiguration);
 
     const providerCode = assertProviderCode(dto.providerCode);
     const provider = this.providers.require(providerCode);
-    if (!provider.environments.includes(dto.environment)) {
-      throw new BadRequestException('Provider nao homologado para este environment');
+    await this.assertTenantProviderAllowed(scope, provider);
+
+    if (!provider.environments.includes(environment)) {
+      throw new BadRequestException(
+        'Provider nao homologado para o ambiente ativo',
+      );
     }
     if (!provider.authModels.includes(dto.authModel)) {
       throw new BadRequestException('authModel nao suportado pelo provider');
@@ -189,6 +270,7 @@ export class IntegrationCredentialAdminService {
 
     const reference = newIntegrationSecretReference();
     let physical: { version: number; expiresAt?: Date | null };
+
     try {
       physical = await this.vault.putSecret({
         reference,
@@ -204,8 +286,12 @@ export class IntegrationCredentialAdminService {
     const now = new Date();
     try {
       const created = await this.prisma.$transaction(async (tx) => {
-        const row = await tx.integrationConnection.update({
-          where: { id: pending.id },
+        const changed = await tx.integrationConnection.updateMany({
+          where: {
+            id: pending.id,
+            status: IntegrationConnectionStatus.PENDING,
+            secretReference: null,
+          },
           data: {
             status: IntegrationConnectionStatus.ACTIVE,
             secretReference: reference,
@@ -213,8 +299,17 @@ export class IntegrationCredentialAdminService {
             secretRotatedAt: now,
             secretExpiresAt: physical.expiresAt ?? null,
             secretRevokedAt: null,
-            lastVerifiedAt: now,
+            lastVerifiedAt: null,
           },
+        });
+        if (changed.count !== 1) {
+          throw new ConflictException(
+            'Connection mudou durante configuracao de credencial',
+          );
+        }
+
+        const row = await tx.integrationConnection.findUniqueOrThrow({
+          where: { id: pending.id },
         });
         await this.audit.record(
           {
@@ -229,7 +324,7 @@ export class IntegrationCredentialAdminService {
               authModel: row.authModel,
               capabilities: row.capabilities,
               publicConfiguration: row.publicConfiguration,
-              secretReference: row.secretReference,
+              credentialConfigured: true,
               secretVersion: row.secretVersion,
               status: row.status,
             },
@@ -240,9 +335,25 @@ export class IntegrationCredentialAdminService {
       });
       return safeView(created);
     } catch (error) {
-      await this.vault.revokeSecret(reference).catch(() => undefined);
+      try {
+        await this.vault.revokeSecret(reference);
+      } catch {
+        await this.recordCleanupPending(
+          pending.id,
+          reference,
+          'CREATE_ROLLBACK_REFERENCE',
+          userId,
+          where.gymId,
+        ).catch(() => undefined);
+      }
       await this.prisma.integrationConnection
-        .delete({ where: { id: pending.id } })
+        .deleteMany({
+          where: {
+            id: pending.id,
+            status: IntegrationConnectionStatus.PENDING,
+            secretReference: null,
+          },
+        })
         .catch(() => undefined);
       throw error;
     }
@@ -269,14 +380,23 @@ export class IntegrationCredentialAdminService {
     return { connection, where };
   }
 
-  async rotate(
+  private async replaceInternal(
     scope: IntegrationConnectionScope,
     connectionId: string,
     userId: string,
     dto: RotateIntegrationCredentialDto,
-  ): Promise<IntegrationCredentialSafeView> {
+    action: 'REPLACED' | 'ROTATED',
+  ): Promise<IntegrationCredentialSafeView & {
+    previousCredentialRevocationScheduled: boolean;
+  }> {
     await this.stepUp(userId, dto);
-    const { connection, where } = await this.requireConnection(scope, connectionId);
+    const { connection, where } = await this.requireConnection(
+      scope,
+      connectionId,
+    );
+
+    const provider = this.providers.require(connection.providerCode);
+    await this.assertTenantProviderAllowed(scope, provider);
 
     if (
       !connection.secretReference ||
@@ -284,68 +404,145 @@ export class IntegrationCredentialAdminService {
       !connection.secretRotatedAt ||
       connection.secretRevokedAt
     ) {
-      throw new ConflictException('Conexao nao possui credencial ativa para rotacao');
+      throw new ConflictException(
+        'Conexao nao possui credencial ativa para troca',
+      );
     }
 
-    const physical = await this.vault.putSecret({
-      reference: connection.secretReference,
-      value: dto.secret,
-      expectedVersion: connection.secretVersion,
-    });
+    const oldReference = connection.secretReference;
+    const oldVersion = connection.secretVersion;
+    const newReference = newIntegrationSecretReference();
+
+    let physical: { version: number; expiresAt?: Date | null };
+    try {
+      physical = await this.vault.putSecret({
+        reference: newReference,
+        value: dto.secret,
+      });
+    } catch (error) {
+      throw error;
+    }
 
     const now = new Date();
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const changed = await tx.integrationConnection.updateMany({
-        where: {
-          id: connection.id,
-          scope: connection.scope,
-          gymId: connection.gymId,
-          environment: connection.environment,
-          secretReference: connection.secretReference,
-          secretVersion: connection.secretVersion,
-          secretRevokedAt: null,
-        },
-        data: {
-          status: IntegrationConnectionStatus.ACTIVE,
-          secretVersion: physical.version,
-          secretRotatedAt: now,
-          secretExpiresAt: physical.expiresAt ?? null,
-          lastVerifiedAt: now,
-        },
-      });
-      if (changed.count !== 1) {
-        throw new ConflictException(
-          'Estado da credencial mudou durante a rotacao; resolucao permanece fail-closed',
-        );
-      }
-      const row = await tx.integrationConnection.findUniqueOrThrow({
-        where: { id: connection.id },
-      });
-      await this.audit.record(
-        {
-          gymId: where.gymId,
-          userId,
-          action: 'INTEGRATION_CREDENTIAL_ROTATED',
-          entity: 'IntegrationConnection',
-          entityId: row.id,
-          previous: {
-            secretReference: connection.secretReference,
-            secretVersion: connection.secretVersion,
-            secretRotatedAt: connection.secretRotatedAt,
-          },
-          next: {
-            secretReference: row.secretReference,
-            secretVersion: row.secretVersion,
-            secretRotatedAt: row.secretRotatedAt,
-            secretExpiresAt: row.secretExpiresAt,
-          },
-        },
-        tx,
-      );
-      return row;
-    });
+    let updated: any;
 
-    return safeView(updated);
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        const changed = await tx.integrationConnection.updateMany({
+          where: {
+            id: connection.id,
+            scope: connection.scope,
+            gymId: connection.gymId,
+            environment: connection.environment,
+            secretReference: oldReference,
+            secretVersion: oldVersion,
+            secretRevokedAt: null,
+          },
+          data: {
+            status: IntegrationConnectionStatus.ACTIVE,
+            secretReference: newReference,
+            secretVersion: physical.version,
+            secretRotatedAt: now,
+            secretExpiresAt: physical.expiresAt ?? null,
+            secretLastUsedAt: null,
+            secretRevokedAt: null,
+            lastVerifiedAt: null,
+          },
+        });
+        if (changed.count !== 1) {
+          throw new ConflictException(
+            'Estado da credencial mudou durante a troca',
+          );
+        }
+
+        const row = await tx.integrationConnection.findUniqueOrThrow({
+          where: { id: connection.id },
+        });
+        await this.audit.record(
+          {
+            gymId: where.gymId,
+            userId,
+            action: 'INTEGRATION_CREDENTIAL_' + action,
+            entity: 'IntegrationConnection',
+            entityId: row.id,
+            previous: {
+              credentialConfigured: true,
+              secretVersion: oldVersion,
+            },
+            next: {
+              credentialConfigured: true,
+              secretVersion: row.secretVersion,
+              secretRotatedAt: row.secretRotatedAt,
+              lastVerifiedAt: null,
+            },
+          },
+          tx,
+        );
+        return row;
+      });
+    } catch (error) {
+      try {
+        await this.vault.revokeSecret(newReference);
+      } catch {
+        await this.recordCleanupPending(
+          connection.id,
+          newReference,
+          'ROTATION_ROLLBACK_REFERENCE',
+          userId,
+          where.gymId,
+        ).catch(() => undefined);
+      }
+      throw error;
+    }
+
+    let previousCredentialRevocationScheduled = true;
+    try {
+      await this.vault.revokeSecret(oldReference);
+    } catch {
+      previousCredentialRevocationScheduled = false;
+      await this.recordCleanupPending(
+        connection.id,
+        oldReference,
+        'ROTATION_OLD_REFERENCE',
+        userId,
+        where.gymId,
+      );
+    }
+
+    return {
+      ...safeView(updated),
+      previousCredentialRevocationScheduled,
+    };
+  }
+
+  rotate(
+    scope: IntegrationConnectionScope,
+    connectionId: string,
+    userId: string,
+    dto: RotateIntegrationCredentialDto,
+  ) {
+    return this.replaceInternal(
+      scope,
+      connectionId,
+      userId,
+      dto,
+      'ROTATED',
+    );
+  }
+
+  replace(
+    scope: IntegrationConnectionScope,
+    connectionId: string,
+    userId: string,
+    dto: RotateIntegrationCredentialDto,
+  ) {
+    return this.replaceInternal(
+      scope,
+      connectionId,
+      userId,
+      dto,
+      'REPLACED',
+    );
   }
 
   async verify(
@@ -355,13 +552,22 @@ export class IntegrationCredentialAdminService {
     stepUp: StepUpInput,
   ) {
     await this.stepUp(userId, stepUp);
-    const { connection, where } = await this.requireConnection(scope, connectionId);
+    const { connection, where } = await this.requireConnection(
+      scope,
+      connectionId,
+    );
+
+    const provider = this.providers.require(connection.providerCode);
+    await this.assertTenantProviderAllowed(scope, provider);
+
     if (
       !connection.secretReference ||
       !connection.secretVersion ||
       connection.secretRevokedAt
     ) {
-      throw new ConflictException('Conexao sem credencial ativa para verificacao');
+      throw new ConflictException(
+        'Conexao sem credencial ativa para verificacao',
+      );
     }
 
     const physical = await this.vault.getSecret(connection.secretReference);
@@ -371,11 +577,30 @@ export class IntegrationCredentialAdminService {
       );
     }
 
+    const probe = this.probes.require(connection.providerCode);
+    await probe.verify({
+      providerCode: connection.providerCode,
+      authModel: connection.authModel,
+      capabilities: Array.isArray(connection.capabilities)
+        ? connection.capabilities.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : [],
+      publicConfiguration:
+        connection.publicConfiguration &&
+        typeof connection.publicConfiguration === 'object' &&
+        !Array.isArray(connection.publicConfiguration)
+          ? (connection.publicConfiguration as Record<string, unknown>)
+          : null,
+      secret: new IntegrationSecretValue(physical.value),
+    });
+
     const verifiedAt = new Date();
     await this.prisma.$transaction(async (tx) => {
       const changed = await tx.integrationConnection.updateMany({
         where: {
           id: connection.id,
+          secretReference: connection.secretReference,
           secretVersion: connection.secretVersion,
           secretRevokedAt: null,
         },
@@ -385,7 +610,9 @@ export class IntegrationCredentialAdminService {
         },
       });
       if (changed.count !== 1) {
-        throw new ConflictException('Credencial mudou durante a verificacao');
+        throw new ConflictException(
+          'Credencial mudou durante a verificacao do provider',
+        );
       }
 
       await this.audit.record(
@@ -396,7 +623,7 @@ export class IntegrationCredentialAdminService {
           entity: 'IntegrationConnection',
           entityId: connection.id,
           next: {
-            secretReference: connection.secretReference,
+            providerCode: connection.providerCode,
             secretVersion: connection.secretVersion,
             lastVerifiedAt: verifiedAt,
           },
@@ -408,6 +635,7 @@ export class IntegrationCredentialAdminService {
     return {
       id: connection.id,
       verified: true,
+      providerCode: connection.providerCode,
       secretVersion: connection.secretVersion,
       lastVerifiedAt: verifiedAt,
     };
@@ -420,59 +648,125 @@ export class IntegrationCredentialAdminService {
     stepUp: StepUpInput,
   ) {
     await this.stepUp(userId, stepUp);
-    const { connection, where } = await this.requireConnection(scope, connectionId);
+    const { connection, where } = await this.requireConnection(
+      scope,
+      connectionId,
+    );
     if (!connection.secretReference) {
       throw new ConflictException('Conexao sem credencial para revogacao');
     }
 
-    const revokedAt = connection.secretRevokedAt ?? new Date();
-    if (!connection.secretRevokedAt) {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.integrationConnection.update({
-          where: { id: connection.id },
-          data: {
-            status: IntegrationConnectionStatus.DISCONNECTED,
-            secretRevokedAt: revokedAt,
-          },
-        });
-        await this.audit.record(
-          {
-            gymId: where.gymId,
-            userId,
-            action: 'INTEGRATION_CREDENTIAL_REVOKED',
-            entity: 'IntegrationConnection',
-            entityId: connection.id,
-            previous: {
-              status: connection.status,
-              secretReference: connection.secretReference,
-              secretVersion: connection.secretVersion,
-              secretRevokedAt: connection.secretRevokedAt,
-            },
-            next: {
-              status: IntegrationConnectionStatus.DISCONNECTED,
-              secretReference: connection.secretReference,
-              secretVersion: connection.secretVersion,
-              secretRevokedAt: revokedAt,
-            },
-          },
-          tx,
-        );
+    const reference = connection.secretReference;
+
+    if (connection.secretRevokedAt) {
+      const pending = await this.prisma.integrationSecretCleanupTask.findUnique({
+        where: { secretReference: reference },
       });
+
+      if (pending?.status === IntegrationSecretCleanupStatus.PENDING) {
+        try {
+          await this.vault.revokeSecret(reference);
+          await this.markCleanupCompleted(reference);
+          return {
+            id: connection.id,
+            revoked: true,
+            revokedAt: connection.secretRevokedAt,
+            physicalRevocation: 'SCHEDULED',
+            idempotent: true,
+          };
+        } catch {
+          await this.recordCleanupPending(
+            connection.id,
+            reference,
+            'REVOKE_PENDING',
+            userId,
+            where.gymId,
+          ).catch(() => undefined);
+          return {
+            id: connection.id,
+            revoked: true,
+            revokedAt: connection.secretRevokedAt,
+            physicalRevocation: 'PENDING_RETRY',
+            idempotent: true,
+          };
+        }
+      }
+
+      return {
+        id: connection.id,
+        revoked: true,
+        revokedAt: connection.secretRevokedAt,
+        physicalRevocation: 'SCHEDULED',
+        idempotent: true,
+      };
     }
+
+    const revokedAt = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const changed = await tx.integrationConnection.updateMany({
+        where: {
+          id: connection.id,
+          secretReference: reference,
+          secretRevokedAt: null,
+        },
+        data: {
+          status: IntegrationConnectionStatus.DISCONNECTED,
+          secretRevokedAt: revokedAt,
+        },
+      });
+      if (changed.count !== 1) {
+        throw new ConflictException(
+          'Connection mudou durante revogacao',
+        );
+      }
+
+      await this.audit.record(
+        {
+          gymId: where.gymId,
+          userId,
+          action: 'INTEGRATION_CREDENTIAL_REVOKED',
+          entity: 'IntegrationConnection',
+          entityId: connection.id,
+          previous: {
+            status: connection.status,
+            secretVersion: connection.secretVersion,
+            credentialConfigured: true,
+          },
+          next: {
+            status: IntegrationConnectionStatus.DISCONNECTED,
+            secretVersion: connection.secretVersion,
+            secretRevokedAt: revokedAt,
+            credentialConfigured: false,
+          },
+        },
+        tx,
+      );
+    });
 
     try {
-      await this.vault.revokeSecret(connection.secretReference);
+      await this.vault.revokeSecret(reference);
+      return {
+        id: connection.id,
+        revoked: true,
+        revokedAt,
+        physicalRevocation: 'SCHEDULED',
+        idempotent: false,
+      };
     } catch {
-      throw new ServiceUnavailableException(
-        'Credencial ja esta bloqueada no IRON, mas a revogacao fisica do Vault requer retry',
+      await this.recordCleanupPending(
+        connection.id,
+        reference,
+        'REVOKE_PENDING',
+        userId,
+        where.gymId,
       );
+      return {
+        id: connection.id,
+        revoked: true,
+        revokedAt,
+        physicalRevocation: 'PENDING_RETRY',
+        idempotent: false,
+      };
     }
-
-    return {
-      id: connection.id,
-      revoked: true,
-      revokedAt,
-      physicalRevocation: 'SCHEDULED',
-    };
   }
 }

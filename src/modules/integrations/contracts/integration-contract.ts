@@ -24,6 +24,7 @@ export interface IntegrationProviderDescriptor {
   environments: readonly IntegrationEnvironmentContract[];
   supportsWebhook: boolean;
   supportsOAuth: boolean;
+  tenantEntitlementFeatureKey?: string;
 }
 
 export interface IntegrationConnectionScope {
@@ -43,6 +44,7 @@ export interface CreateIntegrationConnectionCommand extends IntegrationConnectio
 const PROVIDER_CODE_PATTERN = /^[a-z][a-z0-9._-]{1,63}$/;
 const CAPABILITY_PATTERN = /^[a-z][a-z0-9._:-]{1,127}$/;
 const SECRET_REFERENCE_PATTERN = /^isv_[A-Za-z0-9_-]{43}$/;
+const PRODUCT_FEATURE_KEY_PATTERN = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/;
 const FORBIDDEN_PUBLIC_KEY = /(secret|token|password|passwd|api[_-]?key|client[_-]?secret|private[_-]?key|credential|authorization|cvv|cvc|card[_-]?number|pan)/i;
 
 export function assertProviderCode(providerCode: string): string {
@@ -69,6 +71,14 @@ export function newIntegrationSecretReference(): string {
 export function assertIntegrationSecretReference(reference: string): string {
   if (!SECRET_REFERENCE_PATTERN.test(reference)) throw new Error('secretReference de integracao invalida');
   return reference;
+}
+
+export function assertTenantEntitlementFeatureKey(featureKey: string): string {
+  const normalized = featureKey.trim().toLowerCase();
+  if (!PRODUCT_FEATURE_KEY_PATTERN.test(normalized)) {
+    throw new Error('tenantEntitlementFeatureKey invalida');
+  }
+  return normalized;
 }
 
 function assertPublicValue(value: unknown, path: string): void {
