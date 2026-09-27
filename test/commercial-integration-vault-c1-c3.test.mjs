@@ -125,9 +125,20 @@ test('C1-C3 migration hardens scope, partial uniqueness and opaque secret refere
   assert.doesNotMatch(migration, /apiKey|accessToken|refreshToken|clientSecret|webhookSecret/);
 });
 
-test('C1-C3 module exposes no controller and therefore no premature credential API', async () => {
+test('C1-C3 foundation remains API-neutral while later C6 controllers are explicit', async () => {
   const moduleSource = await readFile('src/modules/integrations/integrations.module.ts', 'utf8');
+  const registrySource = await readFile(
+    'src/modules/integrations/provider-registry.service.ts',
+    'utf8',
+  );
+  const connectionSource = await readFile(
+    'src/modules/integrations/integration-connection.service.ts',
+    'utf8',
+  );
   assert.match(moduleSource, /IntegrationProviderRegistry/);
   assert.match(moduleSource, /IntegrationConnectionService/);
-  assert.doesNotMatch(moduleSource, /controllers:/);
+  assert.doesNotMatch(registrySource, /@Controller/);
+  assert.doesNotMatch(connectionSource, /@Controller/);
+  assert.match(moduleSource, /IntegrationCredentialTenantController/);
+  assert.match(moduleSource, /IntegrationCredentialGlobalController/);
 });
