@@ -21,6 +21,7 @@ import {
 } from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CommercialLaunchService } from '../commercial-launch/commercial-launch.service';
 import { TenantProductSubscriptionLifecycleService } from '../product-entitlements/tenant-product-subscription-lifecycle.service';
 import { InternalSandboxBillingAdapter } from './adapters/internal-sandbox-billing.adapter';
 import {
@@ -47,6 +48,7 @@ export class SaasBillingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly launch: CommercialLaunchService,
     private readonly audit: AuditService,
     private readonly lifecycle: TenantProductSubscriptionLifecycleService,
     private readonly sandbox: InternalSandboxBillingAdapter,
@@ -96,17 +98,23 @@ export class SaasBillingService {
     return this.sandbox;
   }
 
-  private configuredInteger(
-    key: 'SAAS_BILLING_INVOICE_DUE_DAYS' | 'SAAS_BILLING_DUNNING_GRACE_DAYS',
-    min: number,
-    max: number,
-  ): number {
-    const raw = this.config.get<string>(key)?.trim();
-    const value = Number(raw);
-    if (!Number.isInteger(value) || value < min || value > max) {
-      throw new ServiceUnavailableException(`${key} invalido ou ausente`);
+  private async approvedCommercialPolicy() {
+    const approved = await this.launch.currentApproved();
+    const policy = approved.policy;
+    if (
+      !policy ||
+      !Number.isInteger(policy.invoiceDueDays) ||
+      (policy.invoiceDueDays ?? -1) < 0 ||
+      (policy.invoiceDueDays ?? 31) > 30 ||
+      !Number.isInteger(policy.dunningGraceDays) ||
+      (policy.dunningGraceDays ?? 0) < 1 ||
+      (policy.dunningGraceDays ?? 31) > 30
+    ) {
+      throw new ServiceUnavailableException(
+        'Politica comercial da Launch Matrix APPROVED incompleta',
+      );
     }
-    return value;
+    return policy;
   }
 
   private periodEnd(start: Date, interval: SaasBillingInterval): Date {
@@ -1240,7 +1248,8 @@ export class SaasBillingService {
 
   async runRecurrence(dto: RunSaasBillingDto, actorUserId?: string) {
     const asOf = this.asOf(dto);
-    const dueDays = this.configuredInteger('SAAS_BILLING_INVOICE_DUE_DAYS', 0, 30);
+    const commercialPolicy = await this.approvedCommercialPolicy();
+    const dueDays = commercialPolicy.invoiceDueDays as number;
     const candidates = await this.prisma.saasBillingAgreement.findMany({
       where: {
         status: {
@@ -1362,11 +1371,8 @@ export class SaasBillingService {
 
   async runDunning(dto: RunSaasBillingDto, actorUserId?: string) {
     const asOf = this.asOf(dto);
-    const graceDays = this.configuredInteger(
-      'SAAS_BILLING_DUNNING_GRACE_DAYS',
-      1,
-      30,
-    );
+    const commercialPolicy = await this.approvedCommercialPolicy();
+    const graceDays = commercialPolicy.dunningGraceDays as number;
     const invoices = await this.prisma.saasInvoice.findMany({
       where: {
         status: { in: [SaasInvoiceStatus.OPEN, SaasInvoiceStatus.FAILED] },

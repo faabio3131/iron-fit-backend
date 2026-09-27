@@ -110,7 +110,9 @@ test('documentation and environment make external-homologation boundary explicit
   assert.match(doc, /não representa gateway externo homologado/);
   assert.match(doc, /não significa emissão fiscal real/);
   assert.match(env, /SAAS_BILLING_SANDBOX_ENABLED=false/);
-  assert.match(env, /SAAS_BILLING_DUNNING_GRACE_DAYS=5/);
+  assert.match(env, /dunning grace are governed by the APPROVED Commercial Launch Matrix/);
+  assert.doesNotMatch(env, /SAAS_BILLING_DUNNING_GRACE_DAYS=/);
+  assert.doesNotMatch(env, /SAAS_BILLING_INVOICE_DUE_DAYS=/);
   assert.match(workflow, /npm audit --audit-level=high/);
   assert.match(workflow, /npx prisma generate/);
   assert.match(workflow, /npm run lint/);

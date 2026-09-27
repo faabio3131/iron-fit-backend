@@ -92,6 +92,27 @@ Se um item possuir `featureKey` e for `OUT` ou `EXTERNAL_BLOCKER`, nenhuma vers�
 
 A aprovação falha se houver contradição.
 
+## Runtime authority
+
+Após o hardening de runtime:
+
+- novo trial lê `trialPlanVersionId` e `trialDays` somente da matriz `APPROVED`;
+- o plano de trial é uma versão exata, não "último planCode";
+- trials históricos são reconhecidos por `CommercialTrialProvisioning.subscriptionId`, preservando expiração mesmo após futura mudança de matriz;
+- recorrência lê `invoiceDueDays` da política aprovada;
+- dunning lê `dunningGraceDays` da política aprovada.
+
+Deixam de ser autoridades comerciais de deploy:
+
+- `IRON_FIT_TRIAL_PLAN_CODE`;
+- `IRON_FIT_TRIAL_DAYS`;
+- `SAAS_BILLING_INVOICE_DUE_DAYS`;
+- `SAAS_BILLING_DUNNING_GRACE_DAYS`.
+
+O B6 permanente também prova esse contrato: o workflow não injeta mais esses valores em env e o seed cria uma Launch Matrix APPROVED de fixture com snapshot hash no PostgreSQL.
+
+O `INTERNAL_SANDBOX` permanece somente como boundary técnico de teste, proibido em produção. Provider real/credenciais pertencem aos Macroblocos C/H e não são simulados por política comercial.
+
 ## Limite deste incremento
 
 A autoridade pode ser certificada sem inventar decisões de negócio.
