@@ -30,6 +30,7 @@ const SENSITIVE_KEYS = [
   'recoveryCode',
   'deliveryCiphertext',
   'secretReference',
+  'secretValue',
   'cvv',
   'cvc',
   'pan',
