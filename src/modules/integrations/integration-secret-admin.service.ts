@@ -106,12 +106,15 @@ export class IntegrationSecretAdminService {
     }
   }
 
-  private async requireScopedConnection(actor: ScopedActor) {
+  private async requireConnection(
+    connectionId: string,
+    actor: ScopedActor,
+  ) {
     assertIntegrationScope(actor.scope);
     const environment = this.runtimeEnvironment.current() as IntegrationEnvironment;
     const connection = await this.prisma.integrationConnection.findFirst({
       where: {
-        id: (actor as any).connectionId,
+        id: connectionId,
         scope: actor.scope.scope as IntegrationScope,
         gymId: actor.scope.scope === 'TENANT' ? actor.scope.gymId!.trim() : null,
         environment,
@@ -125,17 +128,8 @@ export class IntegrationSecretAdminService {
     return connection;
   }
 
-  private async requireConnection(
-    connectionId: string,
-    actor: ScopedActor,
-  ) {
-    return this.requireScopedConnection({
-      ...actor,
-      connectionId,
-    } as ScopedActor & { connectionId: string });
-  }
-
   private async assertProviderAllowed(connectionOrDescriptor: any, actor: ScopedActor) {
+    assertIntegrationScope(actor.scope);
     const descriptor = 'providerCode' in connectionOrDescriptor
       ? this.providers.require(connectionOrDescriptor.providerCode)
       : connectionOrDescriptor;
@@ -164,6 +158,7 @@ export class IntegrationSecretAdminService {
   }
 
   async create(actor: ScopedActor, dto: CreateIntegrationAdminDto) {
+    assertIntegrationScope(actor.scope);
     await this.assertStepUp(actor, dto);
     const descriptor = this.providers.require(dto.providerCode);
     await this.assertProviderAllowed(descriptor, actor);
