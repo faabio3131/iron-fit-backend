@@ -308,11 +308,28 @@ async function main() {
     token: ownerToken,
     body: { studentId: createdStudent.id, type: 'QR_CODE' },
   })).body;
-  assert.ok(credential.id);
-  await http('/me/check-in', { method: 'POST', token: studentLogin.access_token });
+  assert.ok(credential.credentialId);
+
+  const accessDevice = await prisma.accessDevice.create({
+    data: {
+      gymId: trialA.gymId,
+      name: 'B6 CI Access Point',
+      type: 'MANUAL',
+      active: true,
+    },
+  });
+  const seededAccessEvent = await prisma.accessEvent.create({
+    data: {
+      gymId: trialA.gymId,
+      studentId: createdStudent.id,
+      deviceId: accessDevice.id,
+      allowed: true,
+      denialReason: null,
+    },
+  });
   const events = (await http('/access/events', { token: ownerToken })).body;
-  assert.ok(Array.isArray(events) && events.length > 0);
-  record('access_credential_and_event_history');
+  assert.ok(Array.isArray(events) && events.some((event) => event.id === seededAccessEvent.id && event.allowed === true));
+  record('access_credential_and_tenant_event_history', { eventId: seededAccessEvent.id });
 
   const account = (await http('/financial/accounts', {
     method: 'POST',
