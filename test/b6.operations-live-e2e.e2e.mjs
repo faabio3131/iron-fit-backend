@@ -120,15 +120,20 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
       level: 'INTERMEDIARIO',
     },
   })).payload;
-  const equipment = (await request('/equipments', {
+  const catalog = (await request('/equipments/catalog?search=IRON%20B6%20Bench', {
+    token: a.owner.access_token,
+    expected: 200,
+  })).payload;
+  const catalogItem = catalog.find((item) => item.slug === 'iron-b6-bench-canonical');
+  assert.ok(catalogItem, 'canonical B6 equipment catalog item missing');
+  const selectedEquipment = (await request('/equipments/catalog/selection', {
     method: 'POST',
     token: a.owner.access_token,
     expected: 201,
-    body: {
-      name: `B6 Equipment ${a.suffix}`,
-      type: 'BENCH',
-    },
+    body: { catalogItemIds: [catalogItem.id] },
   })).payload;
+  assert.equal(selectedEquipment.length, 1);
+  const equipment = selectedEquipment[0];
   const assessment = (await request(`/students/${created.id}/assessments`, {
     method: 'POST',
     token: trainer.access_token,
