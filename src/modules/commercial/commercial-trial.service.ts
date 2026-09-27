@@ -6,13 +6,13 @@ import {
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Prisma, TenantProductSubscriptionStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'node:crypto';
 import { AuditService } from '../../common/audit/audit.service';
 import { passwordPolicyViolations } from '../auth/auth-security';
 import { AuthSecurityService } from '../auth/auth-security.service';
+import { CommercialRuntimePolicyService } from '../commercial-launch/commercial-runtime-policy.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartTrialDto } from './dto/start-trial.dto';
 import {
@@ -32,20 +32,10 @@ type CommercialDb = Prisma.TransactionClient | PrismaService;
 export class CommercialTrialService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
     private readonly audit: AuditService,
+    private readonly commercialPolicy: CommercialRuntimePolicyService,
     @Optional() private readonly authSecurity?: AuthSecurityService,
   ) {}
-
-  private trialConfig() {
-    const planCode = this.config.get<string>('IRON_FIT_TRIAL_PLAN_CODE')?.trim();
-    const daysRaw = this.config.get<string>('IRON_FIT_TRIAL_DAYS')?.trim();
-    const days = Number(daysRaw);
-    if (!planCode || !Number.isInteger(days) || days < 1 || days > 90) {
-      throw new ServiceUnavailableException('Trial comercial nao configurado');
-    }
-    return { planCode, days };
-  }
 
   private gymSlug(gymName: string, requestId: string) {
     const base = gymName
@@ -106,7 +96,6 @@ export class CommercialTrialService {
   }
 
   async startTrial(dto: StartTrialDto, ipAddress?: string | null) {
-    const config = this.trialConfig();
     const email = dto.email.trim().toLowerCase();
     const passwordViolations = passwordPolicyViolations(dto.password);
     if (passwordViolations.length > 0) {
@@ -134,6 +123,8 @@ export class CommercialTrialService {
       await this.authSecurity.assertSignupAllowed(email, ipAddress);
     }
 
+    const config = await this.commercialPolicy.trialPolicy();
+
     const slug = this.gymSlug(gymName, dto.requestId);
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
@@ -158,10 +149,9 @@ export class CommercialTrialService {
 
           const planVersion = await tx.productPlanVersion.findFirst({
             where: {
+              id: config.trialPlanVersionId,
               status: 'PUBLISHED',
-              productPlan: { code: config.planCode },
             },
-            orderBy: { version: 'desc' },
             include: { productPlan: true },
           });
           if (!planVersion) {
@@ -184,7 +174,9 @@ export class CommercialTrialService {
           });
 
           const startedAt = new Date();
-          const endsAt = new Date(startedAt.getTime() + config.days * 24 * 60 * 60 * 1000);
+          const endsAt = new Date(
+            startedAt.getTime() + config.trialDays * 24 * 60 * 60 * 1000,
+          );
           const subscription = await tx.tenantProductSubscription.create({
             data: {
               gymId: gym.id,
@@ -204,6 +196,8 @@ export class CommercialTrialService {
               subscriptionId: subscription.id,
               trialStartedAt: startedAt,
               trialEndsAt: endsAt,
+              launchMatrixVersion: config.matrixVersion,
+              launchSnapshotHash: config.snapshotHash,
             },
           });
 
@@ -260,11 +254,20 @@ export class CommercialTrialService {
     });
     if (!subscription) return { status: 'INACTIVE', subscription: null };
 
-    const trialPlanCode = this.config.get<string>('IRON_FIT_TRIAL_PLAN_CODE')?.trim();
+    const provisioning = await this.prisma.commercialTrialProvisioning.findFirst({
+      where: {
+        gymId,
+        subscriptionId: subscription.id,
+      },
+      select: {
+        requestId: true,
+        trialEndsAt: true,
+      },
+    });
     const isTrial = Boolean(
-      trialPlanCode &&
-      subscription.planVersion.productPlan.code === trialPlanCode &&
-      subscription.effectiveUntil,
+      provisioning &&
+      subscription.effectiveUntil &&
+      provisioning.trialEndsAt.getTime() === subscription.effectiveUntil.getTime(),
     );
 
     if (isTrial && subscription.effectiveUntil!.getTime() <= Date.now()) {
