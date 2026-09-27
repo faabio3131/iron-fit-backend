@@ -1,0 +1,22 @@
+enum ProductCapabilityStatus {
+  ACTIVE
+  RETIRED
+}
+
+model ProductCapabilityDefinition {
+  key                 String                  @id
+  kind                ProductEntitlementKind
+  domain              String
+  description         String
+  allowedPolicyValues Json?
+  status              ProductCapabilityStatus @default(ACTIVE)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  planEntitlements     ProductPlanEntitlement[]
+  tenantConfigurations TenantProductConfiguration[]
+  userPreferences      UserProductPreference[]
+
+  @@index([status, domain])
+  @@index([kind, status])
+}
