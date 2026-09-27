@@ -19,6 +19,16 @@ function serviceWith(tx, auditRecords = []) {
   const { ProductEntitlementsService } = require(
     '../dist/src/modules/product-entitlements/product-entitlements.service.js',
   );
+  const { PRODUCT_FEATURE_CATALOG_V1 } = require(
+    '../dist/src/modules/product-entitlements/contracts/product-entitlement-contract.js',
+  );
+  const capabilities = {
+    requireActive: async (key) => {
+      const definition = PRODUCT_FEATURE_CATALOG_V1.find((item) => item.key === key);
+      if (!definition) throw new Error('Capability nao canonica: ' + key);
+      return definition;
+    },
+  };
   return new ProductEntitlementsService(
     {
       $transaction: async (operation, options) => {
@@ -32,6 +42,7 @@ function serviceWith(tx, auditRecords = []) {
         auditRecords.push({ input, db });
       },
     },
+    capabilities,
   );
 }
 
