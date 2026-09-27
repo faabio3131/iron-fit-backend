@@ -10,15 +10,15 @@ export class UnavailableIntegrationSecretVaultAdapter implements IntegrationSecr
     throw new ServiceUnavailableException('Integration Secret Vault fisico nao configurado');
   }
 
-  async putSecret(): Promise<{ version: number; expiresAt?: Date | null }> {
+  async putSecret(_input: { reference: string; value: string; expectedVersion?: number }): Promise<{ version: number; expiresAt?: Date | null }> {
     return this.unavailable();
   }
 
-  async getSecret(): Promise<VaultSecretSnapshot> {
+  async getSecret(_reference: string): Promise<VaultSecretSnapshot> {
     return this.unavailable();
   }
 
-  async revokeSecret(): Promise<void> {
+  async revokeSecret(_reference: string): Promise<void> {
     return this.unavailable();
   }
 }
