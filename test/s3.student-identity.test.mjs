@@ -167,7 +167,7 @@ test('invalid or already-used onboarding token is rejected', async () => {
   const service = new StudentsService(prisma, auditMock());
 
   await assert.rejects(
-    () => service.acceptInvite({ token: 'x'.repeat(43), password: 'SenhaNova123' }),
+    () => service.acceptInvite({ token: 'x'.repeat(43), password: 'SenhaNova123!' }),
     /Convite invalido ou expirado/,
   );
 });
