@@ -356,9 +356,12 @@ model CommercialTrialProvisioning {
   subscriptionId     String
   trialStartedAt     DateTime
   trialEndsAt        DateTime
+  launchMatrixVersion Int?
+  launchSnapshotHash  String?
   createdAt          DateTime @default(now())
 
   @@index([gymId, createdAt])
+  @@index([launchMatrixVersion])
   @@index([userId, createdAt])
 }
 
