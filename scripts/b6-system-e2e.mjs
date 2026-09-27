@@ -43,7 +43,7 @@ async function waitForReady() {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
       const result = await http('/health/ready', { expected: [200] });
-      if (result.body?.status === 'ready') return;
+      if (result.body?.status === 'ok' && result.body?.probe === 'readiness' && result.body?.dependencies?.postgres === 'up') return;
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
@@ -113,7 +113,8 @@ function actionConfig() {
 async function main() {
   await waitForReady();
   const live = await http('/health/live', { expected: [200] });
-  assert.equal(live.body.status, 'alive');
+  assert.equal(live.body.status, 'ok');
+  assert.equal(live.body.probe, 'liveness');
   record('health_ready_live');
 
   const admin = await login('admin@gym-saas.com', 'admin123');
