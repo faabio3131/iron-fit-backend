@@ -37,6 +37,15 @@ export class IntegrationCredentialGlobalController {
     return this.service.create(GLOBAL_SCOPE, user.id, dto);
   }
 
+  @Post(':id/replace')
+  replace(
+    @CurrentUser() user: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: RotateIntegrationCredentialDto,
+  ) {
+    return this.service.replace(GLOBAL_SCOPE, id, user.id, dto);
+  }
+
   @Post(':id/rotate')
   rotate(
     @CurrentUser() user: any,
