@@ -23,6 +23,7 @@ import { ProductEntitlementsModule } from './modules/product-entitlements/produc
 import { CreatorNetworkModule } from './modules/creator-network/creator-network.module';
 import { AiModule } from './modules/ai/ai.module';
 import { CommercialModule } from './modules/commercial/commercial.module';
+import { CommercialLaunchModule } from './modules/commercial-launch/commercial-launch.module';
 import { SaasBillingModule } from './modules/saas-billing/saas-billing.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { PrismaService } from './prisma/prisma.service';
@@ -52,6 +53,7 @@ import { PrismaService } from './prisma/prisma.service';
     CreatorNetworkModule,
     AiModule,
     CommercialModule,
+    CommercialLaunchModule,
     SaasBillingModule,
     IntegrationsModule,
   ],
