@@ -354,3 +354,34 @@ test('B launch migration enforces one approved matrix and immutable approval sha
   assert.match(migration, /snapshotHash/);
   assert.match(migration, /CommercialLaunchPolicy_trial_shape/);
 });
+
+
+test('B Launch Matrix complete snapshot can be approved with deterministic 64-hex freeze hash', async () => {
+  const matrix = baseMatrix();
+  let approvedData;
+  const { service } = fakeService({
+    matrix,
+    commercialLaunchMatrix: {
+      findUnique: async () => matrix,
+      updateMany: async ({ data }) => {
+        if (data.status === 'APPROVED') approvedData = data;
+        return { count: 1 };
+      },
+      findUniqueOrThrow: async () => ({
+        ...matrix,
+        ...approvedData,
+        status: 'APPROVED',
+      }),
+    },
+  });
+
+  const result = await service.approve('matrix-a', 'admin-a', {
+    currentPassword: 'Strong-Pass-2026!',
+    confirmation: 'APPROVE_LAUNCH_MATRIX',
+  });
+
+  assert.equal(result.status, 'APPROVED');
+  assert.match(result.snapshotHash, /^[a-f0-9]{64}$/);
+  assert.equal(result.approvedByUserId, 'admin-a');
+  assert.ok(result.approvedAt instanceof Date);
+});
