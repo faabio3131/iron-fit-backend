@@ -1,0 +1,111 @@
+enum CommercialLaunchMatrixStatus {
+  DRAFT
+  APPROVED
+  RETIRED
+}
+
+enum CommercialLaunchDecision {
+  UNDECIDED
+  LAUNCH
+  EXTERNAL_BLOCKER
+  OUT
+}
+
+enum CommercialLaunchItemKind {
+  SURFACE
+  CHANNEL
+  PROVIDER
+  CAPABILITY
+  MOBILE
+}
+
+enum CommercialUpgradePolicy {
+  IMMEDIATE_PRORATED
+}
+
+enum CommercialDowngradePolicy {
+  NEXT_PERIOD_NO_IMMEDIATE_REFUND
+}
+
+enum CommercialCancellationPolicy {
+  IMMEDIATE_OR_PERIOD_END
+}
+
+enum CommercialRefundPolicy {
+  SUPER_ADMIN_MANUAL
+}
+
+enum CommercialFiscalMode {
+  UNDECIDED
+  PROVIDER_NFSE
+  EXTERNAL_HANDOFF
+  OUT
+}
+
+model CommercialLaunchMatrix {
+  id               String                       @id @default(uuid())
+  version          Int                          @unique
+  name             String
+  status           CommercialLaunchMatrixStatus @default(DRAFT)
+  snapshotHash     String?
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  retiredAt        DateTime?
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+  items            CommercialLaunchItem[]
+  offerings        CommercialLaunchOffering[]
+  policy           CommercialLaunchPolicy?
+
+  @@index([status, approvedAt])
+}
+
+model CommercialLaunchItem {
+  id                  String                   @id @default(uuid())
+  matrixId            String
+  itemKey             String
+  kind                CommercialLaunchItemKind
+  decision            CommercialLaunchDecision @default(UNDECIDED)
+  featureKey          String?
+  rationale           String?
+  blockerOwner        String?
+  evidenceRequirement String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  matrix              CommercialLaunchMatrix   @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+
+  @@unique([matrixId, itemKey])
+  @@index([matrixId, decision])
+  @@index([featureKey])
+}
+
+model CommercialLaunchOffering {
+  id            String                 @id @default(uuid())
+  matrixId      String
+  planVersionId String
+  priceId       String
+  createdAt     DateTime               @default(now())
+  matrix        CommercialLaunchMatrix @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+
+  @@unique([matrixId, priceId])
+  @@index([matrixId, planVersionId])
+}
+
+model CommercialLaunchPolicy {
+  id                 String                       @id @default(uuid())
+  matrixId           String                       @unique
+  trialEnabled       Boolean
+  trialPlanVersionId String?
+  trialDays          Int?
+  invoiceDueDays     Int?
+  dunningGraceDays   Int?
+  upgradePolicy      CommercialUpgradePolicy?
+  downgradePolicy    CommercialDowngradePolicy?
+  cancellationPolicy CommercialCancellationPolicy?
+  refundPolicy       CommercialRefundPolicy?
+  fiscalMode         CommercialFiscalMode         @default(UNDECIDED)
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  matrix             CommercialLaunchMatrix       @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+}
