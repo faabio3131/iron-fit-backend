@@ -33,9 +33,11 @@ Recorrência cria SaasInvoice com idempotencyKey determinística por agreement/p
 
 Inadimplência:
 1. PAST_DUE;
-2. após SAAS_BILLING_DUNNING_GRACE_DAYS, SUSPENDED;
+2. após o `dunningGraceDays` da `CommercialLaunchPolicy` APPROVED, SUSPENDED;
 3. TenantProductSubscription canônica também é suspensa;
 4. entitlements falham fechado porque exigem ACTIVE.
+
+O vencimento de novos invoices usa `invoiceDueDays` da mesma Launch Matrix APPROVED. `SAAS_BILLING_DUNNING_GRACE_DAYS` e `SAAS_BILLING_INVOICE_DUE_DAYS` não são mais autoridades de deploy.
 
 Pagamento posterior pode reativar a assinatura canônica quando não existe outra ACTIVE conflitante.
 
