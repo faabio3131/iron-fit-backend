@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -21,7 +22,7 @@ import { IntegrationCredentialAdminService } from './integration-credential-admi
 
 function tenantScope(user: any) {
   const gymId = user?.activeGymId ?? user?.gymId;
-  if (!gymId) throw new Error('Tenant ativo obrigatorio para administrar integracoes');
+  if (!gymId) throw new BadRequestException('Tenant ativo obrigatorio para administrar integracoes');
   return { scope: 'TENANT' as const, gymId };
 }
 
