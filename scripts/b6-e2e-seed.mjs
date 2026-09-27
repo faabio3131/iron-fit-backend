@@ -84,6 +84,18 @@ async function main() {
   const basic = await ensurePlan('IRON_B6_BASIC', 'IRON B6 Basic');
   const pro = await ensurePlan('IRON_B6_PRO', 'IRON B6 Pro');
 
+  await prisma.equipmentCatalogItem.upsert({
+    where: { slug: 'iron-b6-bench-canonical' },
+    update: { active: true },
+    create: {
+      slug: 'iron-b6-bench-canonical',
+      name: 'IRON B6 Bench Canonical',
+      category: 'PLATE_LOADED',
+      primaryMuscle: 'CHEST',
+      active: true,
+    },
+  });
+
   await prisma.saasPlanPrice.upsert({
     where: { priceCode: 'IRON_B6_BASIC_MONTHLY' },
     update: {
