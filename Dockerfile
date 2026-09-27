@@ -24,4 +24,4 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 3333
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main.js"]

@@ -9,7 +9,7 @@ test('B6 permanent CI runs real HTTP system certification after migrations and b
     'npm run test:smoke',
     'npx prisma db seed',
     'node scripts/b6-bootstrap.mjs',
-    'node dist/main',
+    'node dist/src/main.js',
     'node scripts/b6-system-e2e.mjs',
     'docker build --pull',
   ]) {
