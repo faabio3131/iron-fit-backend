@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuthModule } from '../auth/auth.module';
+import { IntegrationCredentialAdminService } from './integration-credential-admin.service';
+import { IntegrationCredentialGlobalController } from './integration-credential-global.controller';
+import { IntegrationCredentialTenantController } from './integration-credential-tenant.controller';
 import { IntegrationConnectionService } from './integration-connection.service';
 import { IntegrationProviderRegistry } from './provider-registry.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
@@ -13,10 +18,17 @@ import { OciVaultConfigurationService } from './secrets/oci/oci-vault-configurat
 import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-integration-secret-vault.adapter';
 
 @Module({
+  imports: [AuthModule],
+  controllers: [
+    IntegrationCredentialTenantController,
+    IntegrationCredentialGlobalController,
+  ],
   providers: [
     PrismaService,
+    AuditService,
     IntegrationProviderRegistry,
     IntegrationConnectionService,
+    IntegrationCredentialAdminService,
     IntegrationRuntimeEnvironmentService,
     OciVaultConfigurationService,
     OciAuthenticationProviderFactory,
@@ -58,6 +70,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
   exports: [
     IntegrationProviderRegistry,
     IntegrationConnectionService,
+    IntegrationCredentialAdminService,
     IntegrationRuntimeEnvironmentService,
     IntegrationSecretResolverService,
     INTEGRATION_SECRET_VAULT,
