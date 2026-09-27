@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
+import { passwordPolicyViolations } from '../auth/auth-security';
 import {
   canAssignRole,
   resolveAssignmentGymId,
@@ -23,6 +24,12 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto, actor: any) {
+    if (passwordPolicyViolations(dto.password).length > 0) {
+      throw new BadRequestException(
+        'Senha deve ter 12-128 caracteres com maiuscula, minuscula, numero e simbolo',
+      );
+    }
+
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
