@@ -2,6 +2,7 @@ import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { RuntimeMetricsService } from '../observability/runtime-metrics.service';
+import { runtimeIdentity } from '../../config/runtime-environment';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 
@@ -13,6 +14,7 @@ function resolveRequestId(value: string | string[] | undefined): string {
 @Injectable()
 export class RequestObservabilityMiddleware implements NestMiddleware {
   private readonly logger = new Logger('HTTP');
+  private readonly identity = runtimeIdentity();
 
   constructor(private readonly metrics: RuntimeMetricsService) {}
 
@@ -32,6 +34,8 @@ export class RequestObservabilityMiddleware implements NestMiddleware {
           path: req.path,
           statusCode: res.statusCode,
           durationMs: Math.round(durationMs * 100) / 100,
+          runtimeEnvironment: this.identity.runtimeEnvironment,
+          buildSha: this.identity.buildSha,
         }),
       );
     });
