@@ -105,7 +105,7 @@ jobs:
 
       - name: Start live backend for integrated E2E
         run: |
-          node dist/main > /tmp/iron-b6-backend.log 2>&1 &
+          node dist/src/main.js > /tmp/iron-b6-backend.log 2>&1 &
           echo $! > /tmp/iron-b6-backend.pid
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:3333/api/v1/health/ready >/dev/null; then
