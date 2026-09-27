@@ -239,9 +239,11 @@ async function main() {
   const assessment = (await http(`/students/${createdStudent.id}/assessments`, {
     method: 'POST',
     token: trainer.access_token,
-    body: { weight: 80, height: 1.82, bodyFatPercent: 17, notes: 'B6 integrated assessment' },
+    body: { weight: 80, height: 182, bodyFatPercent: 17, notes: 'B6 integrated assessment' },
   })).body;
-  assert.equal(assessment.studentId, createdStudent.id);
+  assert.ok(assessment.id);
+  const persistedAssessment = await prisma.assessment.findUniqueOrThrow({ where: { id: assessment.id } });
+  assert.equal(persistedAssessment.studentId, createdStudent.id);
 
   const workout = (await http('/workouts', {
     method: 'POST',
