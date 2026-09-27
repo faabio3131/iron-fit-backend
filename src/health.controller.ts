@@ -16,6 +16,7 @@ export class HealthController {
     return {
       status: 'ok',
       service: identity.service,
+      version: '0.1.0',
       runtimeEnvironment: identity.runtimeEnvironment,
       buildSha: identity.buildSha,
       releaseVersion: identity.releaseVersion,
@@ -53,7 +54,7 @@ export class HealthController {
     } catch {
       throw new ServiceUnavailableException({
         status: 'unavailable',
-        service: 'iron-fit-backend',
+        service: 'gym-saas-backend',
         probe: 'readiness',
         dependencies: { postgres: 'down' },
       });
