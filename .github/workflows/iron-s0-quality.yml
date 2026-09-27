@@ -25,6 +25,22 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iron_ci?schema=public
+      NODE_ENV: test
+      PORT: 3333
+      B6_API_URL: http://127.0.0.1:3333/api/v1
+      JWT_SECRET: iron-b6-ci-jwt-secret-0123456789-abcdefghijklmnopqrstuvwxyz
+      MFA_ENCRYPTION_KEY: 1111111111111111111111111111111111111111111111111111111111111111
+      AUTH_ACTION_TOKEN_ENCRYPTION_KEY: 2222222222222222222222222222222222222222222222222222222222222222
+      AUTH_REQUIRE_VERIFIED_EMAIL: 'false'
+      CORS_ORIGINS: http://localhost:3000
+      TRUST_PROXY_HOPS: '0'
+      IRON_FIT_TRIAL_PLAN_CODE: IRON_TRIAL
+      IRON_FIT_TRIAL_DAYS: '14'
+      SAAS_BILLING_PROVIDER: INTERNAL_SANDBOX
+      SAAS_BILLING_SANDBOX_ENABLED: 'true'
+      SAAS_BILLING_SANDBOX_SECRET: iron-b6-sandbox-secret-0123456789-abcdef
+      SAAS_BILLING_INVOICE_DUE_DAYS: '0'
+      SAAS_BILLING_DUNNING_GRACE_DAYS: '1'
 
     services:
       postgres:
@@ -73,6 +89,26 @@ jobs:
 
       - name: Smoke regression tests
         run: npm run test:smoke
+
+      - name: Seed integrated system fixture
+        run: |
+          npx prisma db seed
+          node scripts/b6-bootstrap.mjs
+
+      - name: Integrated B6 HTTP system journey
+        run: |
+          set -euo pipefail
+          node dist/main > /tmp/iron-b6-server.log 2>&1 &
+          SERVER_PID=$!
+          cleanup() {
+            kill "$SERVER_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          if ! node scripts/b6-system-e2e.mjs; then
+            echo '--- IRON B6 backend log ---'
+            cat /tmp/iron-b6-server.log || true
+            exit 1
+          fi
 
       - name: Build production container image
         run: docker build --pull -t iron-fit-backend-ci:${{ github.sha }} .
