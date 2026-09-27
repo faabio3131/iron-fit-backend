@@ -171,6 +171,7 @@ test('C14 execute is server-side, one-time and exposes secret only to registered
   const rootPrisma = {
     integrationBreakGlassGrant: {
       updateMany: async ({ data }) => {
+        if (data.status === 'EXPIRED') return { count: 0 };
         if (data.status) grantTransitions.push(data.status);
         return { count: 1 };
       },
@@ -241,6 +242,7 @@ test('C14 provider failure makes grant terminal FAILED instead of reusable', asy
   const prisma = {
     integrationBreakGlassGrant: {
       updateMany: async ({ data }) => {
+        if (data.status === 'EXPIRED') return { count: 0 };
         if (data.status) transitions.push(data.status);
         return { count: 1 };
       },
