@@ -410,6 +410,7 @@ model Gym {
   communicationAutomations CommunicationAutomation[]
   communicationMessages CommunicationMessage[]
   aggregatorConnections AggregatorProviderConnection[]
+  integrationConnections IntegrationConnection[]
   commercialOnboardingCheckpoints CommercialOnboardingCheckpoint[]
   @@index([slug])
 }
