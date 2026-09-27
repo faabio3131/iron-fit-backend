@@ -12,7 +12,7 @@ test('B5 deploy artifacts use one production-shaped Node runtime with Prisma mig
   assert.match(docker, /FROM node:22-bookworm-slim AS build/);
   assert.match(docker, /RUN npx prisma generate/);
   assert.match(docker, /RUN npm run build/);
-  assert.match(docker, /CMD \["node", "dist\/main"\]/);
+  assert.match(docker, /CMD \["node", "dist\/src\/main\.js"\]/);
   assert.match(railway, /builder = "DOCKERFILE"/);
   assert.match(railway, /preDeployCommand = \["npx prisma migrate deploy"\]/);
   assert.match(railway, /healthcheckPath = "\/api\/v1\/health\/ready"/);
