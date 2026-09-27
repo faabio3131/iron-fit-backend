@@ -1,6 +1,6 @@
 # IRON — Bloco 5 — Infraestrutura, Homologação e Operação
 
-Status: CERTIFIED NO ESCOPO INTERNO — engenharia de infraestrutura concluída e promovida em `main` pelo PR #61. Homologação física externa e produção continuam pendentes e não são declaradas sem evidência.
+Status: CERTIFIED NO ESCOPO INTERNO — engenharia de infraestrutura concluída e promovida em `main` pelo PR #61. Homologação física externa continua pendente. Este documento não declara produção real sem evidência física.
 
 ## Arquitetura única por ambiente
 
