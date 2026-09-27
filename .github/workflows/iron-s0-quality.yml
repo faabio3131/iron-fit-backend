@@ -101,6 +101,53 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: C11 seed DB-only secret-reference DR canary
+        run: node scripts/c11-dr-seed.mjs
+
+      - name: C11 PostgreSQL backup/restore secret boundary drill
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/iron-c11-dr
+          rm -f /tmp/iron-c11-dr/iron_ci.sql
+
+          docker run --rm --network host \
+            -e PGPASSWORD=postgres \
+            -v /tmp/iron-c11-dr:/dr \
+            postgres:18 \
+            pg_dump -h 127.0.0.1 -U postgres -d iron_ci \
+              --no-owner --no-privileges --format=p --file=/dr/iron_ci.sql
+
+          for forbidden in '"apiKeyEnc"' '"accessTokenEnc"' '"refreshTokenEnc"' '"webhookSecretEnc"'; do
+            if grep -Fq "$forbidden" /tmp/iron-c11-dr/iron_ci.sql; then
+              echo "C11_DR_FAIL legacy provider credential column found in DB backup"
+              exit 1
+            fi
+          done
+
+          if grep -Fq 'C11_REUSABLE_SECRET_MUST_NEVER_BE_IN_DATABASE' /tmp/iron-c11-dr/iron_ci.sql; then
+            echo "C11_DR_FAIL reusable secret canary found in DB backup"
+            exit 1
+          fi
+
+          docker run --rm --network host \
+            -e PGPASSWORD=postgres \
+            postgres:18 \
+            psql -h 127.0.0.1 -U postgres -d postgres \
+              -v ON_ERROR_STOP=1 \
+              -c 'DROP DATABASE IF EXISTS iron_c11_restore;' \
+              -c 'CREATE DATABASE iron_c11_restore;'
+
+          docker run --rm --network host \
+            -e PGPASSWORD=postgres \
+            -v /tmp/iron-c11-dr:/dr \
+            postgres:18 \
+            psql -h 127.0.0.1 -U postgres -d iron_c11_restore \
+              -v ON_ERROR_STOP=1 -f /dr/iron_ci.sql >/tmp/iron-c11-restore.log
+
+          DATABASE_URL='postgresql://postgres:postgres@localhost:5432/iron_c11_restore?schema=public' \
+            node scripts/c11-dr-restore-verify.mjs
+
       - name: Smoke regression tests
         run: npm run test:smoke
 
