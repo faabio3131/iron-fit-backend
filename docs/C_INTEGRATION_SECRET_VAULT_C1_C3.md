@@ -1,6 +1,14 @@
 # IRON — Commercial Readiness — C1–C3 Integration & Secret Vault Foundation
 
-Status: **CANDIDATE — aguardando CI/PR/merge/post-merge**
+Status: **CERTIFIED**
+
+Certified main: `bb6fb4944089e3e1522669c2b101c1435542db80`
+
+Evidence:
+- PR #65;
+- PR CI `36324690273` — SUCCESS;
+- post-merge main CI `36324876224` — SUCCESS;
+- fresh PostgreSQL migrations, lint/typecheck, build, smoke regression, B6 live E2E, cross-surface live app client and production container build all passed.
 
 ## Escopo
 
@@ -30,7 +38,7 @@ publicConfiguration aceita somente metadados não secretos. A validação recurs
 
 A referência canônica é opaca e aleatória no formato isv_<base64url-32-bytes>. Ela não contém tenant, provider, caminho físico do Vault ou segredo. A coluna permanece nullable porque C4 ainda não existe.
 
-C4 será responsável por criar o segredo no backend físico e somente então associar a referência válida à conexão.
+C4 será responsável por criar o segredo no backend físico e somente então associar uma referência válida à conexão.
 
 ## Segurança preservada
 
@@ -44,4 +52,4 @@ C4 será responsável por criar o segredo no backend físico e somente então as
 
 ## Próximo gate
 
-Executar dependency audit, Prisma generate, fresh migrations PostgreSQL, lint/typecheck, build e regressão completa. Somente após C1–C3 serem certificados deve iniciar C4 — Vault Backend físico.
+C4 — Vault Backend físico — permanece uma dependência externa legítima e não pode ser substituído por armazenamento fake ou criptografia caseira.
