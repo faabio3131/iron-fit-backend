@@ -75,16 +75,13 @@ export class AuthSecurityService {
     const keyHash = securityKeyHash(scope, rawKey || 'unknown');
     const now = new Date();
 
-    return this.serializable(async (tx) => {
+    const result = await this.serializable(async (tx) => {
       const current = await tx.authRateLimitBucket.findUnique({
         where: { scope_keyHash: { scope, keyHash } },
       });
 
       if (current?.blockedUntil && current.blockedUntil > now) {
-        throw new HttpException(
-        'Tente novamente mais tarde',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+        return { blockedUntil: current.blockedUntil };
       }
 
       const windowExpired =
@@ -110,13 +107,15 @@ export class AuthSecurityService {
         },
       });
 
-      if (blockedUntil) {
-        throw new HttpException(
+      return { blockedUntil };
+    });
+
+    if (result.blockedUntil && result.blockedUntil > now) {
+      throw new HttpException(
         'Tente novamente mais tarde',
         HttpStatus.TOO_MANY_REQUESTS,
       );
-      }
-    });
+    }
   }
 
   private async assertBucketNotBlocked(scope: string, rawKey: string) {
