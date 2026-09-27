@@ -4,7 +4,7 @@ export type IronRuntimeEnvironment =
   (typeof IRON_RUNTIME_ENVIRONMENTS)[number];
 
 export type RuntimeIdentity = {
-  service: 'iron-fit-backend';
+  service: 'gym-saas-backend';
   runtimeEnvironment: IronRuntimeEnvironment;
   nodeEnvironment: string;
   buildSha: string;
@@ -48,7 +48,7 @@ export function runtimeIdentity(
 ): RuntimeIdentity {
   const runtimeEnvironment = resolveIronRuntimeEnvironment(env);
   return {
-    service: 'iron-fit-backend',
+    service: 'gym-saas-backend',
     runtimeEnvironment,
     nodeEnvironment: env.NODE_ENV?.trim() || 'development',
     buildSha: env.IRON_BUILD_SHA?.trim() || 'unknown',
