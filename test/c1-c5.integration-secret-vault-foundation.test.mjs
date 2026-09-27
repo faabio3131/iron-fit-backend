@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 const schema = fs.readFileSync('prisma/integrations.prisma', 'utf8');
 const migration = fs.readFileSync(
