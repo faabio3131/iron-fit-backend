@@ -3,11 +3,12 @@ import { ConfigModule } from '@nestjs/config';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthModule } from '../auth/auth.module';
+import { CommercialLaunchModule } from '../commercial-launch/commercial-launch.module';
 import { CommercialTrialController } from './commercial-trial.controller';
 import { CommercialTrialService } from './commercial-trial.service';
 
 @Module({
-  imports: [ConfigModule, AuthModule],
+  imports: [ConfigModule, AuthModule, CommercialLaunchModule],
   controllers: [CommercialTrialController],
   providers: [PrismaService, AuditService, CommercialTrialService],
   exports: [CommercialTrialService],
