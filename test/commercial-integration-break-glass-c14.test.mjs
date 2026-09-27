@@ -78,7 +78,7 @@ test('C14 break-glass requires MFA-enabled administrator even after password ste
     }),
     /MFA habilitado/,
   );
-  assert.equal(dbTouched, true); // stale-grant expiry is metadata-only and may run before step-up
+  assert.equal(dbTouched, false);
 });
 
 test('C14 requester cannot approve own break-glass request', async () => {
