@@ -355,6 +355,28 @@ export class IntegrationBreakGlassService {
         );
       }
 
+      const usedAt = new Date();
+      const touched = await this.prisma.integrationConnection.updateMany({
+        where: {
+          id: connection.id,
+          secretReference: connection.secretReference,
+          secretVersion: connection.secretVersion,
+          secretRevokedAt: null,
+          OR: [
+            { secretExpiresAt: null },
+            { secretExpiresAt: { gt: usedAt } },
+          ],
+        },
+        data: {
+          secretLastUsedAt: usedAt,
+        },
+      });
+      if (touched.count !== 1) {
+        throw new ServiceUnavailableException(
+          'Credencial mudou, expirou ou foi revogada durante break-glass',
+        );
+      }
+
       const probe = this.probes.require(connection.providerCode);
       await probe.verify({
         providerCode: connection.providerCode,
@@ -391,7 +413,7 @@ export class IntegrationBreakGlassService {
           );
         }
 
-        await tx.integrationConnection.updateMany({
+        const verified = await tx.integrationConnection.updateMany({
           where: {
             id: connection.id,
             secretReference: connection.secretReference,
@@ -402,6 +424,11 @@ export class IntegrationBreakGlassService {
             lastVerifiedAt: consumedAt,
           },
         });
+        if (verified.count !== 1) {
+          throw new ConflictException(
+            'Credencial mudou durante conclusao do break-glass',
+          );
+        }
 
         await this.audit.record(
           {
@@ -508,7 +535,7 @@ export class IntegrationBreakGlassService {
         connectionId: connection.id,
         providerCode: connection.providerCode,
         revokedAt,
-        revokeReasonRecorded: Boolean(reason),
+        revokeReason: reason,
       },
     });
 
