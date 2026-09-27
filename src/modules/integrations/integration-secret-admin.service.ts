@@ -9,7 +9,7 @@ import {
   IntegrationConnectionStatus,
   IntegrationEnvironment,
   IntegrationScope,
-  Prisma,
+  IntegrationSecretCleanupStatus,
 } from '@prisma/client';
 import { AuthSecurityService } from '../auth/auth-security.service';
 import { TenantProductEntitlementsService } from '../product-entitlements/tenant-product-entitlements.service';
@@ -85,6 +85,60 @@ export class IntegrationSecretAdminService {
       dto.mfaCode,
       dto.recoveryCode,
     );
+  }
+
+  private async recordCleanupPending(
+    connectionId: string | null,
+    reference: string,
+    reason: string,
+    actorUserId: string,
+    gymId: string | null,
+  ) {
+    const now = new Date();
+    await this.prisma.integrationSecretCleanupTask.upsert({
+      where: { secretReference: reference },
+      create: {
+        integrationConnectionId: connectionId,
+        secretReference: reference,
+        reason,
+        status: IntegrationSecretCleanupStatus.PENDING,
+        attempts: 1,
+        lastAttemptAt: now,
+      },
+      update: {
+        integrationConnectionId: connectionId,
+        reason,
+        status: IntegrationSecretCleanupStatus.PENDING,
+        attempts: { increment: 1 },
+        lastAttemptAt: now,
+        completedAt: null,
+      },
+    });
+    await this.audit.record({
+      gymId,
+      userId: actorUserId,
+      action: 'INTEGRATION_SECRET_CLEANUP_PENDING',
+      entity: 'IntegrationSecretCleanupTask',
+      entityId: reference,
+      next: {
+        reason,
+        cleanupPending: true,
+      },
+    });
+  }
+
+  private async markCleanupCompleted(reference: string) {
+    await this.prisma.integrationSecretCleanupTask.updateMany({
+      where: {
+        secretReference: reference,
+        status: IntegrationSecretCleanupStatus.PENDING,
+      },
+      data: {
+        status: IntegrationSecretCleanupStatus.COMPLETED,
+        completedAt: new Date(),
+        lastAttemptAt: new Date(),
+      },
+    });
   }
 
   private async assertTenantEntitlement(
@@ -236,7 +290,17 @@ export class IntegrationSecretAdminService {
 
       return this.safeView(completed);
     } catch (error) {
-      await this.vault.revokeSecret(reference).catch(() => undefined);
+      try {
+        await this.vault.revokeSecret(reference);
+      } catch {
+        await this.recordCleanupPending(
+          connection.id,
+          reference,
+          'CREATE_ROLLBACK_REFERENCE',
+          actor.userId,
+          connection.gymId,
+        ).catch(() => undefined);
+      }
       await this.prisma.integrationConnection.deleteMany({
         where: {
           id: connection.id,
@@ -336,14 +400,13 @@ export class IntegrationSecretAdminService {
         await this.vault.revokeSecret(oldReference);
       } catch {
         previousCredentialRevocationScheduled = false;
-        await this.audit.record({
-          gymId: connection.gymId,
-          userId: actor.userId,
-          action: 'INTEGRATION_OLD_SECRET_CLEANUP_PENDING',
-          entity: 'IntegrationConnection',
-          entityId: connection.id,
-          next: { cleanupPending: true },
-        });
+        await this.recordCleanupPending(
+          connection.id,
+          oldReference,
+          'ROTATION_OLD_REFERENCE',
+          actor.userId,
+          connection.gymId,
+        );
       }
 
       return {
@@ -351,7 +414,17 @@ export class IntegrationSecretAdminService {
         previousCredentialRevocationScheduled,
       };
     } catch (error) {
-      await this.vault.revokeSecret(newReference).catch(() => undefined);
+      try {
+        await this.vault.revokeSecret(newReference);
+      } catch {
+        await this.recordCleanupPending(
+          connection.id,
+          newReference,
+          'ROTATION_ROLLBACK_REFERENCE',
+          actor.userId,
+          connection.gymId,
+        ).catch(() => undefined);
+      }
       throw error;
     }
   }
@@ -442,15 +515,50 @@ export class IntegrationSecretAdminService {
     await this.assertStepUp(actor, dto);
     const connection = await this.requireConnection(connectionId, actor);
 
-    if (!connection.secretReference || connection.secretRevokedAt) {
+    if (!connection.secretReference) {
       return {
         ...this.safeView(connection),
-        physicalRevokeScheduled: Boolean(connection.secretRevokedAt),
+        physicalRevokeScheduled: null,
         idempotent: true,
       };
     }
 
     const reference = connection.secretReference;
+
+    if (connection.secretRevokedAt) {
+      const pending = await this.prisma.integrationSecretCleanupTask.findUnique({
+        where: { secretReference: reference },
+      });
+      if (pending?.status === IntegrationSecretCleanupStatus.PENDING) {
+        try {
+          await this.vault.revokeSecret(reference);
+          await this.markCleanupCompleted(reference);
+          return {
+            ...this.safeView(connection),
+            physicalRevokeScheduled: true,
+            idempotent: true,
+          };
+        } catch {
+          await this.recordCleanupPending(
+            connection.id,
+            reference,
+            'REVOKE_PENDING',
+            actor.userId,
+            connection.gymId,
+          ).catch(() => undefined);
+          return {
+            ...this.safeView(connection),
+            physicalRevokeScheduled: false,
+            idempotent: true,
+          };
+        }
+      }
+      return {
+        ...this.safeView(connection),
+        physicalRevokeScheduled: true,
+        idempotent: true,
+      };
+    }
     const revokedAt = new Date();
 
     const canonical = await this.prisma.$transaction(async (tx) => {
@@ -496,14 +604,13 @@ export class IntegrationSecretAdminService {
       await this.vault.revokeSecret(reference);
     } catch {
       physicalRevokeScheduled = false;
-      await this.audit.record({
-        gymId: connection.gymId,
-        userId: actor.userId,
-        action: 'INTEGRATION_PHYSICAL_SECRET_REVOKE_PENDING',
-        entity: 'IntegrationConnection',
-        entityId: connection.id,
-        next: { cleanupPending: true },
-      });
+      await this.recordCleanupPending(
+        connection.id,
+        reference,
+        'REVOKE_PENDING',
+        actor.userId,
+        connection.gymId,
+      );
     }
 
     return {
