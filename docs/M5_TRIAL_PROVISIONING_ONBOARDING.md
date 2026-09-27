@@ -29,9 +29,11 @@ A unicidade física do requestId impede dois provisionamentos canônicos para a 
 
 ## Trial efetivo
 
+A política para **novos trials** vem exclusivamente da `CommercialLaunchMatrix` em estado `APPROVED`: versão exata do ProductPlanVersion e quantidade de dias. Não existe mais autoridade comercial `IRON_FIT_TRIAL_PLAN_CODE`/`IRON_FIT_TRIAL_DAYS` em ambiente/deploy.
+
 TenantProductEntitlements somente considera assinatura ACTIVE dentro de effectiveFrom/effectiveUntil. Assim, uma assinatura temporal vencida deixa de conceder capabilities mesmo antes da materialização do status.
 
-CommercialTrialService é a autoridade para materializar a expiração em SUSPENDED e emitir COMMERCIAL_TRIAL_EXPIRED.
+CommercialTrialService é a autoridade para materializar a expiração em SUSPENDED e emitir COMMERCIAL_TRIAL_EXPIRED. A identificação histórica de uma assinatura como trial usa `CommercialTrialProvisioning.subscriptionId`, e não o plano da Launch Matrix corrente; isso preserva trials antigos quando uma nova matriz for aprovada.
 
 JWT permanece autoridade de autenticação e contexto; não altera estado comercial.
 
