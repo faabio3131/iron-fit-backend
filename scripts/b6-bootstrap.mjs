@@ -61,6 +61,20 @@ async function main() {
   await upsertPlan('IRON_PRO', 'IRON Pro');
   await upsertPlan('IRON_PRO_PLUS', 'IRON Pro Plus');
 
+  await prisma.equipmentCatalogItem.upsert({
+    where: { slug: 'b6_power_rack' },
+    update: { active: true },
+    create: {
+      slug: 'b6_power_rack',
+      name: 'B6 Power Rack',
+      category: 'RACKS_BENCHES',
+      primaryMuscle: 'FULL_BODY',
+      aliases: ['rack b6'],
+      metadata: { source: 'B6_CI_FIXTURE' },
+      active: true,
+    },
+  });
+
   process.stdout.write(JSON.stringify({ event: 'b6_bootstrap_ready' }) + '\n');
 }
 

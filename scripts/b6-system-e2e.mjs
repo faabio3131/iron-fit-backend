@@ -218,17 +218,23 @@ async function main() {
   await http('/users', { token: studentLogin.access_token, expected: [403] });
   record('student_create_invite_activate_login', { studentId: createdStudent.id });
 
-  const equipment = (await http('/equipments', {
+  const catalog = (await http('/equipments/catalog?search=B6%20Power%20Rack', {
+    token: ownerToken,
+  })).body;
+  assert.ok(Array.isArray(catalog) && catalog.length === 1);
+  const selectedEquipment = (await http('/equipments/catalog/selection', {
     method: 'POST',
     token: ownerToken,
-    body: { name: 'Rack B6', type: 'RACK', primaryMuscle: 'FULL_BODY' },
+    body: { catalogItemIds: [catalog[0].id] },
   })).body;
+  assert.ok(Array.isArray(selectedEquipment) && selectedEquipment.length === 1);
+  const equipment = selectedEquipment[0];
   const exercise = (await http('/exercises', {
     method: 'POST',
     token: ownerToken,
     body: { name: `Agachamento B6 ${Date.now()}`, muscleGroup: 'Pernas' },
   })).body;
-  record('equipment_and_exercise_created');
+  record('equipment_catalog_selection_and_exercise_created', { equipmentId: equipment.id });
 
   const assessment = (await http(`/students/${createdStudent.id}/assessments`, {
     method: 'POST',
@@ -251,7 +257,6 @@ async function main() {
         order: 1,
         exercises: [{
           exerciseId: exercise.id,
-          equipmentId: equipment.id,
           order: 1,
           sets: 4,
           reps: '10',
