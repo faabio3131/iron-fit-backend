@@ -177,8 +177,8 @@ export class IntegrationBreakGlassService {
     userId: string,
     dto: IntegrationBreakGlassRequestDto,
   ) {
-    await this.expireStale();
     await this.assertBreakGlassStepUp(userId, dto);
+    await this.expireStale();
     const reason = this.assertSafeReason(dto.reason);
     const connection = await this.requireConnection(dto.connectionId);
 
@@ -215,8 +215,8 @@ export class IntegrationBreakGlassService {
     userId: string,
     dto: IntegrationBreakGlassApproveDto,
   ) {
-    await this.expireStale();
     await this.assertBreakGlassStepUp(userId, dto);
+    await this.expireStale();
 
     const grant = await this.prisma.integrationBreakGlassGrant.findUnique({
       where: { id: grantId },
@@ -490,8 +490,8 @@ export class IntegrationBreakGlassService {
     userId: string,
     dto: IntegrationBreakGlassRevokeDto,
   ) {
-    await this.expireStale();
     await this.assertBreakGlassStepUp(userId, dto);
+    await this.expireStale();
     const reason = this.assertSafeReason(dto.reason);
 
     const grant = await this.prisma.integrationBreakGlassGrant.findUnique({
