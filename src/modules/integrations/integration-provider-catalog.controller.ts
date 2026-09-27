@@ -25,6 +25,7 @@ export class IntegrationProviderCatalogController {
         environments: [...provider.environments],
         supportsWebhook: provider.supportsWebhook,
         supportsOAuth: provider.supportsOAuth,
+        tenantEntitlementFeatureKey: provider.tenantEntitlementFeatureKey ?? null,
       })),
     };
   }
