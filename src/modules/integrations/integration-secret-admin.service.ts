@@ -95,7 +95,7 @@ export class IntegrationSecretAdminService {
     gymId: string | null,
   ) {
     const now = new Date();
-    await this.prisma.integrationSecretCleanupTask.upsert({
+    const task = await this.prisma.integrationSecretCleanupTask.upsert({
       where: { secretReference: reference },
       create: {
         integrationConnectionId: connectionId,
@@ -119,7 +119,7 @@ export class IntegrationSecretAdminService {
       userId: actorUserId,
       action: 'INTEGRATION_SECRET_CLEANUP_PENDING',
       entity: 'IntegrationSecretCleanupTask',
-      entityId: reference,
+      entityId: task.id,
       next: {
         reason,
         cleanupPending: true,
