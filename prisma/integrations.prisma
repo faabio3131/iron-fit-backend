@@ -1,0 +1,65 @@
+enum IntegrationScope {
+  GLOBAL
+  TENANT
+}
+
+enum IntegrationEnvironment {
+  DEV
+  HOMOLOG
+  PROD
+}
+
+enum IntegrationConnectionStatus {
+  PENDING
+  CONFIGURED
+  ACTIVE
+  DEGRADED
+  REVOKED
+}
+
+enum IntegrationSecretStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+model IntegrationConnection {
+  id                  String                       @id @default(uuid())
+  scope               IntegrationScope
+  gymId               String?
+  providerCode        String
+  environment         IntegrationEnvironment
+  status              IntegrationConnectionStatus @default(PENDING)
+  capabilities        Json
+  publicConfiguration Json?
+  createdByUserId     String?
+  updatedByUserId     String?
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  gym                 Gym?                         @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  secretVersions      IntegrationSecretVersion[]
+
+  @@index([scope, gymId, status])
+  @@index([providerCode, environment, status])
+}
+
+model IntegrationSecretVersion {
+  id              String                  @id @default(uuid())
+  connectionId    String
+  referenceId     String                  @unique
+  version         Int
+  status          IntegrationSecretStatus @default(ACTIVE)
+  vaultVersion    Int?
+  createdByUserId String?
+  createdAt       DateTime                @default(now())
+  rotatedAt       DateTime?
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  lastVerifiedAt  DateTime?
+  revokedAt       DateTime?
+  connection      IntegrationConnection   @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, version])
+  @@index([connectionId, status, version])
+  @@index([expiresAt, status])
+}

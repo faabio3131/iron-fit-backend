@@ -21,6 +21,52 @@ const SENSITIVE_KEYS = new Set([
   'refreshTokenEnc',
   'webhookSecretEnc',
   'pixQrCode',
+  'credentials',
+  'secretValue',
+  'secretReference',
+  'apiKey',
+  'accessToken',
+  'clientSecret',
+  'webhookSecret',
+  'privateKey',
+  'certificate',
+  'authorizationCode',
+  'cvv',
+  'pan',
+]);
+
+const SENSITIVE_NORMALIZED_KEYS = new Set([
+  'password',
+  'currentpassword',
+  'newpassword',
+  'passwordhash',
+  'token',
+  'refreshtoken',
+  'refreshtokenhash',
+  'authorization',
+  'cookie',
+  'mfasecret',
+  'mfacode',
+  'recoverycode',
+  'deliveryciphertext',
+  'apikeyenc',
+  'accesstokenenc',
+  'refreshtokenenc',
+  'webhooksecretenc',
+  'pixqrcode',
+  'credentials',
+  'secretvalue',
+  'secretreference',
+  'apikey',
+  'accesstoken',
+  'clientsecret',
+  'webhooksecret',
+  'privatekey',
+  'certificate',
+  'authorizationcode',
+  'cvv',
+  'pan',
+  'cardnumber',
 ]);
 
 type AuditDb = PrismaService | Prisma.TransactionClient | PrismaClient;
@@ -37,23 +83,23 @@ export interface AuditRecordInput {
   deviceInfo?: string | null;
 }
 
+function isSensitiveKey(key: string): boolean {
+  if (SENSITIVE_KEYS.has(key)) return true;
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return SENSITIVE_NORMALIZED_KEYS.has(normalized);
+}
+
 function sanitize(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(sanitize);
   }
-
   if (value && typeof value === 'object') {
     const output: Record<string, unknown> = {};
     for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-      if (SENSITIVE_KEYS.has(key)) {
-        output[key] = '[REDACTED]';
-      } else {
-        output[key] = sanitize(nested);
-      }
+      output[key] = isSensitiveKey(key) ? '[REDACTED]' : sanitize(nested);
     }
     return output;
   }
-
   return value;
 }
 
