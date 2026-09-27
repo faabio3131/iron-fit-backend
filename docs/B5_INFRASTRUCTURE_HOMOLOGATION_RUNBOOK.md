@@ -6,6 +6,8 @@ Status: CERTIFIED NO ESCOPO INTERNO — engenharia de infraestrutura concluída 
 
 DEV, HOMOLOG e PROD executam a mesma aplicação NestJS, o mesmo Prisma schema e as mesmas migrations. As diferenças permitidas são somente configuração, secrets, endpoints, capacidade e integrações sandbox/produção.
 
+`IRON_RUNTIME_ENV` é a autoridade canônica do ambiente e aceita exclusivamente `DEV`, `HOMOLOG` ou `PROD`. O bootstrap valida essa autoridade antes de criar o runtime Nest e exige `DATABASE_URL`. `PROD` exige `NODE_ENV=production`. O módulo de integrações reutiliza a mesma autoridade; não mantém um parser paralelo.
+
 Fluxo de release:
 
 ```
@@ -25,17 +27,21 @@ Git main -> CI -> imagem reproduzível -> prisma migrate deploy -> health/readin
 
 ## Configuração e secrets
 
-Secrets nunca são commitados. Variáveis mínimas de ambiente para runtime comercial incluem:
+Secrets nunca são commitados. Variáveis/configuração mínimas de runtime incluem:
 
-- DATABASE_URL
-- JWT_SECRET
-- CORS_ORIGINS
-- TRUST_PROXY_HOPS
-- MFA_ENCRYPTION_KEY
-- AUTH_ACTION_TOKEN_ENCRYPTION_KEY
-- AUTH_REQUIRE_VERIFIED_EMAIL
-- IRON_FIT_TRIAL_PLAN_CODE
-- IRON_FIT_TRIAL_DAYS
+- `IRON_RUNTIME_ENV`;
+- `DATABASE_URL`;
+- `JWT_SECRET` e demais chaves de autenticação aplicáveis;
+- `CORS_ORIGINS`;
+- `TRUST_PROXY_HOPS`;
+- `MFA_ENCRYPTION_KEY`;
+- `AUTH_ACTION_TOKEN_ENCRYPTION_KEY`;
+- `AUTH_REQUIRE_VERIFIED_EMAIL`;
+- configuração GLOBAL do Vault quando esse backend estiver habilitado.
+
+Políticas comerciais como plano/dias de trial, vencimento de invoice e grace period não pertencem ao ambiente de deploy; elas são governadas pela `CommercialLaunchMatrix` APPROVED.
+
+Credenciais de cliente/tenant nunca pertencem a estas variáveis. Elas seguem `IntegrationConnection -> secretReference -> Vault`.
 
 Billing e providers externos permanecem fail-closed quando adapter/credencial homologada não está disponível.
 
@@ -170,3 +176,20 @@ Os repositórios retornaram lista de rulesets vazia. O endpoint clássico de bra
 - CI com PostgreSQL real fresh-install + container build: COMPROVADO internamente.
 
 Esses itens só podem ser promovidos com nova evidência física.
+
+
+## Reconciliação com o Cronograma Mestre — Macrobloco D
+
+Estado atual:
+
+- runtime/container backend: **CERTIFIED_INTERNAL**;
+- runtime/container Web: **CERTIFIED_INTERNAL** no repositório `iron-fit-app`;
+- autoridade DEV/HOMOLOG/PROD no backend: **CANDIDATE neste incremento**;
+- observabilidade base: **CERTIFIED_INTERNAL**;
+- Railway: somente configuração candidata versionada;
+- ambientes DEV/HOMOLOG/PROD físicos IRON: **NÃO COMPROVADOS**;
+- secrets globais físicos/IAM: **NÃO HOMOLOGADOS**;
+- OCI Vault físico: permanece no blocker C4;
+- Gate D: **OPEN** até evidência física de ambientes segregados, runtime acessível e health/readiness reais.
+
+CI, Dockerfile ou arquivo Railway não substituem evidência física de deploy.
