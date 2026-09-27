@@ -12,6 +12,7 @@ import { AcceptStudentInviteDto } from './dto/accept-student-invite.dto';
 import { UpdateConsentsDto } from './dto/update-consents.dto';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
+import { passwordPolicyViolations } from '../auth/auth-security';
 
 const STUDENT_ONBOARDING_SESSION = 'STUDENT_ONBOARDING';
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -181,6 +182,12 @@ export class StudentsService {
   }
 
   async acceptInvite(dto: AcceptStudentInviteDto) {
+    if (passwordPolicyViolations(dto.password).length > 0) {
+      throw new BadRequestException(
+        'Senha deve ter 12-128 caracteres com maiuscula, minuscula, numero e simbolo',
+      );
+    }
+
     const tokenHash = createHash('sha256').update(dto.token).digest('hex');
     const now = new Date();
 
