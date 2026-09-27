@@ -4,6 +4,8 @@ import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthModule } from '../auth/auth.module';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
+import { IntegrationBreakGlassController } from './integration-break-glass.controller';
+import { IntegrationBreakGlassService } from './integration-break-glass.service';
 import { IntegrationCredentialAdminService } from './integration-credential-admin.service';
 import { IntegrationCredentialGlobalController } from './integration-credential-global.controller';
 import { IntegrationCredentialTenantController } from './integration-credential-tenant.controller';
@@ -29,6 +31,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationCredentialGlobalController,
     IntegrationProviderCatalogController,
     IntegrationSecretDrController,
+    IntegrationBreakGlassController,
   ],
   providers: [
     PrismaService,
@@ -37,6 +40,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationCredentialProbeRegistry,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
+    IntegrationBreakGlassService,
     IntegrationSecretDrService,
     IntegrationRuntimeEnvironmentService,
     OciVaultConfigurationService,
@@ -81,6 +85,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
     IntegrationCredentialProbeRegistry,
+    IntegrationBreakGlassService,
     IntegrationSecretDrService,
     IntegrationRuntimeEnvironmentService,
     IntegrationSecretResolverService,
