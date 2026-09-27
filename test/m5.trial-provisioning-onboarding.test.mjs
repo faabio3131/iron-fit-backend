@@ -44,6 +44,10 @@ function makeHarness(overrides = {}) {
   const tx = {
     commercialTrialProvisioning: {
       findUnique: async ({ where }) => state.provisionings.get(where.requestId) ?? null,
+      findFirst: async ({ where }) =>
+        [...state.provisionings.values()].find(
+          (item) => item.subscriptionId === where.subscriptionId,
+        ) ?? null,
       create: async ({ data }) => {
         if (overrides.requestIdRace && !requestRaceTriggered) {
           requestRaceTriggered = true;
@@ -102,7 +106,7 @@ function makeHarness(overrides = {}) {
       },
     },
     role: { findUnique: async () => ownerRole },
-    productPlanVersion: { findFirst: async () => planVersion },
+    productPlanVersion: { findUnique: async () => planVersion },
     userRole: { create: async ({ data }) => data },
     tenantProductSubscription: {
       create: async ({ data }) => {
@@ -181,12 +185,21 @@ function makeHarness(overrides = {}) {
     },
   };
 
-  const config = {
-    get: (key) => {
-      if (key === 'IRON_FIT_TRIAL_PLAN_CODE') return overrides.planCode ?? 'IRON_TRIAL';
-      if (key === 'IRON_FIT_TRIAL_DAYS') return overrides.trialDays ?? '14';
-      return undefined;
-    },
+  const launch = {
+    currentApproved: async () => ({
+      id: 'launch-approved',
+      status: 'APPROVED',
+      integrity: 'PASS',
+      policy: overrides.trialPolicyMissing
+        ? null
+        : {
+            trialEnabled: overrides.trialDisabled ? false : true,
+            trialPlanVersionId: overrides.trialPlanVersionId ?? 'pv-trial',
+            trialDays: overrides.trialDays ?? 14,
+            invoiceDueDays: 3,
+            dunningGraceDays: 5,
+          },
+    }),
   };
 
   const audit = {
@@ -196,7 +209,7 @@ function makeHarness(overrides = {}) {
     },
   };
 
-  return { service: new CommercialTrialService(prisma, config, audit), state };
+  return { service: new CommercialTrialService(prisma, launch, audit), state };
 }
 
 const dto = {
@@ -320,8 +333,8 @@ test('M5 duplicate signup is non-enumerating and configuration dependencies fail
     /Cadastro indisponivel para estes dados/,
   );
   await assert.rejects(
-    () => makeHarness({ trialDays: '0' }).service.startTrial(dto),
-    /Trial comercial nao configurado/,
+    () => makeHarness({ trialDays: 0 }).service.startTrial(dto),
+    /Trial comercial nao habilitado na Launch Matrix APPROVED/,
   );
   await assert.rejects(
     () => makeHarness({ ownerMissing: true }).service.startTrial(dto),
@@ -329,7 +342,7 @@ test('M5 duplicate signup is non-enumerating and configuration dependencies fail
   );
   await assert.rejects(
     () => makeHarness({ planMissing: true }).service.startTrial(dto),
-    /Plano de trial PUBLISHED nao configurado/,
+    /Plano de trial da Launch Matrix nao esta PUBLISHED/,
   );
   await assert.rejects(
     () => makeHarness().service.startTrial({ ...dto, timezone: 'America/Invalid_Zone' }),
@@ -415,6 +428,15 @@ test('M5 expiration is materialized once while entitlements fail closed by effec
   };
   const { service, state } = makeHarness({ expiringSubscription: expired });
   state.subscriptions.set(expired.id, expired);
+  state.provisionings.set('trial-expired-request', {
+    requestId: 'trial-expired-request',
+    requestFingerprint: 'fingerprint',
+    userId: 'owner-a',
+    gymId: 'gym-a',
+    subscriptionId: expired.id,
+    trialStartedAt: expired.effectiveFrom,
+    trialEndsAt: expired.effectiveUntil,
+  });
 
   const first = await service.synchronizeTrial('gym-a', 'owner-a');
   const second = await service.synchronizeTrial('gym-a', 'owner-a');
