@@ -1,11 +1,12 @@
-import { IsEmail, IsString, MinLength, IsOptional, IsUUID } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, IsOptional, IsUUID } from 'class-validator';
 
 export class CreateUserDto {
   @IsEmail()
   email: string;
 
   @IsString()
-  @MinLength(6)
+  @MinLength(12)
+  @MaxLength(128)
   password: string;
 
   @IsString()
