@@ -49,6 +49,6 @@ test('B6 integrated journey covers critical commercialization and adversarial pa
 test('B6 documentation keeps external homologation boundary factual', async () => {
   const doc = await readFile('docs/B6_INTEGRATED_SYSTEM_CERTIFICATION.md', 'utf8');
   assert.match(doc, /não há uso do Supabase legado/i);
-  assert.match(doc, /não declarar produção externa/i);
+  assert.match(doc, /sem declarar produção externa/i);
   assert.match(doc, /S0–S12/);
 });
