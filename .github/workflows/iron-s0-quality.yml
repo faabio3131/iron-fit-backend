@@ -22,9 +22,20 @@ jobs:
   quality:
     name: Build, lint, audit and smoke tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
+      NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iron_ci?schema=public
+      AUTH_REQUIRE_VERIFIED_EMAIL: 'false'
+      IRON_FIT_TRIAL_PLAN_CODE: IRON_B6_TRIAL
+      IRON_FIT_TRIAL_DAYS: '14'
+      SAAS_BILLING_PROVIDER: INTERNAL_SANDBOX
+      SAAS_BILLING_SANDBOX_ENABLED: 'true'
+      SAAS_BILLING_INVOICE_DUE_DAYS: '3'
+      SAAS_BILLING_DUNNING_GRACE_DAYS: '5'
+      TRUST_PROXY_HOPS: '0'
+      PORT: '3333'
+      B6_API_URL: http://127.0.0.1:3333/api/v1
 
     services:
       postgres:
@@ -54,6 +65,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate isolated E2E credentials
+        shell: bash
+        run: |
+          {
+            echo "JWT_SECRET=$(openssl rand -hex 32)"
+            echo "MFA_ENCRYPTION_KEY=$(openssl rand -hex 32)"
+            echo "AUTH_ACTION_TOKEN_ENCRYPTION_KEY=$(openssl rand -hex 32)"
+            echo "SAAS_BILLING_SANDBOX_SECRET=$(openssl rand -hex 32)"
+            echo "B6_OWNER_PASSWORD=Aa1!$(openssl rand -hex 16)"
+            echo "B6_STAFF_PASSWORD=Bb2!$(openssl rand -hex 16)"
+            echo "B6_STUDENT_PASSWORD=Cc3!$(openssl rand -hex 16)"
+            echo "B6_RESET_PASSWORD=Dd4!$(openssl rand -hex 16)"
+            echo "B6_ADMIN_PASSWORD=Ee5!$(openssl rand -hex 16)"
+          } >> "$GITHUB_ENV"
+
       - name: Dependency audit
         run: npm audit --audit-level=high
 
@@ -73,6 +99,51 @@ jobs:
 
       - name: Smoke regression tests
         run: npm run test:smoke
+
+      - name: Seed deterministic Block 6 prerequisites
+        run: node scripts/b6-e2e-seed.mjs
+
+      - name: Start live backend for integrated E2E
+        run: |
+          node dist/src/main.js > /tmp/iron-b6-backend.log 2>&1 &
+          echo $! > /tmp/iron-b6-backend.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3333/api/v1/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/iron-b6-backend.log
+          exit 1
+
+      - name: Integrated live E2E
+        run: node --test --test-concurrency=1 test/b6.*.e2e.mjs
+
+      - name: Checkout certified IRON app surface
+        uses: actions/checkout@v4
+        with:
+          repository: faabio3131/iron-fit-app
+          ref: 43f8c26979c4228b8c8a8d1bd71607ee9350eef5
+          path: iron-fit-app
+
+      - name: Install certified IRON app dependencies
+        working-directory: iron-fit-app
+        run: npm ci
+
+      - name: Cross-surface live app client against backend
+        working-directory: iron-fit-app
+        env:
+          IRON_LIVE_E2E: 'true'
+          EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
+        run: npx jest test/live-system-contract.test.ts --runInBand --ci
+
+      - name: Stop live backend
+        if: always()
+        run: |
+          if test -f /tmp/iron-b6-backend.pid; then
+            kill "$(cat /tmp/iron-b6-backend.pid)" 2>/dev/null || true
+          fi
+          tail -n 200 /tmp/iron-b6-backend.log 2>/dev/null || true
 
       - name: Build production container image
         run: docker build --pull -t iron-fit-backend-ci:${{ github.sha }} .

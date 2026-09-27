@@ -16,7 +16,7 @@ Git main -> CI -> imagem reproduzível -> prisma migrate deploy -> health/readin
 
 - Node.js 22.
 - Build por Dockerfile versionado.
-- Processo: `node dist/main`.
+- Processo: `node dist/src/main.js`.
 - Porta: `PORT`, default local 3333.
 - Health: `/api/v1/health/live`.
 - Readiness: `/api/v1/health/ready`, que executa consulta real no PostgreSQL.
