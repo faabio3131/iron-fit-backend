@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
-const SENSITIVE_KEYS = new Set([
+function normalizedSensitiveKey(key: string): string {
+  return key.replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+}
+
+const SENSITIVE_KEYS = [
   'password',
   'currentPassword',
   'newPassword',
@@ -10,18 +14,44 @@ const SENSITIVE_KEYS = new Set([
   'token',
   'refreshToken',
   'refreshTokenHash',
+  'accessToken',
+  'accessTokenEnc',
+  'refreshTokenEnc',
+  'webhookSecret',
+  'webhookSecretEnc',
+  'clientSecret',
+  'apiKey',
+  'apiKeyEnc',
+  'privateKey',
   'authorization',
   'cookie',
   'mfaSecret',
   'mfaCode',
   'recoveryCode',
   'deliveryCiphertext',
-  'apiKeyEnc',
-  'accessTokenEnc',
-  'refreshTokenEnc',
-  'webhookSecretEnc',
+  'secretReference',
+  'cvv',
+  'cvc',
+  'pan',
+  'cardNumber',
   'pixQrCode',
-]);
+] as const;
+
+const SENSITIVE_KEY_NAMES = new Set(
+  SENSITIVE_KEYS.map((key) => normalizedSensitiveKey(key)),
+);
+
+function isSensitiveKey(key: string): boolean {
+  const normalized = normalizedSensitiveKey(key);
+  if (SENSITIVE_KEY_NAMES.has(normalized)) return true;
+  return (
+    normalized.endsWith('password') ||
+    normalized.endsWith('secret') ||
+    normalized.endsWith('token') ||
+    normalized.endsWith('privatekey') ||
+    normalized === 'apikey'
+  );
+}
 
 type AuditDb = PrismaService | Prisma.TransactionClient | PrismaClient;
 
@@ -37,18 +67,18 @@ export interface AuditRecordInput {
   deviceInfo?: string | null;
 }
 
-function sanitize(value: unknown): unknown {
+export function sanitizeAuditValue(value: unknown): unknown {
   if (Array.isArray(value)) {
-    return value.map(sanitize);
+    return value.map(sanitizeAuditValue);
   }
 
   if (value && typeof value === 'object') {
     const output: Record<string, unknown> = {};
     for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-      if (SENSITIVE_KEYS.has(key)) {
+      if (isSensitiveKey(key)) {
         output[key] = '[REDACTED]';
       } else {
-        output[key] = sanitize(nested);
+        output[key] = sanitizeAuditValue(nested);
       }
     }
     return output;
@@ -71,10 +101,10 @@ export class AuditService {
         entityId: input.entityId ?? null,
         previous: input.previous === undefined
           ? Prisma.JsonNull
-          : (sanitize(input.previous) as Prisma.InputJsonValue),
+          : (sanitizeAuditValue(input.previous) as Prisma.InputJsonValue),
         next: input.next === undefined
           ? Prisma.JsonNull
-          : (sanitize(input.next) as Prisma.InputJsonValue),
+          : (sanitizeAuditValue(input.next) as Prisma.InputJsonValue),
         ipAddress: input.ipAddress ?? null,
         deviceInfo: input.deviceInfo ?? null,
       },

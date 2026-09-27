@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 30
     env:
       NODE_ENV: test
+      IRON_RUNTIME_ENV: HOMOLOG
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iron_ci?schema=public
       AUTH_REQUIRE_VERIFIED_EMAIL: 'false'
       IRON_FIT_TRIAL_PLAN_CODE: IRON_B6_TRIAL
@@ -55,6 +56,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Repository secret scan
+        run: node scripts/secret-scan.mjs
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
