@@ -35,7 +35,10 @@ export function requireIronRuntimeEnvironment(
 export function assertRuntimeBootstrapContract(
   env: NodeJS.ProcessEnv = process.env,
 ): IronRuntimeEnvironment {
-  const runtime = requireIronRuntimeEnvironment(env.IRON_RUNTIME_ENV);
+  const runtime = parseIronRuntimeEnvironment(env.IRON_RUNTIME_ENV);
+  if (!runtime) {
+    throw new Error('IRON_RUNTIME_ENV deve ser DEV, HOMOLOG ou PROD');
+  }
 
   if (!env.DATABASE_URL?.trim()) {
     throw new Error('DATABASE_URL obrigatoria no runtime');
