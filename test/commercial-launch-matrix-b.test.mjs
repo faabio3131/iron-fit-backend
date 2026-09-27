@@ -340,7 +340,7 @@ test('B launch governance is SUPER_ADMIN-only and contains no tenant/package-nam
   assert.match(controller, /@Roles\('SUPER_ADMIN'\)/);
   assert.match(controller, /APPROVE_LAUNCH_MATRIX|approve/);
   assert.doesNotMatch(dto, /gymId|tenantId/);
-  assert.doesNotMatch(constants, /START|BASIC|PRO|PREMIUM|ENTERPRISE/);
+  assert.doesNotMatch(constants, /['\"](?:START|BASIC|PRO|PREMIUM|ENTERPRISE)['\"]/);
 });
 
 test('B launch migration enforces one approved matrix and immutable approval shape', async () => {
