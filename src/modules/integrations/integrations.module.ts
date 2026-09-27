@@ -7,6 +7,7 @@ import { IntegrationCredentialAdminService } from './integration-credential-admi
 import { IntegrationCredentialGlobalController } from './integration-credential-global.controller';
 import { IntegrationCredentialTenantController } from './integration-credential-tenant.controller';
 import { IntegrationConnectionService } from './integration-connection.service';
+import { IntegrationProviderCatalogController } from './integration-provider-catalog.controller';
 import { IntegrationProviderRegistry } from './provider-registry.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
 import { IntegrationSecretResolverService } from './secrets/integration-secret-resolver.service';
@@ -22,6 +23,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
   controllers: [
     IntegrationCredentialTenantController,
     IntegrationCredentialGlobalController,
+    IntegrationProviderCatalogController,
   ],
   providers: [
     PrismaService,
