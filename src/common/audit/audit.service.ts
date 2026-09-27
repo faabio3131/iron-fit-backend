@@ -2,36 +2,44 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
-const SENSITIVE_KEY_NAMES = new Set([
-  'password',
-  'currentpassword',
-  'newpassword',
-  'passwordhash',
-  'token',
-  'refreshtoken',
-  'refreshtokenhash',
-  'accesstoken',
-  'webhooksecret',
-  'clientsecret',
-  'apikey',
-  'privatekey',
-  'authorization',
-  'cookie',
-  'mfasecret',
-  'mfacode',
-  'recoverycode',
-  'deliveryciphertext',
-  'secretreference',
-  'cvv',
-  'cvc',
-  'pan',
-  'cardnumber',
-  'pixqrcode',
-]);
-
 function normalizedSensitiveKey(key: string): string {
   return key.replace(/[^A-Za-z0-9]/g, '').toLowerCase();
 }
+
+const SENSITIVE_KEYS = [
+  'password',
+  'currentPassword',
+  'newPassword',
+  'passwordHash',
+  'token',
+  'refreshToken',
+  'refreshTokenHash',
+  'accessToken',
+  'accessTokenEnc',
+  'refreshTokenEnc',
+  'webhookSecret',
+  'webhookSecretEnc',
+  'clientSecret',
+  'apiKey',
+  'apiKeyEnc',
+  'privateKey',
+  'authorization',
+  'cookie',
+  'mfaSecret',
+  'mfaCode',
+  'recoveryCode',
+  'deliveryCiphertext',
+  'secretReference',
+  'cvv',
+  'cvc',
+  'pan',
+  'cardNumber',
+  'pixQrCode',
+] as const;
+
+const SENSITIVE_KEY_NAMES = new Set(
+  SENSITIVE_KEYS.map((key) => normalizedSensitiveKey(key)),
+);
 
 function isSensitiveKey(key: string): boolean {
   const normalized = normalizedSensitiveKey(key);
