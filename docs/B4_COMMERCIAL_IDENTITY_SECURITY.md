@@ -1,6 +1,6 @@
 # IRON — Bloco 4: Identidade e Segurança Comercial
 
-Status: CANDIDATE — implementação interna em certificação.
+Status: CERTIFIED — implementação interna concluída e promovida em `main` pelo PR #60. Entrega real de e-mail continua dependência externa de homologação.
 
 ## Autoridade canônica
 
