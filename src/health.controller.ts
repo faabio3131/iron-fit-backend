@@ -9,7 +9,7 @@ export class HealthController {
   check() {
     return {
       status: 'ok',
-      service: 'iron-fit-backend',
+      service: 'gym-saas-backend',
       version: '0.1.0',
       timestamp: new Date().toISOString(),
     };
@@ -19,7 +19,7 @@ export class HealthController {
   live() {
     return {
       status: 'ok',
-      service: 'iron-fit-backend',
+      service: 'gym-saas-backend',
       probe: 'liveness',
       timestamp: new Date().toISOString(),
     };
@@ -31,7 +31,7 @@ export class HealthController {
       await this.prisma.$queryRaw`SELECT 1`;
       return {
         status: 'ok',
-        service: 'iron-fit-backend',
+        service: 'gym-saas-backend',
         probe: 'readiness',
         dependencies: { postgres: 'up' },
         timestamp: new Date().toISOString(),
@@ -39,7 +39,7 @@ export class HealthController {
     } catch {
       throw new ServiceUnavailableException({
         status: 'unavailable',
-        service: 'iron-fit-backend',
+        service: 'gym-saas-backend',
         probe: 'readiness',
         dependencies: { postgres: 'down' },
       });
