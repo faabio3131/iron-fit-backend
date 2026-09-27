@@ -321,6 +321,13 @@ export class IntegrationBreakGlassService {
     const connection = await this.requireConnection(
       grant.integrationConnectionId,
     );
+    const secretReference = connection.secretReference;
+    const secretVersion = connection.secretVersion;
+    if (!secretReference || !secretVersion) {
+      throw new ServiceUnavailableException(
+        'Connection sem metadata de segredo para break-glass',
+      );
+    }
     const executionStartedAt = new Date();
 
     const claimed = await this.prisma.integrationBreakGlassGrant.updateMany({
@@ -343,10 +350,8 @@ export class IntegrationBreakGlassService {
     }
 
     try {
-      const physical = await this.vault.getSecret(
-        connection.secretReference,
-      );
-      if (physical.version !== connection.secretVersion) {
+      const physical = await this.vault.getSecret(secretReference);
+      if (physical.version !== secretVersion) {
         throw new ServiceUnavailableException(
           'Versao fisica diverge do estado canonico',
         );
@@ -422,8 +427,8 @@ export class IntegrationBreakGlassService {
         const verified = await tx.integrationConnection.updateMany({
           where: {
             id: connection.id,
-            secretReference: connection.secretReference,
-            secretVersion: connection.secretVersion,
+            secretReference,
+            secretVersion,
             secretRevokedAt: null,
           },
           data: {
