@@ -28,12 +28,8 @@ jobs:
       IRON_RUNTIME_ENV: HOMOLOG
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iron_ci?schema=public
       AUTH_REQUIRE_VERIFIED_EMAIL: 'false'
-      IRON_FIT_TRIAL_PLAN_CODE: IRON_B6_TRIAL
-      IRON_FIT_TRIAL_DAYS: '14'
       SAAS_BILLING_PROVIDER: INTERNAL_SANDBOX
       SAAS_BILLING_SANDBOX_ENABLED: 'true'
-      SAAS_BILLING_INVOICE_DUE_DAYS: '3'
-      SAAS_BILLING_DUNNING_GRACE_DAYS: '5'
       TRUST_PROXY_HOPS: '0'
       PORT: '3333'
       B6_API_URL: http://127.0.0.1:3333/api/v1
