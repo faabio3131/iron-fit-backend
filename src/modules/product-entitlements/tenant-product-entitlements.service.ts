@@ -790,7 +790,7 @@ export class TenantProductEntitlementsService {
   ) {
     const scopedGymId = this.requireGymId(gymId);
     const scopedUserId = this.requireUserId(userId);
-    const definition = this.featureDefinition(featureKey);
+    const definition = await this.capabilities.requireForResolution(featureKey);
     const built = this.buildStoredLayerValue(definition, dto);
 
     return this.serializable(async (tx) => {
@@ -863,7 +863,7 @@ export class TenantProductEntitlementsService {
   ) {
     const scopedGymId = this.requireGymId(gymId);
     const scopedUserId = this.requireUserId(userId);
-    this.featureDefinition(featureKey);
+    await this.capabilities.requireForResolution(featureKey);
 
     return this.serializable(async (tx) => {
       await this.assertStudentInTenant(tx, scopedGymId, scopedUserId);
@@ -897,7 +897,7 @@ export class TenantProductEntitlementsService {
 
   async resolveFeature(gymId: string | undefined, featureKey: string) {
     const scopedGymId = this.requireGymId(gymId);
-    const definition = this.featureDefinition(featureKey);
+    const definition = await this.capabilities.requireForResolution(featureKey);
     return this.resolveTenantFeatureWithDb(this.prisma, scopedGymId, definition);
   }
 
@@ -958,7 +958,7 @@ export class TenantProductEntitlementsService {
       preferences.map((record: any) => [record.featureKey, record]),
     );
 
-    return PRODUCT_FEATURE_CATALOG_V1.map((definition) => {
+    return definitions.map((definition) => {
       const planResolution = this.resolvePlanFromContext(definition, context);
       const tenantResolution = this.applyConfigurationLayer(
         definition,
