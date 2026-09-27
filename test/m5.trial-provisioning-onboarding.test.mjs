@@ -273,6 +273,19 @@ test('M5 replay returns the canonical provisioning without duplicate resources',
   assert.equal(state.creates.subscription, 1);
 });
 
+test('M5 persisted replay remains valid even if current Launch Matrix trial policy later becomes unavailable', async () => {
+  const overrides = {};
+  const { service, state } = makeHarness(overrides);
+  const first = await service.startTrial(dto);
+  overrides.trialPolicyMissing = true;
+  const replay = await service.startTrial(dto);
+  assert.equal(replay.idempotentReplay, true);
+  assert.equal(replay.subscriptionId, first.subscriptionId);
+  assert.equal(state.creates.user, 1);
+  assert.equal(state.creates.gym, 1);
+  assert.equal(state.creates.subscription, 1);
+});
+
 test('M5 concurrent requestId loser rolls back and replays the external canonical winner', async () => {
   const { service, state } = makeHarness({ requestIdRace: true });
   const result = await service.startTrial(dto);
