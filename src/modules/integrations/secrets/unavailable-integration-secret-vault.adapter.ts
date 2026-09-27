@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import {
   IntegrationSecretVaultPort,
+  VaultSecretMetadata,
   VaultSecretSnapshot,
 } from './integration-secret-vault.port';
 
@@ -15,6 +16,10 @@ export class UnavailableIntegrationSecretVaultAdapter implements IntegrationSecr
   }
 
   async getSecret(_reference: string): Promise<VaultSecretSnapshot> {
+    return this.unavailable();
+  }
+
+  async inspectSecret(_reference: string): Promise<VaultSecretMetadata> {
     return this.unavailable();
   }
 

@@ -688,10 +688,6 @@ model GatewayConnection {
   authType         String
   merchantId       String?
   accountId        String?
-  apiKeyEnc        String?
-  accessTokenEnc   String?
-  refreshTokenEnc  String?
-  webhookSecretEnc String?
   status           String @default("disconnected")
   lastVerifiedAt   DateTime?
   profile          FinancialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)

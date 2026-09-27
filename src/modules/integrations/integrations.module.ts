@@ -12,6 +12,8 @@ import { IntegrationProviderCatalogController } from './integration-provider-cat
 import { IntegrationCredentialProbeRegistry } from './provider-credential-probe.registry';
 import { IntegrationProviderRegistry } from './provider-registry.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
+import { IntegrationSecretDrController } from './integration-secret-dr.controller';
+import { IntegrationSecretDrService } from './integration-secret-dr.service';
 import { IntegrationSecretResolverService } from './secrets/integration-secret-resolver.service';
 import { INTEGRATION_SECRET_VAULT } from './secrets/integration-secret-vault.port';
 import { OciAuthenticationProviderFactory } from './secrets/oci/oci-authentication-provider.factory';
@@ -26,6 +28,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationCredentialTenantController,
     IntegrationCredentialGlobalController,
     IntegrationProviderCatalogController,
+    IntegrationSecretDrController,
   ],
   providers: [
     PrismaService,
@@ -34,6 +37,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationCredentialProbeRegistry,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
+    IntegrationSecretDrService,
     IntegrationRuntimeEnvironmentService,
     OciVaultConfigurationService,
     OciAuthenticationProviderFactory,
@@ -77,6 +81,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
     IntegrationCredentialProbeRegistry,
+    IntegrationSecretDrService,
     IntegrationRuntimeEnvironmentService,
     IntegrationSecretResolverService,
     INTEGRATION_SECRET_VAULT,

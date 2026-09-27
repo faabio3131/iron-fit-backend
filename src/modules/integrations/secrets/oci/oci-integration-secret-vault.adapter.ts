@@ -9,6 +9,7 @@ import * as vault from 'oci-vault';
 import { assertIntegrationSecretReference } from '../../contracts/integration-contract';
 import {
   IntegrationSecretVaultPort,
+  VaultSecretMetadata,
   VaultSecretSnapshot,
 } from '../integration-secret-vault.port';
 import {
@@ -175,6 +176,21 @@ export class OciIntegrationSecretVaultAdapter implements IntegrationSecretVaultP
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
       throw new ServiceUnavailableException('Falha ao resolver segredo no OCI Vault');
+    }
+  }
+
+  async inspectSecret(reference: string): Promise<VaultSecretMetadata> {
+    try {
+      const bundle = await this.current(reference);
+      return {
+        version: bundle.versionNumber,
+        expiresAt: bundle.timeOfExpiry ?? null,
+      };
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      throw new ServiceUnavailableException(
+        'Falha ao inspecionar metadata do segredo no OCI Vault',
+      );
     }
   }
 
