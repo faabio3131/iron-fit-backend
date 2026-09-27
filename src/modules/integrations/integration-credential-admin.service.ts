@@ -372,32 +372,37 @@ export class IntegrationCredentialAdminService {
     }
 
     const verifiedAt = new Date();
-    const changed = await this.prisma.integrationConnection.updateMany({
-      where: {
-        id: connection.id,
-        secretVersion: connection.secretVersion,
-        secretRevokedAt: null,
-      },
-      data: {
-        lastVerifiedAt: verifiedAt,
-        status: IntegrationConnectionStatus.ACTIVE,
-      },
-    });
-    if (changed.count !== 1) {
-      throw new ConflictException('Credencial mudou durante a verificacao');
-    }
+    await this.prisma.$transaction(async (tx) => {
+      const changed = await tx.integrationConnection.updateMany({
+        where: {
+          id: connection.id,
+          secretVersion: connection.secretVersion,
+          secretRevokedAt: null,
+        },
+        data: {
+          lastVerifiedAt: verifiedAt,
+          status: IntegrationConnectionStatus.ACTIVE,
+        },
+      });
+      if (changed.count !== 1) {
+        throw new ConflictException('Credencial mudou durante a verificacao');
+      }
 
-    await this.audit.record({
-      gymId: where.gymId,
-      userId,
-      action: 'INTEGRATION_CREDENTIAL_VERIFIED',
-      entity: 'IntegrationConnection',
-      entityId: connection.id,
-      next: {
-        secretReference: connection.secretReference,
-        secretVersion: connection.secretVersion,
-        lastVerifiedAt: verifiedAt,
-      },
+      await this.audit.record(
+        {
+          gymId: where.gymId,
+          userId,
+          action: 'INTEGRATION_CREDENTIAL_VERIFIED',
+          entity: 'IntegrationConnection',
+          entityId: connection.id,
+          next: {
+            secretReference: connection.secretReference,
+            secretVersion: connection.secretVersion,
+            lastVerifiedAt: verifiedAt,
+          },
+        },
+        tx,
+      );
     });
 
     return {
