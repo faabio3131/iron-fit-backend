@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuthModule } from '../auth/auth.module';
+import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
+import { GlobalIntegrationAdminController, TenantIntegrationAdminController } from './integration-admin.controller';
 import { IntegrationConnectionService } from './integration-connection.service';
+import { IntegrationCredentialProbeRegistry } from './provider-credential-probe.registry';
+import { IntegrationSecretAdminService } from './integration-secret-admin.service';
 import { IntegrationProviderRegistry } from './provider-registry.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
 import { IntegrationSecretResolverService } from './secrets/integration-secret-resolver.service';
@@ -13,9 +19,13 @@ import { OciVaultConfigurationService } from './secrets/oci/oci-vault-configurat
 import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-integration-secret-vault.adapter';
 
 @Module({
+  imports: [AuthModule, ProductEntitlementsModule],
+  controllers: [TenantIntegrationAdminController, GlobalIntegrationAdminController],
   providers: [
     PrismaService,
+    AuditService,
     IntegrationProviderRegistry,
+    IntegrationCredentialProbeRegistry,
     IntegrationConnectionService,
     IntegrationRuntimeEnvironmentService,
     OciVaultConfigurationService,
@@ -54,12 +64,15 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
       },
     },
     IntegrationSecretResolverService,
+    IntegrationSecretAdminService,
   ],
   exports: [
     IntegrationProviderRegistry,
     IntegrationConnectionService,
     IntegrationRuntimeEnvironmentService,
     IntegrationSecretResolverService,
+    IntegrationSecretAdminService,
+    IntegrationCredentialProbeRegistry,
     INTEGRATION_SECRET_VAULT,
   ],
 })
