@@ -1,9 +1,12 @@
 export const INTEGRATION_SECRET_VAULT = Symbol('INTEGRATION_SECRET_VAULT');
 
-export interface VaultSecretSnapshot {
-  value: string;
+export interface VaultSecretMetadata {
   version: number;
   expiresAt?: Date | null;
+}
+
+export interface VaultSecretSnapshot extends VaultSecretMetadata {
+  value: string;
 }
 
 export interface IntegrationSecretVaultPort {
@@ -14,6 +17,8 @@ export interface IntegrationSecretVaultPort {
   }): Promise<{ version: number; expiresAt?: Date | null }>;
 
   getSecret(reference: string): Promise<VaultSecretSnapshot>;
+
+  inspectSecret(reference: string): Promise<VaultSecretMetadata>;
 
   revokeSecret(reference: string): Promise<void>;
 }
