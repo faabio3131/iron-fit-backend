@@ -122,7 +122,6 @@ export class CommercialTrialService {
   }
 
   async startTrial(dto: StartTrialDto, ipAddress?: string | null) {
-    const config = await this.trialConfig();
     const email = dto.email.trim().toLowerCase();
     const passwordViolations = passwordPolicyViolations(dto.password);
     if (passwordViolations.length > 0) {
@@ -145,6 +144,8 @@ export class CommercialTrialService {
       fingerprint,
     );
     if (persistedReplay) return persistedReplay;
+
+    const config = await this.trialConfig();
 
     if (this.authSecurity) {
       await this.authSecurity.assertSignupAllowed(email, ipAddress);
