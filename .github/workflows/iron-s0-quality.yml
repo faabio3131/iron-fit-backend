@@ -119,6 +119,24 @@ jobs:
       - name: Integrated live E2E
         run: node --test --test-concurrency=1 test/b6.*.e2e.mjs
 
+      - name: Checkout certified IRON app surface
+        uses: actions/checkout@v4
+        with:
+          repository: faabio3131/iron-fit-app
+          ref: d7d9e11d68b5f1088a450353347aec60a4bc3db8
+          path: iron-fit-app
+
+      - name: Install certified IRON app dependencies
+        working-directory: iron-fit-app
+        run: npm ci
+
+      - name: Cross-surface live app client against backend
+        working-directory: iron-fit-app
+        env:
+          IRON_LIVE_E2E: 'true'
+          EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
+        run: npx jest test/live-system-contract.test.ts --runInBand --ci
+
       - name: Stop live backend
         if: always()
         run: |
