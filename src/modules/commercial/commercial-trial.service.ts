@@ -6,14 +6,18 @@ import {
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Prisma, TenantProductSubscriptionStatus } from '@prisma/client';
+import {
+  Prisma,
+  ProductPlanVersionStatus,
+  TenantProductSubscriptionStatus,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'node:crypto';
 import { AuditService } from '../../common/audit/audit.service';
 import { passwordPolicyViolations } from '../auth/auth-security';
 import { AuthSecurityService } from '../auth/auth-security.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CommercialLaunchService } from '../commercial-launch/commercial-launch.service';
 import { StartTrialDto } from './dto/start-trial.dto';
 import {
   COMMERCIAL_ONBOARDING_STEPS,
@@ -32,19 +36,31 @@ type CommercialDb = Prisma.TransactionClient | PrismaService;
 export class CommercialTrialService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
+    private readonly launch: CommercialLaunchService,
     private readonly audit: AuditService,
     @Optional() private readonly authSecurity?: AuthSecurityService,
   ) {}
 
-  private trialConfig() {
-    const planCode = this.config.get<string>('IRON_FIT_TRIAL_PLAN_CODE')?.trim();
-    const daysRaw = this.config.get<string>('IRON_FIT_TRIAL_DAYS')?.trim();
-    const days = Number(daysRaw);
-    if (!planCode || !Number.isInteger(days) || days < 1 || days > 90) {
-      throw new ServiceUnavailableException('Trial comercial nao configurado');
+  private async trialConfig() {
+    const approved = await this.launch.currentApproved();
+    const policy = approved.policy;
+    if (
+      !policy ||
+      policy.trialEnabled !== true ||
+      typeof policy.trialPlanVersionId !== 'string' ||
+      !policy.trialPlanVersionId ||
+      !Number.isInteger(policy.trialDays) ||
+      (policy.trialDays ?? 0) < 1 ||
+      (policy.trialDays ?? 0) > 90
+    ) {
+      throw new ServiceUnavailableException(
+        'Trial comercial nao habilitado na Launch Matrix APPROVED',
+      );
     }
-    return { planCode, days };
+    return {
+      planVersionId: policy.trialPlanVersionId,
+      days: policy.trialDays as number,
+    };
   }
 
   private gymSlug(gymName: string, requestId: string) {
@@ -106,7 +122,7 @@ export class CommercialTrialService {
   }
 
   async startTrial(dto: StartTrialDto, ipAddress?: string | null) {
-    const config = this.trialConfig();
+    const config = await this.trialConfig();
     const email = dto.email.trim().toLowerCase();
     const passwordViolations = passwordPolicyViolations(dto.password);
     if (passwordViolations.length > 0) {
@@ -156,16 +172,17 @@ export class CommercialTrialService {
           const ownerRole = await tx.role.findUnique({ where: { name: 'OWNER' } });
           if (!ownerRole) throw new ServiceUnavailableException('RBAC OWNER nao configurado');
 
-          const planVersion = await tx.productPlanVersion.findFirst({
-            where: {
-              status: 'PUBLISHED',
-              productPlan: { code: config.planCode },
-            },
-            orderBy: { version: 'desc' },
+          const planVersion = await tx.productPlanVersion.findUnique({
+            where: { id: config.planVersionId },
             include: { productPlan: true },
           });
-          if (!planVersion) {
-            throw new ServiceUnavailableException('Plano de trial PUBLISHED nao configurado');
+          if (
+            !planVersion ||
+            planVersion.status !== ProductPlanVersionStatus.PUBLISHED
+          ) {
+            throw new ServiceUnavailableException(
+              'Plano de trial da Launch Matrix nao esta PUBLISHED',
+            );
           }
 
           const user = await tx.user.create({
@@ -260,12 +277,11 @@ export class CommercialTrialService {
     });
     if (!subscription) return { status: 'INACTIVE', subscription: null };
 
-    const trialPlanCode = this.config.get<string>('IRON_FIT_TRIAL_PLAN_CODE')?.trim();
-    const isTrial = Boolean(
-      trialPlanCode &&
-      subscription.planVersion.productPlan.code === trialPlanCode &&
-      subscription.effectiveUntil,
-    );
+    const provisioning = await this.prisma.commercialTrialProvisioning.findFirst({
+      where: { subscriptionId: subscription.id },
+      select: { requestId: true, trialEndsAt: true },
+    });
+    const isTrial = Boolean(provisioning && subscription.effectiveUntil);
 
     if (isTrial && subscription.effectiveUntil!.getTime() <= Date.now()) {
       const expired = await this.prisma.$transaction(async (tx) => {
