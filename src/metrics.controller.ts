@@ -9,7 +9,7 @@ export class MetricsController {
   metricsSnapshot() {
     return {
       status: 'ok',
-      service: 'iron-fit-backend',
+      service: 'gym-saas-backend',
       metrics: this.metrics.snapshot(),
       timestamp: new Date().toISOString(),
     };
