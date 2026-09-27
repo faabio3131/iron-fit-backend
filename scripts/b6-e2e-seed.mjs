@@ -124,7 +124,8 @@ async function main() {
     },
   });
 
-  const adminPassword = 'B6-Admin-Strong!2026';
+  const adminPassword = process.env.B6_ADMIN_PASSWORD;
+  if (!adminPassword) throw new Error('B6_ADMIN_PASSWORD obrigatoria no E2E');
   const adminHash = await bcrypt.hash(adminPassword, 12);
   const admin = await prisma.user.upsert({
     where: { email: 'b6-admin@example.com' },
