@@ -55,6 +55,18 @@ function makeService({
     '../dist/src/modules/product-entitlements/tenant-product-entitlements.service.js',
   );
 
+  const { PRODUCT_FEATURE_CATALOG_V1 } = require(
+    '../dist/src/modules/product-entitlements/contracts/product-entitlement-contract.js',
+  );
+  const capabilities = {
+    requireForResolution: async (key) => {
+      const definition = PRODUCT_FEATURE_CATALOG_V1.find((item) => item.key === key);
+      if (!definition) throw new Error('Capability nao canonica: ' + key);
+      return definition;
+    },
+    listForResolution: async () => PRODUCT_FEATURE_CATALOG_V1,
+  };
+
   const audits = [];
   const tenantStore = new Map(
     tenantConfigurations.map((record) => [record.featureKey, { ...record }]),
@@ -152,7 +164,7 @@ function makeService({
   };
 
   return {
-    service: new TenantProductEntitlementsService(prisma, audit),
+    service: new TenantProductEntitlementsService(prisma, audit, capabilities),
     audits,
     tenantStore,
     preferenceStore,

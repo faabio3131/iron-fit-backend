@@ -28,7 +28,7 @@ export type FailClosedDefault = false | 0 | null;
 export interface ProductFeatureDefinition {
   key: string;
   kind: EntitlementValueKind;
-  domain: ProductCapabilityDomain;
+  domain: string;
   description: string;
   failClosedDefault: FailClosedDefault;
   allowedPolicyValues?: readonly string[];
@@ -50,6 +50,7 @@ export const STUDENT_FINANCIAL_SUBSCRIPTION_DOMAIN =
   'STUDENT_FINANCIAL_SUBSCRIPTION' as const;
 
 const FEATURE_KEY_PATTERN = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/;
+const CAPABILITY_DOMAIN_PATTERN = /^[A-Z][A-Z0-9_]{1,63}$/;
 const PLAN_CODE_PATTERN = /^[A-Z][A-Z0-9_]{1,63}$/;
 const POLICY_VALUE_PATTERN = /^[A-Z][A-Z0-9_]{1,63}$/;
 
@@ -58,6 +59,9 @@ export function defineProductFeature(
 ): Readonly<ProductFeatureDefinition> {
   if (!FEATURE_KEY_PATTERN.test(definition.key)) {
     throw new Error(`feature key canonica invalida: ${definition.key}`);
+  }
+  if (!CAPABILITY_DOMAIN_PATTERN.test(definition.domain)) {
+    throw new Error(`domain de capability invalido: ${definition.key}`);
   }
   if (!definition.description.trim()) {
     throw new Error(`feature sem descricao: ${definition.key}`);
@@ -129,6 +133,7 @@ export function canNarrowPolicy(
   return requestedAllowedValues.every((value) => planSet.has(value));
 }
 
+// Historical PE0 bootstrap fixture only. Runtime commercial authority lives in ProductCapabilityDefinition.
 export const PRODUCT_FEATURE_CATALOG_V1 = Object.freeze([
   defineProductFeature({
     key: 'content.external_youtube',
