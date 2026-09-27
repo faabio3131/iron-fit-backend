@@ -3,6 +3,7 @@ import {
   assertCapability,
   assertProviderCode,
   IntegrationProviderDescriptor,
+  assertTenantEntitlementFeatureKey,
 } from './contracts/integration-contract';
 
 @Injectable()
@@ -16,6 +17,9 @@ export class IntegrationProviderRegistry {
     }
 
     const capabilities = [...new Set(descriptor.capabilities.map(assertCapability))];
+    const tenantEntitlementFeatureKey = descriptor.tenantEntitlementFeatureKey
+      ? assertTenantEntitlementFeatureKey(descriptor.tenantEntitlementFeatureKey)
+      : undefined;
     if (capabilities.length === 0) throw new ConflictException('Integration provider exige ao menos uma capability');
     if (descriptor.authModels.length === 0) throw new ConflictException('Integration provider exige ao menos um authModel');
     if (descriptor.environments.length === 0) throw new ConflictException('Integration provider exige ao menos um environment');
@@ -26,6 +30,7 @@ export class IntegrationProviderRegistry {
       capabilities: Object.freeze(capabilities),
       authModels: Object.freeze([...new Set(descriptor.authModels)]),
       environments: Object.freeze([...new Set(descriptor.environments)]),
+      tenantEntitlementFeatureKey,
     });
     this.providers.set(providerCode, normalized);
     return normalized;
