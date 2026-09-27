@@ -1,59 +1,84 @@
 # IRON — Commercial Readiness — Secret Vault Controls
 
-Status: **CANDIDATE — aguardando CI/PR/merge/post-merge**
+Status: **INTERNAL CONTROLS CERTIFIED — C4 PHYSICAL VAULT BLOCKED_EXTERNAL**
 
-Baseline: C1-C3 certified on main at `bb6fb4944089e3e1522669c2b101c1435542db80`.
+Current main: `60d28300a8466c26574af08970dde17e97761442`
 
-## State of C4
+Evidence:
+- PR #66;
+- first PR CI `36325413341` correctly FAILED on two historical audit-source expectations after the redaction refactor; no promotion occurred;
+- corrective PR CI `36325557481` — SUCCESS;
+- post-merge main CI `36325717270` — SUCCESS;
+- secret scan: PASS across 601 tracked files;
+- smoke regression: 460/460 PASS, 0 FAIL, 0 SKIP;
+- B6 integrated live E2E: 5/5 PASS, 0 FAIL, 0 SKIP;
+- cross-surface live app client and production container build: SUCCESS.
 
-C4 — Vault Backend físico — is **BLOCKED_EXTERNAL** until a real managed secret backend is selected, provisioned and governed. No database column, .env-per-client, home-grown encryption or fake adapter may be promoted as a physical Vault.
+Baseline C1-C3: certified on main at `bb6fb4944089e3e1522669c2b101c1435542db80`.
 
-The code therefore keeps an explicit unavailable adapter by default.
+## Estado de C4
 
-## Controls in this increment
+C4 — Vault Backend físico — está **BLOCKED_EXTERNAL** até que um backend gerenciado real de segredos seja selecionado, provisionado e governado.
 
-### C5 boundary and fail-closed resolver
+Nenhuma coluna do PostgreSQL, `.env` por cliente, criptografia caseira ou adapter fake pode ser promovido como Vault físico.
 
-`IntegrationSecretValue` does not reveal its content through string conversion, JSON serialization or Node inspection. Cleartext is accessible only through explicit `reveal()`, intended for the final external provider adapter boundary.
+O runtime mantém um adapter explicitamente indisponível por padrão.
 
-The resolver validates, before Vault access:
+## Controles certificados neste incremento
 
-- canonical connection id;
-- GLOBAL/TENANT scope;
-- tenant id when TENANT;
-- exact runtime environment;
-- ACTIVE status;
-- secret reference and version;
-- non-revoked/non-expired lifecycle state.
+### C5 — boundary/resolver interno certificado; backend físico pendente
 
-Cross-tenant denial occurs before a Vault read.
+`IntegrationSecretValue` não revela conteúdo por conversão para string, serialização JSON ou inspeção Node. Cleartext só existe por chamada explícita a `reveal()`, destinada ao último boundary do adapter externo.
 
-### C8 lifecycle metadata
+Antes de qualquer leitura do Vault, o resolver valida:
+- connection id canônico;
+- GLOBAL/TENANT;
+- gymId no escopo TENANT;
+- environment exato;
+- status ACTIVE;
+- referência e versão;
+- revogação e expiração.
 
-PostgreSQL stores only non-secret lifecycle metadata: version, rotation, expiry, last-use and revocation timestamps. Database constraints prevent impossible partial states.
+Cross-tenant denial ocorre antes de qualquer Vault read. Revogação/expiração concorrente após a leitura física bloqueia a entrega antes do reveal.
 
-### C9 structural redaction
+### C8 — lifecycle metadata certificado; escrita/rotação física pendente C4/C6
 
-Audit redaction is normalized across camelCase/snake_case/hyphenated key names and covers password, tokens, secrets, API keys, private keys, authorization, card PAN/CVV/CVC and secretReference recursively.
+PostgreSQL persiste somente metadados não secretos:
+- secretVersion;
+- secretRotatedAt;
+- secretExpiresAt;
+- secretLastUsedAt;
+- secretRevokedAt.
 
-### C10 environment isolation
+Constraints impedem estados parciais incompatíveis.
 
-`IRON_RUNTIME_ENV` is mandatory and must be DEV, HOMOLOG or PROD. Secret resolution filters by the exact active environment; production credentials cannot be selected by a DEV/HOMOLOG runtime.
+### C9 — structural redaction CERTIFIED
 
-### C12 adversarial isolation
+Audit redaction normaliza camelCase, snake_case e nomes equivalentes e cobre passwords, tokens, secrets, API keys, private keys, authorization, card PAN/CVV/CVC e secretReference recursivamente.
 
-Permanent tests prove that forged tenant scope is rejected before physical secret resolution.
+Os nomes históricos exigidos pelos gates B4/S11 permanecem explícitos e funcionais.
 
-### C13 repository secret scanning
+### C10 — environment isolation CERTIFIED
 
-The quality gate scans tracked files before build for high-confidence private keys and common live credential formats, and rejects tracked non-example .env files.
+`IRON_RUNTIME_ENV` é obrigatório e aceita apenas DEV, HOMOLOG ou PROD. Secret resolution filtra pelo ambiente exato; credencial PROD não pode ser selecionada por runtime DEV/HOMOLOG.
 
-## Not certified by this increment
+### C12 — adversarial resolver isolation CERTIFIED
 
-- physical C4 backend;
-- write/rotate/revoke admin API (C6);
-- step-up wiring to integration changes (C7);
-- real secret write/rotation (remaining C8);
-- physical Vault backup/recovery policy (C11);
-- break-glass execution flow (C14);
-- any real provider.
+Testes permanentes provam que tenant forjado é rejeitado antes de acessar o backend físico de segredo.
+
+### C13 — repository secret scanning CERTIFIED
+
+O quality gate executa `scripts/secret-scan.mjs` antes de build/testes e bloqueia:
+- private keys de alto sinal;
+- formatos conhecidos de credenciais live;
+- arquivos `.env` rastreados, exceto `.env.example`.
+
+## Ainda não concluído
+
+- C4 — physical Vault backend: BLOCKED_EXTERNAL;
+- C6 — write-only create/replace/test/rotate/revoke admin API/UX;
+- C7 — step-up wiring das operações críticas (o B4 já fornece `assertStepUp`);
+- C8 — escrita/rotação/revogação física no Vault;
+- C11 — política física de backup/recovery do Vault;
+- C14 — fluxo operacional break-glass;
+- providers reais.
