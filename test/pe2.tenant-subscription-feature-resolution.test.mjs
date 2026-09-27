@@ -19,6 +19,17 @@ function makeService({ gym, subscription, transaction } = {}) {
   const { TenantProductEntitlementsService } = require(
     '../dist/src/modules/product-entitlements/tenant-product-entitlements.service.js',
   );
+  const { PRODUCT_FEATURE_CATALOG_V1 } = require(
+    '../dist/src/modules/product-entitlements/contracts/product-entitlement-contract.js',
+  );
+  const capabilities = {
+    requireForResolution: async (key) => {
+      const definition = PRODUCT_FEATURE_CATALOG_V1.find((item) => item.key === key);
+      if (!definition) throw new Error('Capability nao canonica: ' + key);
+      return definition;
+    },
+    listForResolution: async () => PRODUCT_FEATURE_CATALOG_V1,
+  };
   const audits = [];
   const prisma = {
     gym: {
@@ -35,7 +46,7 @@ function makeService({ gym, subscription, transaction } = {}) {
   const audit = {
     record: async (input, db) => audits.push({ input, db }),
   };
-  return { service: new TenantProductEntitlementsService(prisma, audit), audits };
+  return { service: new TenantProductEntitlementsService(prisma, audit, capabilities), audits };
 }
 
 function subscriptionWith({ status = 'PUBLISHED', entitlements = [] } = {}) {
