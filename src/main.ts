@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ProductionExceptionFilter } from './common/filters/production-exception.filter';
+import { assertRuntimeBootstrapContract } from './common/runtime/iron-runtime-environment';
 
 function resolveCorsOrigins(): string[] {
   const configured = (process.env.CORS_ORIGINS ?? '')
@@ -30,6 +31,8 @@ function resolveTrustProxyHops(): number {
 }
 
 async function bootstrap() {
+  const runtimeEnvironment = assertRuntimeBootstrapContract();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
   });
@@ -78,7 +81,8 @@ async function bootstrap() {
       event: 'service_started',
       service: 'gym-saas-backend',
       port: Number(port),
-      environment: process.env.NODE_ENV ?? 'development',
+      runtimeEnvironment,
+      nodeEnvironment: process.env.NODE_ENV ?? 'development',
     }),
   );
 }
