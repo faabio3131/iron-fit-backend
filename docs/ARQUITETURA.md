@@ -1,207 +1,175 @@
-# 🏋️ IronCloud Gym SaaS - Documentação de Arquitetura e Sistema
+# IRON Fit — Arquitetura CURRENT
 
-**Versão:** 1.0.0  
-**Data da Última Atualização:** Setembro 2026  
-**Status:** Produção (Live)  
-**Repositório Backend:** [github.com/faabio3131/gym-saas-backend](https://github.com/faabio3131/gym-saas-backend)
+**Status:** engenharia interna certificada até o Bloco 6; produção externa **não declarada**  
+**Linha canônica:** `main`  
+**Backend:** `faabio3131/iron-fit-backend`  
+**App Web/mobile:** `faabio3131/iron-fit-app`  
+**Data de reconciliação:** 27/09/2026
 
----
+> Este documento descreve o CURRENT técnico. Claims históricos de Render/Supabase como produção, painel React/Vite paralelo, `/auth/register` público e runtime `dist/main` foram removidos porque não representam mais a aplicação canônica.
 
-## 1. 🏗️ Visão Geral da Arquitetura
+## 1. Arquitetura única
 
-O sistema segue uma arquitetura **Client-Server** moderna, separando claramente frontend, backend e banco de dados, permitindo escalabilidade e manutenção independente.
+O IRON mantém uma única linha de produto:
 
-### 1.1 Diagrama de Infraestrutura
+```text
+Web (Expo + React Native Web) ─┐
+                              ├──> API NestJS ──> PostgreSQL
+Mobile (Expo / React Native) ─┘
+                                      │
+                                      ├── Auth / Session / RBAC / Tenant
+                                      ├── Product / Plan / Feature
+                                      ├── Trial / Onboarding
+                                      ├── Operações da academia
+                                      ├── Billing SaaS FM -> academia
+                                      ├── Aggregator Hub
+                                      ├── Creator Network
+                                      └── IRON Intelligence (governado)
+```
 
-\\\	ext
-┌─────────────────────┐       ┌──────────────────────┐       ┌─────────────────────┐
-│   CLIENTES (Front)  │       │   BACKEND (API)      │       │   DADOS & INFRA     │
-│                     │       │                      │       │                     │
-│   App Mobile      │──────▶│   Render (Node.js) │──────▶│  🗄️ Supabase (Postgres)│
-│  (Expo/React Native)│ HTTPS │  (NestJS + Prisma)   │ SQL   │  (Banco Relacional) │
-│                     │       │                      │       │                     │
-│  💻 Painel Admin    │──────▶│  🔒 Auth (JWT)       │       │  ☁️ Storage (Imagens) │
-│  (React/Vite)       │ HTTPS │  🛡️ Guards (Roles)   │       │                     │
-└─────────────────────┘       └──────────────────────┘       └─────────────────────┘
-         ▲                              ▲
-         │                              │
-         └────────── Git Push ──────────┘
-               (Auto-Deploy)
-\\\
+Web e mobile pertencem ao mesmo repositório `iron-fit-app`, compartilham o mesmo cliente HTTP e consomem as mesmas autoridades de backend. Não existe um segundo painel Web com regras de negócio próprias.
 
-### 1.2 Tecnologias Utilizadas
+## 2. Stack CURRENT
 
-| Camada | Tecnologia | Versão | Função |
-|--------|------------|--------|--------|
-| **Backend** | NestJS | v10+ | Framework API REST |
-| **Linguagem** | TypeScript | v5+ | Tipagem estática |
-| **ORM** | Prisma | v5+ | Acesso ao banco de dados |
-| **Banco de Dados** | PostgreSQL | 15+ | Via Supabase |
-| **Auth** | JWT + Bcrypt | - | Tokens e Senhas |
-| **Painel Web** | React + Vite | v5+ | Dashboard do Dono |
-| **App Mobile** | Expo (React Native) | SDK 50+ | App do Aluno/Treinador |
-| **Infra** | Render + Supabase | Free Tier | Hospedagem e DB |
+### Backend
+- Node.js 22.
+- NestJS 11.
+- TypeScript 5.7.
+- Prisma 6.19.3.
+- PostgreSQL.
+- Dockerfile versionado.
+- processo de produção: `node dist/src/main.js`.
 
----
+### App
+- Expo SDK 57.
+- React 19.
+- React Native 0.86.
+- React Native Web.
+- Android e Web exportados/certificados pelo CI.
+- Web empacotada em container de produção e submetida a smoke físico de runtime.
 
-## 2. 🔒 Segurança e Autenticação
+## 3. Autoridades canônicas
 
-### 2.1 Fluxo de Login
-1.  Usuário envia \mail\ e \senha\ para \POST /auth/login\.
-2.  Backend valida credenciais no banco (senha comparada com hash bcrypt).
-3.  Se válido, gera **JWT Token** contendo: \id\, \mail\, \ole\, \gymId\.
-4.  Frontend armazena token (LocalStorage/SecureStore) e usa no header \Authorization: Bearer <token>\.
+### Identidade e segurança
+- `User`, `Session`, `UserRole`/RBAC e tenant context são autoridades.
+- access JWT carrega `sid`; a sessão é validada no servidor.
+- refresh token é rotativo e armazenado por hash.
+- MFA TOTP, recovery codes, step-up, rate limit e action tokens pertencem ao backend.
+- cadastro público comercial canônico: `POST /commercial/trial/start`.
+- `/auth/register` não é a superfície pública comercial.
 
-### 2.2 Controle de Acesso (RBAC - Roles)
-O sistema utiliza **Guards** no NestJS para proteger rotas baseadas em cargos:
+### Tenant
+- tenant ativo deriva da identidade/sessão autenticada.
+- domínio não confia em `gymId` arbitrário do cliente para operações tenant-scoped.
+- isolamento cross-tenant é requisito permanente de regressão.
 
-| Role | Permissões Principais |
-|------|-----------------------|
-| \SUPER_ADMIN\ | Acesso total a todas as academias (God mode). |
-| \OWNER\ | Dono da academia. Gestão total da sua unidade (alunos, financeiro, treinos). |
-| \MANAGER\ | Gerente. Opera como o dono, mas sem acesso a configurações críticas da conta. |
-| \TRAINER\ | Treinador. Cria treinos, vê alunos, mas não acessa financeiro sensível. |
-| \STUDENT\ | Aluno. Vê apenas seus próprios treinos, agenda e pagamentos. |
+### Comercial
+- `ProductPlan` / versões / features definem catálogo de produto.
+- `TenantProductSubscription` é a autoridade de entitlement.
+- trial e onboarding zero-touch usam as autoridades canônicas existentes.
+- `SaasBillingAgreement` registra lifecycle financeiro/comercial e não substitui entitlement.
 
-**Endpoints Protegidos:** Todos os endpoints (exceto \/auth/login\ e \/auth/register\) exigem token JWT válido.
+## 4. Superfícies
 
----
+### Web operacional
+A Web cobre os domínios comerciais e operacionais canônicos, incluindo onboarding, equipe, alunos, equipamentos, avaliações, treinos, agenda, acesso, financeiro, assinatura IRON, segurança e entitlements.
 
-## 3. ️ Modelo de Dados (Prisma Schema)
+Equipamentos novos devem seguir o Catálogo Mestre:
+- seleção: `POST /equipments/catalog/selection`;
+- candidate intake quando o item não existe;
+- criação manual legada não é o caminho canônico para novos itens.
 
-O banco de dados é relacional, focado em integridade. Principais entidades:
+### Mobile
+O aluno usa as rotas canônicas `/me/*` para perfil, treinos, avaliações, agenda e cobranças.
 
-### 3.1 Entidades Core
-*   **User:** Dados de login e perfil global.
-*   **Gym:** A academia/unidade de negócio.
-*   **Student:** Perfil do aluno vinculado a uma Gym e a um User.
-*   **Assessment:** Avaliação física (dobras, medidas, peso) vinculada ao Student.
-*   **Workout:** O treino prescrito. Contém Sessions e Exercises.
-*   **Session:** Divisão do treino (ex: "Treino A - Peito").
-*   **Exercise:** Exercício específico dentro da sessão (com séries, reps, carga).
-*   **Charge:** Cobrança financeira (mensalidade) com status (PENDING, PAID, OVERDUE).
-*   **Schedule:** Horários disponíveis para reserva de aula.
+## 5. Billing
 
-### 3.2 Relacionamentos Chave
-*   \Gym\ 1:N \Student\
-*   \Student\ 1:N \Workout\
-*   \Workout\ 1:N \Session\ -> 1:N \Exercise\
-*   \Student\ 1:N \Charge\
+Existem dois domínios distintos:
 
-*(Ver arquivo \prisma/schema.prisma\ no repositório para detalhes técnicos dos tipos).*
+1. **FM -> academia:** billing SaaS da assinatura IRON.
+2. **Academia -> aluno:** financeiro operacional do tenant.
 
----
+O motor SaaS interno está certificado com provider `INTERNAL_SANDBOX`, que é proibido em produção. Nenhum gateway externo é declarado homologado até o bloco de Commercial Readiness correspondente.
 
-## 4. 🔌 API Endpoints Principais
+## 6. Providers e integrações
 
-Base URL: \https://gym-saas-backend-t9ej.onrender.com/api/v1\
+Adapters e contratos são provider-neutral sempre que aplicável.
 
-### Auth
-*   \POST /auth/login\ - Login (Retorna JWT)
-*   \POST /auth/register\ - Registro de novo usuário/dono
+Estado atual:
+- Wellhub/TotalPass: fronteiras internas existem; homologação externa depende de documentação/credenciais oficiais.
+- IRON Intelligence: configuração GLOBAL/TENANT e `secretReference` existem; secret backend real ainda precisa ser materializado no Integration & Secret Vault.
+- Creator media: provider abstraction existe; provider live de storage/CDN não é declarado.
+- e-mail: emissão segura de action token existe; entrega real depende de provider homologado.
 
-### Dashboard
-*   \GET /dashboard/stats\ - Resumo estatístico (total alunos, receita, etc.)
+Nenhum provider externo é considerado live apenas porque existe adapter, contrato ou configuração candidata.
 
-### Alunos (Students)
-*   \GET /students\ - Lista todos os alunos da academia (Owner/Manager)
-*   \POST /students\ - Cadastra novo aluno
-*   \PATCH /students/:id\ - Atualiza dados do aluno
+## 7. Runtime e infraestrutura
 
-### Treinos (Workouts)
-*   \GET /workouts\ - Lista todos os treinos da academia (**Novo Endpoint**)
-*   \GET /students/:studentId/workouts\ - Lista treinos de um aluno específico
-*   \POST /workouts\ - Cria novo treino (com sessões e exercícios aninhados)
-*   \PATCH /workouts/:id/status\ - Aprova ou Rejeita treino (DRAFT → APPROVED)
+A aplicação possui fundação production-shaped:
+- Docker;
+- `railway.toml` candidato;
+- `prisma migrate deploy`;
+- liveness;
+- readiness com consulta real ao PostgreSQL;
+- métricas agregadas;
+- logs HTTP estruturados com request ID;
+- CORS e proxy topology configuráveis.
 
-### Financeiro
-*   \GET /financial/charges\ - Lista cobranças
-*   \POST /financial/charges\ - Lança nova cobrança
-*   \PATCH /financial/charges/:id/pay\ - Confirma pagamento
+### Estado externo conhecido
+- não existe runtime IRON Railway comprovado;
+- o Supabase `gym-saas` observado é legado e não representa o schema CURRENT;
+- produção IRON não está declarada.
 
-### Agenda
-*   \GET /schedules\ - Consulta horários disponíveis
-*   \POST /schedules\ - Abre novo horário
-*   \POST /schedules/:id/book\ - Reserva vaga (Aluno)
+DEV, HOMOLOG e PROD deverão executar a mesma aplicação e arquitetura, variando somente configuração, secrets, endpoints e capacidade.
 
----
+## 8. Banco e migrations
 
-## 5. 🚀 Deploy e CI/CD
+Fonte de verdade:
+- `prisma/schema.prisma` e schemas Prisma complementares;
+- `prisma/migrations`.
 
-### 5.1 Backend (Render)
-*   **Trigger:** Push na branch \main\ do GitHub.
-*   **Build Command:** \
-pm run build\ (NestJS compila para JS).
-*   **Start Command:** \
-ode dist/main.js\.
-*   **Variáveis de Env:** \DATABASE_URL\ (Supabase), \JWT_SECRET\.
-*   **Status:** Auto-deploy habilitado.
+O CI executa PostgreSQL real e `prisma migrate deploy` do zero. Isso comprova fresh install interno, mas não substitui homologação física de banco externo, backup/restore e disaster recovery.
 
-### 5.2 Frontend (Painel & App)
-*   **Painel:** Roda localmente (\
-pm run dev\) ou pode ser deployado na Vercel/Netlify.
-*   **App:** Desenvolvido em Expo. Gera builds via \as build\ (não há deploy automático contínuo configurado, processo manual via EAS).
+## 9. CI e certificação
 
----
+O backend quality gate executa, no mínimo:
+1. `npm ci`;
+2. dependency audit;
+3. Prisma generate;
+4. fresh migrations em PostgreSQL real;
+5. lint/typecheck;
+6. build;
+7. regressão;
+8. seed determinístico B6;
+9. backend real;
+10. Integrated Live E2E;
+11. checkout de SHA explícito do app certificado;
+12. cliente real do app contra o backend;
+13. build do container backend.
 
-## 6. ✅ Checklist de Auditoria (Status Atual)
+O app executa dependency audit, typecheck, lint, Jest, release/build checks, export Android, export Web, integridade de bundles, build do container Web e smoke físico de `/health` + `index.html`.
 
-Use esta lista para validar a saúde do sistema antes de novas implementações.
+## 10. Estado dos Blocos 4–6
 
-### Segurança
-- [x] JWT implementado com expiração.
-- [x] Senhas hasheadas com bcrypt (salt 10).
-- [x] Roles validadas em todos os endpoints críticos.
-- [ ] Rate Limiting (A implementar).
-- [ ] Logs de auditoria de ações sensíveis (A implementar).
+- **Bloco 4 — Identidade e Segurança Comercial:** implementação interna concluída e mergeada; provider externo de e-mail continua dependência de homologação.
+- **Bloco 5 — Infraestrutura:** engenharia interna concluída; homologação externa/produção pendente.
+- **Bloco 6 — Recertificação Integrada:** certificado internamente com PostgreSQL real em CI e transporte HTTP real entre app e backend.
+- **Macrobloco A de Commercial Readiness:** repina o B6 para o app CURRENT saneado e reconcilia documentação.
 
-### Funcional
-- [x] CRUD de Alunos funcional.
-- [x] Criação e Aprovação de Treinos funcional.
-- [x] Lançamento e Baixa de Pagamentos funcional.
-- [x] Seed de dados inicial funcionando.
-- [ ] Recuperação de senha (Esqueci minha senha) (A implementar).
+## 11. Claims proibidos sem evidência
 
-### Infraestrutura
-- [x] Backend no ar (Render).
-- [x] Banco de dados conectado (Supabase).
-- [x] CORS configurado para localhost e domínios de produção.
-- [ ] Backup automático do banco testado (Gerenciado pelo Supabase).
+Não declarar, sem evidência física atual:
+- “produção live”;
+- banco externo homologado;
+- gateway real homologado;
+- Wellhub/TotalPass live;
+- provider de IA live;
+- storage/CDN live;
+- e-mail live;
+- disponibilidade comercial final.
 
----
+## 12. Próxima fase
 
-## 7. 📂 Estrutura de Pastas do Projeto
+Após o Macrobloco A, seguir o Cronograma Mestre de Execução Commercial Readiness A–T.
 
-\\\	ext
-gym-saas-backend/
-├── src/
-│   ├── modules/          # Módulos de negócio (auth, students, workouts...)
-│   ├── common/           # Guards, Decorators, Filters
-│   ├── prisma/           # Schema e Seeds
-│   ── main.ts           # Entry point
-├── docs/                 # Documentação do projeto
-│   └── ARQUITETURA.md    # Este arquivo
-├── prisma/
-│   ├── schema.prisma
-│   └── seed.ts
-├── .env                  # Variáveis de ambiente (NÃO COMMITAR)
-└── package.json
-
-ironcloud-admin/ (Painel)
-├── src/
-│   ├── pages/            # Telas (Dashboard, Alunos, Treinos...)
-│   ├── services/         # Chamadas API
-│   └── App.tsx
-── package.json
-
-gym-saas-app/ (Mobile)
-├── src/
-│   ├── screens/          # Telas Mobile
-│   ── services/
-└── app.json
-\\\
-
----
-
-**Fim da Documentação.**
-*Gerado para auditoria do projeto IronCloud Gym SaaS.*
+O **Integration & Secret Vault** é P0 e deve anteceder integrações específicas de cliente que carreguem credenciais, OAuth tokens, webhook secrets ou material financeiro sensível.
