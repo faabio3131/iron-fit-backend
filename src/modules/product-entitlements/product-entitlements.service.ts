@@ -12,10 +12,8 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
-import {
-  PRODUCT_FEATURE_CATALOG_V1,
-  ProductFeatureDefinition,
-} from './contracts/product-entitlement-contract';
+import { ProductFeatureDefinition } from './contracts/product-entitlement-contract';
+import { ProductCapabilityCatalogService } from './product-capability-catalog.service';
 import { CreateProductPlanDto } from './dto/create-product-plan.dto';
 import { CreateProductPlanVersionDto } from './dto/create-product-plan-version.dto';
 import { SetProductPlanEntitlementDto } from './dto/set-product-plan-entitlement.dto';
@@ -27,6 +25,7 @@ export class ProductEntitlementsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly capabilities: ProductCapabilityCatalogService,
   ) {}
 
   private async serializable<T>(
@@ -47,26 +46,15 @@ export class ProductEntitlementsService {
     throw new ConflictException('Falha de concorrencia ao governar plano');
   }
 
-  private featureDefinition(featureKey: string): Readonly<ProductFeatureDefinition> {
-    const definition = PRODUCT_FEATURE_CATALOG_V1.find(
-      (candidate) => candidate.key === featureKey,
-    );
-    if (!definition) {
-      throw new BadRequestException(`Capability nao canonica: ${featureKey}`);
-    }
-    return definition;
-  }
-
   private buildEntitlementValue(
     dto: SetProductPlanEntitlementDto,
+    definition: Readonly<ProductFeatureDefinition>,
   ): {
     kind: ProductEntitlementKind;
     featureEnabled: boolean | null;
     limitValue: number | null;
     policyValues: Prisma.InputJsonValue | typeof Prisma.DbNull;
   } {
-    const definition = this.featureDefinition(dto.featureKey);
-
     if (definition.kind === 'FEATURE') {
       if (
         typeof dto.featureEnabled !== 'boolean' ||
@@ -132,8 +120,10 @@ export class ProductEntitlementsService {
     };
   }
 
-  private validateStoredEntitlement(entitlement: ProductPlanEntitlement): void {
-    const definition = this.featureDefinition(entitlement.featureKey);
+  private validateStoredEntitlement(
+    entitlement: ProductPlanEntitlement,
+    definition: Readonly<ProductFeatureDefinition>,
+  ): void {
     if (entitlement.kind !== definition.kind) {
       throw new BadRequestException(
         `Entitlement ${entitlement.featureKey} diverge do tipo canonico`,
@@ -261,8 +251,6 @@ export class ProductEntitlementsService {
     if (!Number.isInteger(versionNumber) || versionNumber < 1) {
       throw new BadRequestException('version deve ser inteiro positivo');
     }
-    const value = this.buildEntitlementValue(dto);
-
     return this.serializable(async (tx) => {
       const version = await tx.productPlanVersion.findFirst({
         where: { productPlanId: planId, version: versionNumber },
@@ -272,6 +260,9 @@ export class ProductEntitlementsService {
       if (version.status !== ProductPlanVersionStatus.DRAFT) {
         throw new ConflictException('Versao publicada/retirada e imutavel');
       }
+
+      const definition = await this.capabilities.requireActive(dto.featureKey, tx);
+      const value = this.buildEntitlementValue(dto, definition);
 
       const previous = await tx.productPlanEntitlement.findUnique({
         where: {
@@ -346,7 +337,11 @@ export class ProductEntitlementsService {
       }
 
       for (const entitlement of version.entitlements) {
-        this.validateStoredEntitlement(entitlement);
+        const definition = await this.capabilities.requireActive(
+          entitlement.featureKey,
+          tx,
+        );
+        this.validateStoredEntitlement(entitlement, definition);
       }
 
       const publishedAt = new Date();
