@@ -123,7 +123,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 43f8c26979c4228b8c8a8d1bd71607ee9350eef5
+          ref: d05b10ec7995ae55d5a9a4f6104234decc9e16b8
           path: iron-fit-app
 
       - name: Install certified IRON app dependencies
