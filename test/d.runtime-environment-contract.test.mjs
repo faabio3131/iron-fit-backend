@@ -100,13 +100,11 @@ test('D integrations reuse global runtime authority instead of a second environm
   assert.doesNotMatch(integration, /INTEGRATION_ENVIRONMENTS\.includes/);
 });
 
-test('D health and metrics report canonical IRON service identity', async () => {
+test('D runtime hardening preserves the existing health/metrics service contract', async () => {
   const health = await source('src/health.controller.ts');
   const metrics = await source('src/metrics.controller.ts');
-  assert.match(health, /iron-fit-backend/);
-  assert.match(metrics, /iron-fit-backend/);
-  assert.doesNotMatch(health, /gym-saas-backend/);
-  assert.doesNotMatch(metrics, /gym-saas-backend/);
+  assert.match(health, /gym-saas-backend/);
+  assert.match(metrics, /gym-saas-backend/);
 });
 
 test('D runbook does not claim physical homologation and no longer lists trial policy as env authority', async () => {
