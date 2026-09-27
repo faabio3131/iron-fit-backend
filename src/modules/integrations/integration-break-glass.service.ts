@@ -180,7 +180,13 @@ export class IntegrationBreakGlassService {
     await this.assertBreakGlassStepUp(userId, dto);
     await this.expireStale();
     const reason = this.assertSafeReason(dto.reason);
+    if (dto.operation !== IntegrationBreakGlassOperation.PROVIDER_VERIFY) {
+      throw new ConflictException(
+        'Operacao break-glass nao autorizada',
+      );
+    }
     const connection = await this.requireConnection(dto.connectionId);
+    this.probes.require(connection.providerCode);
 
     const grant = await this.prisma.integrationBreakGlassGrant.create({
       data: {
