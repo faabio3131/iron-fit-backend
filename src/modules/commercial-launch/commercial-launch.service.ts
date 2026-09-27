@@ -6,10 +6,14 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
+  CommercialCancellationPolicy,
+  CommercialDowngradePolicy,
   CommercialFiscalMode,
   CommercialLaunchDecision,
   CommercialLaunchItemKind,
   CommercialLaunchMatrixStatus,
+  CommercialRefundPolicy,
+  CommercialUpgradePolicy,
   Prisma,
   ProductEntitlementKind,
   ProductPlanVersionStatus,
@@ -152,12 +156,11 @@ export class CommercialLaunchService {
       );
     }
 
-    if (dto.featureKey) {
-      await this.capabilities.requireActive(dto.featureKey);
-    }
-
     return this.serializable(async (tx) => {
       await this.requireDraft(matrixId, tx);
+      if (dto.featureKey) {
+        await this.capabilities.requireActive(dto.featureKey, tx);
+      }
       const previous = await tx.commercialLaunchItem.findUnique({
         where: {
           matrixId_itemKey: {
@@ -393,10 +396,11 @@ export class CommercialLaunchService {
         trialDays: dto.trialEnabled ? dto.trialDays! : null,
         invoiceDueDays: dto.invoiceDueDays,
         dunningGraceDays: dto.dunningGraceDays,
-        upgradePolicy: dto.upgradePolicy,
-        downgradePolicy: dto.downgradePolicy,
-        cancellationPolicy: dto.cancellationPolicy,
-        refundPolicy: dto.refundPolicy,
+        upgradePolicy: dto.upgradePolicy as CommercialUpgradePolicy,
+        downgradePolicy: dto.downgradePolicy as CommercialDowngradePolicy,
+        cancellationPolicy:
+          dto.cancellationPolicy as CommercialCancellationPolicy,
+        refundPolicy: dto.refundPolicy as CommercialRefundPolicy,
         fiscalMode: dto.fiscalMode as CommercialFiscalMode,
       };
       const policy = await tx.commercialLaunchPolicy.upsert({
@@ -560,6 +564,16 @@ export class CommercialLaunchService {
       if (item.kind !== required.kind) {
         throw new ConflictException(
           'Launch item possui kind divergente: ' + required.itemKey,
+        );
+      }
+      if (
+        required.expectedFeatureKey &&
+        item.featureKey !== required.expectedFeatureKey
+      ) {
+        throw new ConflictException(
+          required.itemKey +
+            ' deve apontar para capability canonica ' +
+            required.expectedFeatureKey,
         );
       }
       if (
