@@ -1,6 +1,6 @@
 # IRON — Bloco 5 — Infraestrutura, Homologação e Operação
 
-Status: CANDIDATE — infraestrutura interna em certificação. Este documento não declara produção real sem evidência física.
+Status: CERTIFIED NO ESCOPO INTERNO — engenharia de infraestrutura concluída e promovida em `main` pelo PR #61. Homologação física externa e produção continuam pendentes e não são declaradas sem evidência.
 
 ## Arquitetura única por ambiente
 
