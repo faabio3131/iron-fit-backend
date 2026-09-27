@@ -288,8 +288,8 @@ export class IntegrationBreakGlassService {
     userId: string,
     dto: IntegrationBreakGlassExecuteDto,
   ) {
-    await this.expireStale();
     await this.assertBreakGlassStepUp(userId, dto);
+    await this.expireStale();
 
     const grant = await this.prisma.integrationBreakGlassGrant.findUnique({
       where: { id: grantId },
