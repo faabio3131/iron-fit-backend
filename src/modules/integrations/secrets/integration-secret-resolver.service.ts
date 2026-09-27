@@ -3,9 +3,10 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { IntegrationConnectionStatus } from '@prisma/client';
+import { IntegrationConnectionStatus, IntegrationEnvironment, IntegrationScope } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
+  assertIntegrationScope,
   assertIntegrationSecretReference,
   IntegrationConnectionScope,
 } from '../contracts/integration-contract';
@@ -29,13 +30,14 @@ export class IntegrationSecretResolverService {
     connectionId: string,
     scope: IntegrationConnectionScope,
   ): Promise<IntegrationSecretValue> {
+    assertIntegrationScope(scope);
     const runtimeEnvironment = this.runtimeEnvironment.current();
     const connection = await this.prisma.integrationConnection.findFirst({
       where: {
         id: connectionId,
-        scope: scope.scope,
-        gymId: scope.scope === 'TENANT' ? scope.gymId : null,
-        environment: runtimeEnvironment,
+        scope: scope.scope as IntegrationScope,
+        gymId: scope.scope === 'TENANT' ? scope.gymId!.trim() : null,
+        environment: runtimeEnvironment as IntegrationEnvironment,
       },
     });
 
@@ -66,14 +68,23 @@ export class IntegrationSecretResolverService {
       throw new ServiceUnavailableException('Segredo fisico expirado');
     }
 
-    await this.prisma.integrationConnection.updateMany({
+    const touch = await this.prisma.integrationConnection.updateMany({
       where: {
         id: connection.id,
         secretVersion: connection.secretVersion,
         secretRevokedAt: null,
+        OR: [
+          { secretExpiresAt: null },
+          { secretExpiresAt: { gt: new Date() } },
+        ],
       },
       data: { secretLastUsedAt: new Date() },
     });
+    if (touch.count !== 1) {
+      throw new ServiceUnavailableException(
+        'Credencial mudou, expirou ou foi revogada durante a resolucao',
+      );
+    }
 
     return new IntegrationSecretValue(snapshot.value);
   }
