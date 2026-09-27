@@ -211,3 +211,65 @@ test('operational and student activation entrypoints inherit the canonical stron
   assert.match(activation, /bcrypt\.hash\(dto\.password, 12\)/);
   assert.match(studentInviteDto, /@MinLength\(12\)/);
 });
+
+
+test('rate-limit threshold commits lockout before 429 is surfaced', async () => {
+  let buckets = new Map();
+  const keyOf = (scope, keyHash) => scope + ':' + keyHash;
+
+  const prisma = {
+    authRateLimitBucket: {
+      findUnique: async ({ where }) => {
+        const { scope, keyHash } = where.scope_keyHash;
+        return buckets.get(keyOf(scope, keyHash)) ?? null;
+      },
+      upsert: async ({ where, create, update }) => {
+        const { scope, keyHash } = where.scope_keyHash;
+        const key = keyOf(scope, keyHash);
+        const current = buckets.get(key);
+        const value = current
+          ? { ...current, ...update, updatedAt: new Date() }
+          : { id: 'bucket-' + buckets.size, ...create, updatedAt: new Date() };
+        buckets.set(key, value);
+        return value;
+      },
+      delete: async ({ where }) => {
+        const { scope, keyHash } = where.scope_keyHash;
+        buckets.delete(keyOf(scope, keyHash));
+        return {};
+      },
+    },
+    $transaction: async (operation) => {
+      const snapshot = new Map(
+        [...buckets.entries()].map(([key, value]) => [key, { ...value }]),
+      );
+      try {
+        return await operation(prisma);
+      } catch (error) {
+        buckets = snapshot;
+        throw error;
+      }
+    },
+  };
+
+  const security = new AuthSecurityService(
+    prisma,
+    { get: () => undefined },
+    { record: async () => ({}) },
+  );
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await security.recordLoginFailure('victim@example.com', '203.0.113.9');
+  }
+
+  const persisted = [...buckets.values()].find(
+    (bucket) => bucket.scope === 'AUTH_LOGIN_FAILURE_EMAIL',
+  );
+  assert.ok(persisted?.blockedUntil instanceof Date);
+  assert.ok(persisted.blockedUntil > new Date());
+
+  await assert.rejects(
+    () => security.assertLoginAllowed('victim@example.com', '203.0.113.9'),
+    (error) => error?.getStatus?.() === 429,
+  );
+});
