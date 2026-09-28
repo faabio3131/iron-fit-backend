@@ -1,6 +1,6 @@
 # IRON — Macro I2/I3 — Meta + Google OAuth Provider Adapters
 
-Status: **CANDIDATE — engenharia interna implementada; aguardando CI/PR/merge. Homologacao fisica de Meta/Google continua bloqueada ate o C Gate e credenciais/apps reais.**
+Status: **DONE (engenharia interna) — PR #93 mergeada na `main` em `d5a031be57f781833a64ac0bc361c5800615be25`; Quality Gate #647 PASS. Homologacao fisica de Meta/Google continua bloqueada ate o C Gate e credenciais/apps reais.**
 
 ## Autoridade arquitetural
 
