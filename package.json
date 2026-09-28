@@ -15,7 +15,8 @@
     "ci": "npm run lint && npm run build && npm run test:smoke",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:prod": "node dist/src/main.js"
+    "start:prod": "node dist/src/main.js",
+    "commercial:materialize-v1": "node scripts/materialize-launch-v1.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
