@@ -68,17 +68,23 @@ jobs:
       - name: Generate isolated E2E credentials
         shell: bash
         run: |
-          {
-            echo "JWT_SECRET=$(openssl rand -hex 32)"
-            echo "MFA_ENCRYPTION_KEY=$(openssl rand -hex 32)"
-            echo "AUTH_ACTION_TOKEN_ENCRYPTION_KEY=$(openssl rand -hex 32)"
-            echo "SAAS_BILLING_SANDBOX_SECRET=$(openssl rand -hex 32)"
-            echo "B6_OWNER_PASSWORD=Aa1!$(openssl rand -hex 16)"
-            echo "B6_STAFF_PASSWORD=Bb2!$(openssl rand -hex 16)"
-            echo "B6_STUDENT_PASSWORD=Cc3!$(openssl rand -hex 16)"
-            echo "B6_RESET_PASSWORD=Dd4!$(openssl rand -hex 16)"
-            echo "B6_ADMIN_PASSWORD=Ee5!$(openssl rand -hex 16)"
-          } >> "$GITHUB_ENV"
+          set -euo pipefail
+          mask_and_export() {
+            local key="$1"
+            local value="$2"
+            echo "::add-mask::$value"
+            printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+          }
+
+          mask_and_export JWT_SECRET "$(openssl rand -hex 32)"
+          mask_and_export MFA_ENCRYPTION_KEY "$(openssl rand -hex 32)"
+          mask_and_export AUTH_ACTION_TOKEN_ENCRYPTION_KEY "$(openssl rand -hex 32)"
+          mask_and_export SAAS_BILLING_SANDBOX_SECRET "$(openssl rand -hex 32)"
+          mask_and_export B6_OWNER_PASSWORD "Aa1!$(openssl rand -hex 16)"
+          mask_and_export B6_STAFF_PASSWORD "Bb2!$(openssl rand -hex 16)"
+          mask_and_export B6_STUDENT_PASSWORD "Cc3!$(openssl rand -hex 16)"
+          mask_and_export B6_RESET_PASSWORD "Dd4!$(openssl rand -hex 16)"
+          mask_and_export B6_ADMIN_PASSWORD "Ee5!$(openssl rand -hex 16)"
 
       - name: Dependency audit
         run: npm audit --audit-level=high
