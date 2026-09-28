@@ -34,6 +34,14 @@ const REFRESH_LEASE_MS = 2 * 60_000;
 const REFRESH_BATCH_SIZE = 20;
 const OAUTH_PROVIDER_REVOKE_PENDING = 'OAUTH_PROVIDER_REVOKE_PENDING';
 const OAUTH_LOCAL_REVOKE_PENDING = 'OAUTH_LOCAL_REVOKE_PENDING';
+const OAUTH_LOCAL_CLEANUP_REASONS = [
+  OAUTH_LOCAL_REVOKE_PENDING,
+  'OAUTH_REFRESH_OLD_REFERENCE',
+  'OAUTH_REFRESH_ROLLBACK_REFERENCE',
+  'OAUTH_CALLBACK_ROLLBACK_NEW_REFERENCE',
+  'OAUTH_REAUTHORIZE_OLD_REFERENCE',
+  'OAUTH_PKCE_CONSUMED_REFERENCE',
+] as const;
 
 function refreshBackoffMs(failureCount: number): number {
   const schedule = [
@@ -468,7 +476,10 @@ export class IntegrationOAuthMaintenanceService
       where: {
         status: IntegrationSecretCleanupStatus.PENDING,
         reason: {
-          in: [OAUTH_PROVIDER_REVOKE_PENDING, OAUTH_LOCAL_REVOKE_PENDING],
+          in: [
+            OAUTH_PROVIDER_REVOKE_PENDING,
+            ...OAUTH_LOCAL_CLEANUP_REASONS,
+          ],
         },
       },
       orderBy: { lastAttemptAt: 'asc' },
