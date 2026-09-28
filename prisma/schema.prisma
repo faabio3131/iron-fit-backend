@@ -831,23 +831,40 @@ model CommunicationAutomation {
 }
 
 model CommunicationMessage {
-  id           String        @id @default(uuid())
-  gymId        String
-  studentId    String
-  templateId   String?
-  channel      MessageChannel
-  status       MessageStatus @default(QUEUED)
-  title        String?
-  body         String
-  sentAt       DateTime?
-  deliveredAt  DateTime?
-  readAt       DateTime?
-  errorMessage String?
-  createdAt    DateTime @default(now())
-  gym          Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  template     CommunicationTemplate? @relation(fields: [templateId], references: [id])
+  id                   String        @id @default(uuid())
+  gymId                String
+  studentId            String
+  templateId           String?
+  channel              MessageChannel
+  status               MessageStatus @default(QUEUED)
+  title                String?
+  body                 String
+  dispatchKey          String        @unique
+  providerCode         String?
+  providerConnectionId String?
+  providerMessageRef   String?
+  attemptCount         Int           @default(0)
+  nextAttemptAt        DateTime?
+  lastAttemptAt        DateTime?
+  dispatchLeaseOwner   String?
+  dispatchLeaseUntil   DateTime?
+  lastErrorCode        String?
+  sentAt               DateTime?
+  deliveredAt          DateTime?
+  readAt               DateTime?
+  errorMessage         String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  gym                   Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  student               Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  template              CommunicationTemplate? @relation(fields: [templateId], references: [id])
+  providerConnection    IntegrationConnection? @relation(fields: [providerConnectionId], references: [id], onDelete: SetNull)
+
   @@index([studentId])
+  @@index([gymId, channel, status])
+  @@index([status, nextAttemptAt])
+  @@index([dispatchLeaseUntil])
+  @@index([providerConnectionId, status])
 }
 
 model CommunicationPreference {
