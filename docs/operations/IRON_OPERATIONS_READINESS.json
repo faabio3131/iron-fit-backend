@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "macro": "M",
+  "status": "CANDIDATE_INTERNAL",
+  "workPackages": {
+    "M1_SUPPORT": {"status":"CANDIDATE_INTERNAL","requiresExternalEvidence":["support_channel","support_owner","response_schedule"]},
+    "M2_SEVERITIES": {"status":"CANDIDATE_INTERNAL","levels":["SEV0","SEV1","SEV2","SEV3"]},
+    "M3_INCIDENT_RESPONSE": {"status":"CANDIDATE_INTERNAL","requiresExternalEvidence":["incident_owner_rotation","notification_channel"]},
+    "M4_DEPLOY_ROLLBACK": {"status":"CANDIDATE_INTERNAL","requiresExternalEvidence":["real_runtime","rollback_drill"]},
+    "M5_PROVIDER_OUTAGE": {"status":"CANDIDATE_INTERNAL","requiresExternalEvidence":["provider_contacts","provider_status_sources"]},
+    "M6_MONITORING_ALERTS": {"status":"CANDIDATE_INTERNAL","requiresExternalEvidence":["alert_destination","real_runtime_metrics","alert_delivery_test"]}
+  },
+  "gate": "BLOCKED_EXTERNAL",
+  "gateReason": "Operational runbooks are defined, but real owners, alert routes, runtime and drills must be evidenced before go-live."
+}
