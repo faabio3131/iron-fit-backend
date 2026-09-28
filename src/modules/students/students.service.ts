@@ -3,8 +3,10 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -13,16 +15,68 @@ import { UpdateConsentsDto } from './dto/update-consents.dto';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 import { passwordPolicyViolations } from '../auth/auth-security';
+import { TenantProductEntitlementsService } from '../product-entitlements/tenant-product-entitlements.service';
 
 const STUDENT_ONBOARDING_SESSION = 'STUDENT_ONBOARDING';
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
+const TRIAL_STUDENT_LIMIT_FEATURE = 'commercial.trial_students_max';
+const SERIALIZABLE_ATTEMPTS = 3;
 
 @Injectable()
 export class StudentsService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private entitlements: TenantProductEntitlementsService,
   ) {}
+
+  private async activeTrialStudentLimit(gymId: string): Promise<number | null> {
+    const now = new Date();
+    const provisioning = await this.prisma.commercialTrialProvisioning.findFirst({
+      where: {
+        gymId,
+        trialEndsAt: { gt: now },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { subscriptionId: true },
+    });
+    if (!provisioning) return null;
+
+    const subscription = await this.prisma.tenantProductSubscription.findFirst({
+      where: {
+        id: provisioning.subscriptionId,
+        gymId,
+        status: 'ACTIVE',
+        effectiveFrom: { lte: now },
+        effectiveUntil: { gt: now },
+      },
+      select: { id: true },
+    });
+    if (!subscription) return null;
+
+    const resolution = await this.entitlements.resolveFeature(
+      gymId,
+      TRIAL_STUDENT_LIMIT_FEATURE,
+    );
+    if (
+      resolution.kind !== 'LIMIT' ||
+      typeof resolution.value !== 'number' ||
+      !Number.isInteger(resolution.value) ||
+      resolution.value < 1
+    ) {
+      throw new ServiceUnavailableException(
+        'Limite de alunos do trial nao configurado',
+      );
+    }
+    return resolution.value;
+  }
+
+  private retryable(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2034'
+    );
+  }
 
   async create(dto: CreateStudentDto, userGymId?: string, actorUserId?: string) {
     if (!userGymId) {
@@ -65,11 +119,29 @@ export class StudentsService {
       throw new NotFoundException('Role de aluno nao encontrada');
     }
 
-    let onboardingToken: string | null = null;
-    let onboardingExpiresAt: Date | null = null;
+    const trialStudentLimit = await this.activeTrialStudentLimit(userGymId);
 
-    const student = await this.prisma.$transaction(async (tx) => {
-      let user = existingUser;
+    for (let attempt = 1; attempt <= SERIALIZABLE_ATTEMPTS; attempt += 1) {
+      let onboardingToken: string | null = null;
+      let onboardingExpiresAt: Date | null = null;
+
+      try {
+        const student = await this.prisma.$transaction(async (tx) => {
+          if (trialStudentLimit !== null) {
+            const currentStudents = await tx.student.count({
+              where: {
+                gymId: userGymId,
+                status: { not: 'CANCELED' },
+              },
+            });
+            if (currentStudents >= trialStudentLimit) {
+              throw new ConflictException(
+                `Trial limitado a ${trialStudentLimit} alunos`,
+              );
+            }
+          }
+
+          let user = existingUser;
 
       if (!user) {
         const provisionalSecret = randomBytes(48).toString('base64url');
@@ -159,26 +231,33 @@ export class StudentsService {
         });
       }
 
-      return createdStudent;
-    });
+          return createdStudent;
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-    return {
-      id: student.id,
-      name: student.user!.name,
-      email: student.user!.email,
-      phone: student.user!.phone,
-      status: student.status,
-      enrollmentDate: student.enrollmentDate,
-      onboarding: onboardingToken
-        ? {
-            required: true,
-            token: onboardingToken,
-            expiresAt: onboardingExpiresAt,
-          }
-        : {
-            required: false,
-          },
-    };
+        return {
+          id: student.id,
+          name: student.user!.name,
+          email: student.user!.email,
+          phone: student.user!.phone,
+          status: student.status,
+          enrollmentDate: student.enrollmentDate,
+          onboarding: onboardingToken
+            ? {
+                required: true,
+                token: onboardingToken,
+                expiresAt: onboardingExpiresAt,
+              }
+            : {
+                required: false,
+              },
+        };
+      } catch (error) {
+        if (this.retryable(error) && attempt < SERIALIZABLE_ATTEMPTS) continue;
+        throw error;
+      }
+    }
+
+    throw new ConflictException('Falha de concorrencia ao cadastrar aluno');
   }
 
   async acceptInvite(dto: AcceptStudentInviteDto) {

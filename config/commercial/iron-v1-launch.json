@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "matrix": {
+    "version": 1,
+    "name": "IRON V1 Commercial Launch"
+  },
+  "plans": [
+    {
+      "code": "IRON_V1_TRIAL",
+      "name": "IRON V1 Trial",
+      "description": "Plano técnico do trial comercial IRON V1. Não possui preço e é governado pela Launch Matrix.",
+      "version": 1,
+      "entitlements": [
+        {
+          "featureKey": "content.external_youtube",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "equipment.catalog",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "equipment.inventory",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "ai.workout_generation",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "ai.content_recommendation",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "commercial.trial_students_max",
+          "limitValue": 15
+        }
+      ],
+      "prices": []
+    },
+    {
+      "code": "IRON_V1",
+      "name": "IRON V1",
+      "description": "Oferta comercial principal do IRON V1.",
+      "version": 1,
+      "entitlements": [
+        {
+          "featureKey": "content.external_youtube",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "equipment.catalog",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "equipment.inventory",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "ai.workout_generation",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "ai.content_recommendation",
+          "featureEnabled": true
+        }
+      ],
+      "prices": [
+        {
+          "priceCode": "IRON_V1_MONTHLY_BRL",
+          "currency": "BRL",
+          "amountMinor": 26900,
+          "interval": "MONTHLY"
+        },
+        {
+          "priceCode": "IRON_V1_YEARLY_BRL",
+          "currency": "BRL",
+          "amountMinor": 269000,
+          "interval": "YEARLY"
+        }
+      ]
+    }
+  ],
+  "launchItems": [
+    {
+      "itemKey": "surface.core",
+      "kind": "SURFACE",
+      "decision": "LAUNCH"
+    },
+    {
+      "itemKey": "surface.web",
+      "kind": "SURFACE",
+      "decision": "LAUNCH"
+    },
+    {
+      "itemKey": "service.email",
+      "kind": "CHANNEL",
+      "decision": "LAUNCH"
+    },
+    {
+      "itemKey": "service.billing",
+      "kind": "CHANNEL",
+      "decision": "LAUNCH"
+    },
+    {
+      "itemKey": "content.external_youtube",
+      "kind": "CAPABILITY",
+      "decision": "LAUNCH",
+      "featureKey": "content.external_youtube"
+    },
+    {
+      "itemKey": "mobile.android",
+      "kind": "MOBILE",
+      "decision": "LAUNCH"
+    },
+    {
+      "itemKey": "mobile.ios",
+      "kind": "MOBILE",
+      "decision": "LAUNCH"
+    },
+    {
+      "itemKey": "ai.workout_generation",
+      "kind": "CAPABILITY",
+      "decision": "LAUNCH",
+      "featureKey": "ai.workout_generation"
+    },
+    {
+      "itemKey": "ai.content_recommendation",
+      "kind": "CAPABILITY",
+      "decision": "LAUNCH",
+      "featureKey": "ai.content_recommendation"
+    },
+    {
+      "itemKey": "creator.iron_managed",
+      "kind": "CAPABILITY",
+      "decision": "OUT",
+      "featureKey": "content.iron_managed",
+      "rationale": "Creator Network IRON-managed permanece no roadmap oficial e fora do launch comercial V1."
+    },
+    {
+      "itemKey": "creator.tenant_private",
+      "kind": "CAPABILITY",
+      "decision": "OUT",
+      "featureKey": "content.tenant_private",
+      "rationale": "Conteúdo privado pertencente ao tenant permanece evolução futura e fora do launch comercial V1."
+    },
+    {
+      "itemKey": "provider.wellhub",
+      "kind": "PROVIDER",
+      "decision": "EXTERNAL_BLOCKER",
+      "featureKey": "aggregator.wellhub",
+      "rationale": "A arquitetura Aggregator Hub inclui Wellhub, mas a ativação comercial depende de integração e homologação externa real.",
+      "blockerOwner": "FM Tecnologia + Wellhub",
+      "evidenceRequirement": "Credenciais/documentação oficiais, integração em ambiente autorizado e homologação física com evidência reproduzível."
+    },
+    {
+      "itemKey": "provider.totalpass",
+      "kind": "PROVIDER",
+      "decision": "EXTERNAL_BLOCKER",
+      "featureKey": "aggregator.totalpass",
+      "rationale": "A arquitetura Aggregator Hub inclui TotalPass, mas a ativação comercial depende de integração e homologação externa real.",
+      "blockerOwner": "FM Tecnologia + TotalPass",
+      "evidenceRequirement": "Credenciais/documentação oficiais, integração em ambiente autorizado e homologação física com evidência reproduzível."
+    },
+    {
+      "itemKey": "channel.meta",
+      "kind": "CHANNEL",
+      "decision": "LAUNCH",
+      "rationale": "Meta é a autoridade guarda-chuva da V1 para Facebook, Instagram e WhatsApp; configuração por tenant via IntegrationConnection + Vault, sem hardcode."
+    },
+    {
+      "itemKey": "channel.google",
+      "kind": "CHANNEL",
+      "decision": "LAUNCH",
+      "rationale": "Google integra a V1 por configuração governada, OAuth/credenciais externas e Vault, sem hardcode por tenant."
+    }
+  ],
+  "offerings": [
+    {
+      "planCode": "IRON_V1",
+      "version": 1,
+      "priceCode": "IRON_V1_MONTHLY_BRL"
+    },
+    {
+      "planCode": "IRON_V1",
+      "version": 1,
+      "priceCode": "IRON_V1_YEARLY_BRL"
+    }
+  ],
+  "policy": {
+    "trialEnabled": true,
+    "trialPlan": {
+      "planCode": "IRON_V1_TRIAL",
+      "version": 1
+    },
+    "trialDays": 30,
+    "invoiceDueDays": 0,
+    "dunningGraceDays": 7,
+    "upgradePolicy": "IMMEDIATE_PRORATED",
+    "downgradePolicy": "NEXT_PERIOD_NO_IMMEDIATE_REFUND",
+    "cancellationPolicy": "IMMEDIATE_OR_PERIOD_END",
+    "refundPolicy": "SUPER_ADMIN_MANUAL",
+    "fiscalMode": "PROVIDER_NFSE"
+  }
+}

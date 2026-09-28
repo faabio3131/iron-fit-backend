@@ -704,6 +704,19 @@ export class CommercialLaunchService {
     return expanded;
   }
 
+  async validateDraft(matrixId: string) {
+    const expanded = await this.validateApproval(matrixId, this.prisma);
+    return {
+      readyToApprove: true as const,
+      matrixId: expanded.matrix.id,
+      version: expanded.matrix.version,
+      candidateSnapshotHash: this.hashSnapshot(expanded.snapshot),
+      itemCount: expanded.matrix.items.length,
+      offeringCount: expanded.matrix.offerings.length,
+      policyConfigured: Boolean(expanded.matrix.policy),
+    };
+  }
+
   async approve(
     matrixId: string,
     userId: string,
