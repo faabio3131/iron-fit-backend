@@ -53,24 +53,39 @@ Esses valores devem ser materializados por `ProductPlanVersion`, `ProductPlanEnt
 - suspensão não equivale a cancelamento nem exclusão de dados;
 - pagamento conciliado deve permitir reativação conforme o provider e o fluxo de billing.
 
-### Conteúdo
+### Conteúdo, agregadores e canais externos
 
 - conteúdo público gratuito por provider externo/YouTube faz parte do launch;
-- Creator Network comercial/premium não deve ser apresentado como capacidade live sem aprovação/homologação própria.
+- `creator.iron_managed` → `OUT` na V1, preservado no roadmap oficial IRON-CREATOR;
+- `creator.tenant_private` → `OUT` na V1; tenant-owned storage permanece evolução futura;
+- `provider.wellhub` → `EXTERNAL_BLOCKER`; arquitetura Aggregator Hub preservada, homologação depende de parceiro/credenciais/evidência externa;
+- `provider.totalpass` → `EXTERNAL_BLOCKER`; arquitetura Aggregator Hub preservada, homologação depende de parceiro/credenciais/evidência externa;
+- `channel.google` → `LAUNCH`.
+
+Google deve obedecer ao padrão mestre FM de configuração externa:
+
+- novo cliente = configuração, nunca alteração de código;
+- OAuth/configuração por tenant;
+- `IntegrationConnection + Vault` como autoridade;
+- app/config global quando aplicável + tokens tenant-scoped;
+- nenhum client secret, refresh token, API key ou account ID hardcoded;
+- nenhum caminho privilegiado por cliente/academia;
+- rotação/revogação/reautorização governadas;
+- integração só recebe status homologado/live com evidência externa real.
+
+### Fiscal V1
+
+- modelo fiscal → `PROVIDER_NFSE`;
+- integração pelo FM Fiscal Core / contrato universal já preparado;
+- homologação externa de provider/prefeitura/credenciais permanece separada e não pode ser inventada.
 
 ## Decisões humanas ainda obrigatórias para fechar Gate B
 
-Os itens abaixo **não podem ser inventados pelo código** e permanecem pendentes até aprovação explícita:
+Os itens abaixo permanecem pendentes até aprovação explícita:
 
 | Item | Estado |
 |---|---|
-| `creator.iron_managed` | UNDECIDED |
-| `creator.tenant_private` | UNDECIDED |
-| `provider.wellhub` | UNDECIDED |
-| `provider.totalpass` | UNDECIDED |
 | `channel.meta` | UNDECIDED |
-| `channel.google` | UNDECIDED |
-| modelo fiscal V1 | UNDECIDED |
 
 As políticas de upgrade, downgrade, cancelamento e refund já possuem apenas opções suportadas pelo runtime atual; a matriz real ainda precisa selecioná-las e ser aprovada por SUPER_ADMIN + step-up.
 
@@ -90,4 +105,4 @@ Gate B somente passa quando:
 
 **GATE B: OPEN / IN_PROGRESS**
 
-A autoridade técnica está implementada e certificada. Mobile, IA e política financeira já estão aprovados. O fechamento depende das decisões restantes sobre Creator, agregadores, Meta/Google, fiscal e da materialização/aprovação da matriz real.
+A autoridade técnica está implementada e certificada. Mobile, IA, política financeira, Creator V1, agregadores, Google e modelo fiscal já estão classificados. O fechamento depende da decisão comercial restante sobre Meta, das políticas comerciais ainda não selecionadas e da materialização/aprovação da matriz real.
