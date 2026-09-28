@@ -16,7 +16,8 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/src/main.js",
-    "commercial:materialize-v1": "node scripts/materialize-launch-v1.mjs"
+    "commercial:materialize-v1": "node scripts/materialize-launch-v1.mjs",
+    "readiness:edge-preflight": "node scripts/public-edge-preflight.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
