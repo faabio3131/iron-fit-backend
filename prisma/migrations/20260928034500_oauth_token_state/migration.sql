@@ -3,6 +3,7 @@
 
 CREATE TABLE "IntegrationOAuthTokenState" (
   "connectionId" TEXT NOT NULL,
+  "appConnectionId" TEXT NOT NULL,
   "providerCode" TEXT NOT NULL,
   "environment" "IntegrationEnvironment" NOT NULL,
   "tokenType" TEXT,
@@ -28,6 +29,8 @@ CREATE TABLE "IntegrationOAuthTokenState" (
     )
 );
 
+CREATE INDEX "IntegrationOAuthTokenState_appConnectionId_idx"
+  ON "IntegrationOAuthTokenState"("appConnectionId");
 CREATE INDEX "IntegrationOAuthTokenState_providerCode_environment_idx"
   ON "IntegrationOAuthTokenState"("providerCode", "environment");
 CREATE INDEX "IntegrationOAuthTokenState_accessTokenExpiresAt_idx"
