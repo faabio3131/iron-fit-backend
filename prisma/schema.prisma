@@ -226,6 +226,127 @@ model User {
   commercialOnboardingCheckpoints CommercialOnboardingCheckpoint[]
   equipmentCandidatesSubmitted EquipmentCatalogCandidate[] @relation("EquipmentCandidateSubmittedBy")
   equipmentCandidatesReviewed  EquipmentCatalogCandidate[] @relation("EquipmentCandidateReviewedBy")
+  dataSubjectRequests DataSubjectRequest[]
+  legalAcceptances LegalAcceptance[]
+}
+
+
+enum DataSubjectRequestType {
+  ACCESS
+  CORRECTION
+  DELETION
+  PORTABILITY
+  RESTRICTION
+  OBJECTION
+}
+
+enum DataSubjectRequestStatus {
+  OPEN
+  IN_REVIEW
+  FULFILLED
+  REJECTED
+  CANCELLED
+}
+
+enum LegalDocumentKind {
+  PRIVACY_POLICY
+  TERMS_OF_SERVICE
+}
+
+enum LegalDocumentStatus {
+  DRAFT
+  APPROVED
+  RETIRED
+}
+
+enum RetentionAction {
+  DELETE
+  ANONYMIZE
+  REVIEW
+}
+
+enum GovernanceRecordStatus {
+  DRAFT
+  APPROVED
+  RETIRED
+}
+
+model DataSubjectRequest {
+  id             String                   @id @default(uuid())
+  userId         String
+  type           DataSubjectRequestType
+  status         DataSubjectRequestStatus @default(OPEN)
+  requestedAt    DateTime                 @default(now())
+  operationalDueAt DateTime?
+  reviewedAt     DateTime?
+  completedAt    DateTime?
+  resolutionCode String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status, requestedAt])
+  @@index([status, operationalDueAt])
+}
+
+model LegalDocument {
+  id          String              @id @default(uuid())
+  kind        LegalDocumentKind
+  version     String
+  status      LegalDocumentStatus @default(DRAFT)
+  contentUrl  String
+  contentHash String
+  effectiveAt DateTime?
+  approvedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  acceptances LegalAcceptance[]
+
+  @@unique([kind, version])
+  @@index([kind, status, effectiveAt])
+}
+
+model LegalAcceptance {
+  id              String        @id @default(uuid())
+  userId          String
+  legalDocumentId String
+  acceptedAt      DateTime      @default(now())
+  user            User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  legalDocument   LegalDocument @relation(fields: [legalDocumentId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, legalDocumentId])
+  @@index([userId, acceptedAt])
+}
+
+model DataRetentionPolicy {
+  id             String                 @id @default(uuid())
+  dataClass      String                 @unique
+  purposeCode    String
+  legalBasisCode String
+  retentionDays  Int?
+  action         RetentionAction
+  status         GovernanceRecordStatus @default(DRAFT)
+  approvedAt     DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([status, dataClass])
+}
+
+model SubprocessorRecord {
+  id             String                 @id @default(uuid())
+  providerCode   String                 @unique
+  purposeCode    String
+  dataCategories Json
+  processingRegion String?
+  privacyUrl     String?
+  dpaReference   String?
+  status         GovernanceRecordStatus @default(DRAFT)
+  approvedAt     DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([status, providerCode])
 }
 
 model Session {

@@ -27,6 +27,7 @@ import { CommercialLaunchModule } from './modules/commercial-launch/commercial-l
 import { SaasBillingModule } from './modules/saas-billing/saas-billing.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { TransactionalEmailModule } from './modules/transactional-email/transactional-email.module';
+import { PrivacyGovernanceModule } from './modules/privacy/privacy-governance.module';
 import { PrismaService } from './prisma/prisma.service';
 
 @Module({
@@ -58,6 +59,7 @@ import { PrismaService } from './prisma/prisma.service';
     SaasBillingModule,
     IntegrationsModule,
     TransactionalEmailModule,
+    PrivacyGovernanceModule,
   ],
   controllers: [HealthController, MetricsController],
   providers: [PrismaService, RuntimeMetricsService, RequestObservabilityMiddleware],
