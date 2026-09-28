@@ -55,10 +55,13 @@ function jsonScopes(raw: unknown): string[] {
       'Politica OAuth aprovada possui scopes invalidos',
     );
   }
-  try {
-    return normalizedScopes(
-      raw.filter((value): value is string => typeof value === 'string'),
+  if (raw.some((value) => typeof value !== 'string')) {
+    throw new ServiceUnavailableException(
+      'Politica OAuth aprovada possui scopes invalidos',
     );
+  }
+  try {
+    return normalizedScopes(raw as string[]);
   } catch {
     throw new ServiceUnavailableException(
       'Politica OAuth aprovada possui scopes invalidos',
