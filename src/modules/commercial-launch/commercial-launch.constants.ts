@@ -81,6 +81,18 @@ export const MASTER_REQUIRED_LAUNCH_ITEMS: readonly RequiredLaunchItem[] =
       kind: CommercialLaunchItemKind.CHANNEL,
     },
     {
+      itemKey: 'channel.facebook',
+      kind: CommercialLaunchItemKind.CHANNEL,
+    },
+    {
+      itemKey: 'channel.instagram',
+      kind: CommercialLaunchItemKind.CHANNEL,
+    },
+    {
+      itemKey: 'channel.whatsapp',
+      kind: CommercialLaunchItemKind.CHANNEL,
+    },
+    {
       itemKey: 'channel.google',
       kind: CommercialLaunchItemKind.CHANNEL,
     },
