@@ -156,6 +156,11 @@ jobs:
       - name: Seed deterministic Block 6 prerequisites
         run: node scripts/b6-e2e-seed.mjs
 
+      - name: Materialize and validate canonical IRON V1 launch draft
+        env:
+          IRON_LAUNCH_ACTOR_EMAIL: b6-admin@example.com
+        run: npm run commercial:materialize-v1
+
       - name: Start live backend for integrated E2E
         run: |
           node dist/src/main.js > /tmp/iron-b6-backend.log 2>&1 &
