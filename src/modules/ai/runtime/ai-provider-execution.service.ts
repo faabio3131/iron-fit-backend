@@ -5,12 +5,14 @@ import {
 } from '../contracts/ai-contract';
 import { AiConfigurationResolverService } from '../configuration/ai-configuration-resolver.service';
 import { AiProviderRegistryService } from '../providers/ai-provider-registry.service';
+import { AiSecretReferenceService } from '../secrets/ai-secret-reference.service';
 
 @Injectable()
 export class AiProviderExecutionService {
   constructor(
     private readonly configurations: AiConfigurationResolverService,
     private readonly providers: AiProviderRegistryService,
+    private readonly secrets: AiSecretReferenceService,
   ) {}
 
   async execute<TInput = unknown, TOutput = unknown>(
@@ -37,14 +39,70 @@ export class AiProviderExecutionService {
       };
     }
 
-    const provider = this.providers.resolve(resolution.configuration.providerCode);
+    const provider = this.providers.resolve(
+      resolution.configuration.providerCode,
+    );
     if (provider.providerCode === 'null_provider') {
-      return provider.execute<TInput, TOutput>(request, resolution.configuration);
+      return provider.execute<TInput, TOutput>(
+        request,
+        resolution.configuration,
+        {
+          connectionId: null,
+          credential: null,
+        },
+      );
+    }
+
+    let runtime = {
+      connectionId: null as string | null,
+      credential: null as import('../../integrations/secrets/integration-secret-vault.port').IntegrationSecretValue | null,
+    };
+
+    if (
+      provider.requiresCredential === true ||
+      resolution.configuration.secretReference
+    ) {
+      let secretResolution;
+      try {
+        secretResolution = await this.secrets.resolveForExecution(
+          resolution.configuration,
+          request.context.tenantId,
+        );
+      } catch {
+        return {
+          status: 'UNAVAILABLE',
+          flags: ['AI_SECRET_RESOLUTION_FAILED'],
+          failureCategory: 'BAD_CREDENTIALS',
+        };
+      }
+
+      if (!secretResolution.available || !secretResolution.credential) {
+        return {
+          status: 'UNAVAILABLE',
+          flags: [
+            'AI_SECRET_UNAVAILABLE',
+            secretResolution.reason ?? 'AI_SECRET_UNKNOWN',
+          ],
+          failureCategory:
+            provider.requiresCredential === true
+              ? 'BAD_CREDENTIALS'
+              : 'CONFIGURATION_UNAVAILABLE',
+        };
+      }
+
+      runtime = {
+        connectionId: secretResolution.connectionId,
+        credential: secretResolution.credential,
+      };
     }
 
     try {
       return await this.withTimeout(
-        provider.execute<TInput, TOutput>(request, resolution.configuration),
+        provider.execute<TInput, TOutput>(
+          request,
+          resolution.configuration,
+          runtime,
+        ),
         resolution.configuration.timeoutMs,
       );
     } catch (error) {
