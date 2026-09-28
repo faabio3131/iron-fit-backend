@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { IntegrationSecretValue } from './secrets/integration-secret-vault.port';
 
 const OAUTH_HTTP_TIMEOUT_MS = 20_000;
@@ -334,5 +334,30 @@ export class GoogleOAuthProviderAdapter
     await this.http.postForm(input.configuration.revocationEndpoint, {
       token: (input.refreshToken ?? input.accessToken).reveal(),
     });
+  }
+}
+
+@Injectable()
+export class IntegrationOAuthProviderAdapterRegistry {
+  private readonly adapters: ReadonlyMap<
+    string,
+    IntegrationOAuthProviderAdapter
+  >;
+
+  constructor(http: IntegrationOAuthHttpTransport) {
+    this.adapters = new Map<string, IntegrationOAuthProviderAdapter>([
+      ['meta', new MetaOAuthProviderAdapter(http)],
+      ['google', new GoogleOAuthProviderAdapter(http)],
+    ]);
+  }
+
+  require(providerCode: string): IntegrationOAuthProviderAdapter {
+    const adapter = this.adapters.get(providerCode.trim().toLowerCase());
+    if (!adapter) {
+      throw new ServiceUnavailableException(
+        'OAuth adapter nao implementado para provider',
+      );
+    }
+    return adapter;
   }
 }
