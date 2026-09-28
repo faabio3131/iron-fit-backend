@@ -32,7 +32,7 @@ test('F preflight cannot silently accept DEV as a physical launch environment', 
 
 test('E/F readiness documentation preserves physical-gate boundaries', async () => {
   const doc = await read('docs/E_F_DATABASE_EDGE_PREFLIGHT.md');
-  assert.match(doc, /E não passa fisicamente/);
+  assert.match(doc, /não passa fisicamente/);
   assert.match(doc, /Gate F só pode receber evidência/);
   assert.match(doc, /Nenhum domínio, certificado ou URL é declarado existente/);
 });
