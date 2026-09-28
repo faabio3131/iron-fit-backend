@@ -22,6 +22,15 @@ Conforme Cronograma Mestre e autoridade codificada:
 - `service.billing` → `LAUNCH`
 - `content.external_youtube` → `LAUNCH`
 
+### Mobile e IA
+
+Decisões explicitamente aprovadas pelo owner do produto:
+
+- `mobile.android` → `LAUNCH`
+- `mobile.ios` → `LAUNCH`
+- `ai.workout_generation` → `LAUNCH`
+- `ai.content_recommendation` → `LAUNCH`
+
 ### Oferta comercial já aprovada
 
 - mensal: **R$ 269/mês**
@@ -32,6 +41,17 @@ Conforme Cronograma Mestre e autoridade codificada:
 - Enterprise: **sob consulta**, sem preço público congelado neste gate
 
 Esses valores devem ser materializados por `ProductPlanVersion`, `ProductPlanEntitlement`, `SaasPlanPrice` e `CommercialLaunchOffering`; não devem virar constantes de código.
+
+### Política financeira aprovada
+
+- `invoiceDueDays = 0`
+- `dunningGraceDays = 7`
+- vencimento da recorrência no próprio dia de renovação;
+- após o vencimento, o acordo entra em `PAST_DUE`;
+- durante 7 dias corridos permanece em recuperação de cobrança;
+- após 7 dias de inadimplência, pode transicionar para `SUSPENDED`;
+- suspensão não equivale a cancelamento nem exclusão de dados;
+- pagamento conciliado deve permitir reativação conforme o provider e o fluxo de billing.
 
 ### Conteúdo
 
@@ -44,10 +64,6 @@ Os itens abaixo **não podem ser inventados pelo código** e permanecem pendente
 
 | Item | Estado |
 |---|---|
-| `mobile.android` | UNDECIDED |
-| `mobile.ios` | UNDECIDED |
-| `ai.workout_generation` | UNDECIDED |
-| `ai.content_recommendation` | UNDECIDED |
 | `creator.iron_managed` | UNDECIDED |
 | `creator.tenant_private` | UNDECIDED |
 | `provider.wellhub` | UNDECIDED |
@@ -55,8 +71,6 @@ Os itens abaixo **não podem ser inventados pelo código** e permanecem pendente
 | `channel.meta` | UNDECIDED |
 | `channel.google` | UNDECIDED |
 | modelo fiscal V1 | UNDECIDED |
-| invoice due days | UNDECIDED |
-| dunning grace days | UNDECIDED |
 
 As políticas de upgrade, downgrade, cancelamento e refund já possuem apenas opções suportadas pelo runtime atual; a matriz real ainda precisa selecioná-las e ser aprovada por SUPER_ADMIN + step-up.
 
@@ -76,4 +90,4 @@ Gate B somente passa quando:
 
 **GATE B: OPEN / IN_PROGRESS**
 
-A autoridade técnica está implementada e certificada. O fechamento depende apenas das decisões comerciais restantes e da materialização/aprovação da matriz real.
+A autoridade técnica está implementada e certificada. Mobile, IA e política financeira já estão aprovados. O fechamento depende das decisões restantes sobre Creator, agregadores, Meta/Google, fiscal e da materialização/aprovação da matriz real.
