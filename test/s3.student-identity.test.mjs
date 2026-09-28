@@ -149,7 +149,7 @@ test('new student receives a random one-time onboarding token and starts inactiv
     $transaction: async (callback) => callback(tx),
   };
 
-  const service = new StudentsService(prisma, auditMock());
+  const service = new StudentsService(prisma, auditMock(), entitlementsMock());
   const result = await service.create(
     { name: 'Novo Aluno', email: 'novo@example.com' },
     'gym-a',
