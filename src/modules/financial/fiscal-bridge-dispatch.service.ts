@@ -440,11 +440,7 @@ export class FiscalBridgeDispatchService {
       return true;
     } catch (error) {
       const code = errorCode(error);
-      if (
-        issuanceStarted ||
-        (error instanceof FiscalBridgeTransportError &&
-          error.outcomeUnknown)
-      ) {
+      if (issuanceStarted) {
         await this.markUnknownOutcome(
           row,
           leaseOwner,
