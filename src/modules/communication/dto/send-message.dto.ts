@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsUUID, IsObject } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { MessageChannel } from '@prisma/client';
 
 export class SendMessageDto {
   @IsUUID()
@@ -8,8 +9,8 @@ export class SendMessageDto {
   @IsOptional()
   templateId?: string;
 
-  @IsString()
-  channel: string;
+  @IsEnum(MessageChannel)
+  channel: MessageChannel;
 
   @IsString()
   @IsOptional()
