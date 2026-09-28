@@ -151,6 +151,20 @@ function fixture() {
       },
     },
     vault,
+    {
+      assertApprovedScopes: async (
+        _providerCode,
+        _environment,
+        capabilities,
+        configuredCapabilityScopes,
+      ) => [
+        ...new Set(
+          capabilities.flatMap(
+            (capability) => configuredCapabilityScopes[capability] ?? [],
+          ),
+        ),
+      ].sort(),
+    },
   );
 
   return {
