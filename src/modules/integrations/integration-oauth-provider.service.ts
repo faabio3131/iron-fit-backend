@@ -26,6 +26,12 @@ import {
   IntegrationSecretVaultPort,
 } from './secrets/integration-secret-vault.port';
 
+function minDate(left: Date | null, right: Date | null): Date | null {
+  if (!left) return right;
+  if (!right) return left;
+  return left <= right ? left : right;
+}
+
 
 @Injectable()
 export class IntegrationOAuthProviderService {
