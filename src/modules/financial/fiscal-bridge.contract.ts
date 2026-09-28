@@ -175,6 +175,17 @@ function nullableString(raw: unknown, max: number): string | null {
   return raw;
 }
 
+function nullableAccessKey(raw: unknown): string | null {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== 'string' || !/^[0-9]{44}$/.test(raw)) {
+    throw new FiscalBridgeTransportError(
+      'FISCAL_ACCESS_KEY_INVALID',
+      true,
+    );
+  }
+  return raw;
+}
+
 export class FiscalBridgeHttpTransport {
   async post(
     path: string,
@@ -309,7 +320,7 @@ export class FiscalBridgeHttpTransport {
         256,
       ),
       documentId: nullableString(payload.document_id, 128),
-      accessKey: nullableString(payload.access_key, 44),
+      accessKey: nullableAccessKey(payload.access_key),
       protocolReference: nullableString(
         payload.protocol_reference,
         512,
