@@ -418,6 +418,7 @@ model Gym {
   productConfigurations TenantProductConfiguration[]
   productPreferences UserProductPreference[]
   charges   Charge[]
+  fiscalHandoffs FiscalHandoff[]
   communicationTemplates CommunicationTemplate[]
   communicationAutomations CommunicationAutomation[]
   communicationMessages CommunicationMessage[]
@@ -820,11 +821,65 @@ model Charge {
   student                  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   subscription             Subscription? @relation(fields: [subscriptionId], references: [id])
   gatewayConnection        IntegrationConnection? @relation(fields: [gatewayConnectionId], references: [id], onDelete: SetNull)
+  fiscalHandoff            FiscalHandoff?
 
   @@index([gymId])
   @@index([gymId, status])
   @@index([gatewayConnectionId, status])
   @@unique([gatewayProviderCode, gatewayChargeId])
+}
+
+enum FiscalHandoffStatus {
+  PENDING_CAPABILITY
+  READY_TO_ISSUE
+  SUBMITTED
+  AUTHORIZED
+  REJECTED
+  RECONCILIATION_PENDING
+  RECONCILED
+  CANCELLATION_PENDING
+  CANCELLED
+  FAILED
+}
+
+model FiscalHandoff {
+  id                        String              @id @default(uuid())
+  gymId                     String
+  chargeId                  String              @unique
+  transactionId             String              @unique
+  idempotencyKey            String              @unique
+  contractVersion           String
+  hostNamespace             String
+  packId                    String
+  useCaseId                 String
+  operationKind             String
+  documentKind              String
+  amountMinor               Int
+  currency                  String              @default("BRL")
+  paymentMethod             String?
+  settledAt                 DateTime?
+  status                    FiscalHandoffStatus @default(PENDING_CAPABILITY)
+  capabilityVersion         String?
+  providerRequestId         String?
+  providerDocumentId        String?
+  providerAccessKey         String?
+  providerProtocolReference String?
+  attemptCount              Int                 @default(0)
+  nextAttemptAt             DateTime?
+  lastAttemptAt             DateTime?
+  lastErrorCode             String?
+  authorizedAt              DateTime?
+  cancelledAt               DateTime?
+  reconciledAt              DateTime?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  gym                       Gym                 @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  charge                    Charge              @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+
+  @@index([gymId, status])
+  @@index([status, nextAttemptAt])
+  @@index([providerDocumentId])
+  @@index([providerAccessKey])
 }
 
 model CommunicationTemplate {

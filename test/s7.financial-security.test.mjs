@@ -39,6 +39,15 @@ function basePrisma(overrides = {}) {
       findFirst: async () => ({ id: 'gym-a', active: true }),
       ...overrides.gym,
     },
+    fiscalHandoff: {
+      findUnique: async () => null,
+      create: async ({ data }) => ({
+        id: 'fiscal-handoff-a',
+        status: 'PENDING_CAPABILITY',
+        ...data,
+      }),
+      ...overrides.fiscalHandoff,
+    },
     auditLog: {
       create: async ({ data }) => ({ id: 'audit-a', ...data }),
       ...overrides.auditLog,
@@ -135,6 +144,7 @@ test('payCharge is idempotent when charge is already paid and canonical transact
   assert.equal(result.transaction.id, 'tx-a');
   assert.equal(result.fiscalHandoff.state, 'PENDING_CAPABILITY');
   assert.equal(result.fiscalHandoff.idempotencyKey, 'iron:charge:charge-a:nfse:v1');
+  assert.equal(result.fiscalHandoffRecordId, 'fiscal-handoff-a');
   assert.equal(creates, 0);
 });
 
@@ -220,6 +230,7 @@ test('payCharge atomically marks charge paid, audits it and records governed fis
   assert.equal(result.fiscalHandoff.idempotencyKey, 'iron:charge:charge-a:nfse:v1');
   assert.equal(result.fiscalHandoff.source.transactionId, 'tx-a');
   assert.equal(result.fiscalHandoff.source.amountMinor, 10000);
+  assert.equal(result.fiscalHandoffRecordId, 'fiscal-handoff-a');
 });
 
 test('fiscal handoff does not declare production readiness, provider or jurisdiction', async () => {
