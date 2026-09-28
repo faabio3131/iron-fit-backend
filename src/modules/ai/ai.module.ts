@@ -5,6 +5,7 @@ import { CreatorNetworkModule } from '../creator-network/creator-network.module'
 import { EquipmentsModule } from '../equipments/equipments.module';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
 import { WorkoutsModule } from '../workouts/workouts.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
 import { AiController } from './ai.controller';
 import { AiMobileAdvisoryService } from './ai-mobile-advisory.service';
 import { AiPersistenceService } from './ai-persistence.service';
@@ -21,7 +22,13 @@ import { AiSecretReferenceService } from './secrets/ai-secret-reference.service'
 import { AiOutputValidatorService } from './validation/ai-output-validator.service';
 
 @Module({
-  imports: [ProductEntitlementsModule, EquipmentsModule, CreatorNetworkModule, WorkoutsModule],
+  imports: [
+    ProductEntitlementsModule,
+    EquipmentsModule,
+    CreatorNetworkModule,
+    WorkoutsModule,
+    IntegrationsModule,
+  ],
   controllers: [AiController, AiWorkoutCandidateController],
   providers: [
     PrismaService,

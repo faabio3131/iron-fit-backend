@@ -1,3 +1,5 @@
+import type { IntegrationSecretValue } from '../../integrations/secrets/integration-secret-vault.port';
+
 export const AI_CAPABILITIES = [
   'WORKOUT_INSIGHTS',
   'ADVISORY_CHAT',
@@ -119,11 +121,18 @@ export interface AiExternalConfigurationContract {
   version: number;
 }
 
+export interface AiProviderRuntimeContext {
+  connectionId: string | null;
+  credential: IntegrationSecretValue | null;
+}
+
 export interface AiProviderAdapter {
   readonly providerCode: string;
+  readonly requiresCredential?: boolean;
   execute<TInput = unknown, TOutput = unknown>(
     request: AiNormalizedRequest<TInput>,
     configuration: Readonly<AiExternalConfigurationContract>,
+    runtime?: Readonly<AiProviderRuntimeContext>,
   ): Promise<AiNormalizedResponse<TOutput>>;
 }
 
