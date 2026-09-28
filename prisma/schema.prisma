@@ -419,6 +419,7 @@ model Gym {
   productPreferences UserProductPreference[]
   charges   Charge[]
   fiscalHandoffs FiscalHandoff[]
+  fiscalScopeBindings FiscalScopeBinding[]
   communicationTemplates CommunicationTemplate[]
   communicationAutomations CommunicationAutomation[]
   communicationMessages CommunicationMessage[]
@@ -842,6 +843,22 @@ enum FiscalHandoffStatus {
   FAILED
 }
 
+model FiscalScopeBinding {
+  id               String                 @id @default(uuid())
+  gymId            String
+  environment      IntegrationEnvironment
+  externalTenantId String
+  externalUnitId   String
+  active           Boolean                @default(true)
+  createdByUserId  String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  gym              Gym                    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+
+  @@unique([gymId, environment])
+  @@index([environment, active])
+}
+
 model FiscalHandoff {
   id                        String              @id @default(uuid())
   gymId                     String
@@ -864,9 +881,12 @@ model FiscalHandoff {
   providerDocumentId        String?
   providerAccessKey         String?
   providerProtocolReference String?
+  bridgeConnectionId        String?
   attemptCount              Int                 @default(0)
   nextAttemptAt             DateTime?
   lastAttemptAt             DateTime?
+  dispatchLeaseOwner        String?
+  dispatchLeaseUntil        DateTime?
   lastErrorCode             String?
   authorizedAt              DateTime?
   cancelledAt               DateTime?
@@ -875,9 +895,12 @@ model FiscalHandoff {
   updatedAt                 DateTime            @updatedAt
   gym                       Gym                 @relation(fields: [gymId], references: [id], onDelete: Restrict)
   charge                    Charge              @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+  bridgeConnection          IntegrationConnection? @relation(fields: [bridgeConnectionId], references: [id], onDelete: SetNull)
 
   @@index([gymId, status])
   @@index([status, nextAttemptAt])
+  @@index([dispatchLeaseUntil])
+  @@index([bridgeConnectionId, status])
   @@index([providerDocumentId])
   @@index([providerAccessKey])
 }
