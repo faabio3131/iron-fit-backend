@@ -11,8 +11,14 @@ import { IntegrationCredentialGlobalController } from './integration-credential-
 import { IntegrationCredentialTenantController } from './integration-credential-tenant.controller';
 import { IntegrationConnectionService } from './integration-connection.service';
 import { IntegrationProviderCatalogController } from './integration-provider-catalog.controller';
+import { IntegrationOAuthCallbackController } from './integration-oauth-callback.controller';
 import { IntegrationOAuthController } from './integration-oauth.controller';
 import { IntegrationOAuthCoreService } from './integration-oauth-core.service';
+import {
+  IntegrationOAuthHttpTransport,
+  IntegrationOAuthProviderAdapterRegistry,
+} from './integration-oauth-provider-adapters';
+import { IntegrationOAuthProviderService } from './integration-oauth-provider.service';
 import { IntegrationProviderBootstrapService } from './integration-provider-bootstrap.service';
 import { IntegrationCredentialProbeRegistry } from './provider-credential-probe.registry';
 import { IntegrationProviderRegistry } from './provider-registry.service';
@@ -34,6 +40,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationCredentialGlobalController,
     IntegrationProviderCatalogController,
     IntegrationOAuthController,
+    IntegrationOAuthCallbackController,
     IntegrationSecretDrController,
     IntegrationBreakGlassController,
   ],
@@ -43,6 +50,9 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationProviderRegistry,
     IntegrationProviderBootstrapService,
     IntegrationOAuthCoreService,
+    IntegrationOAuthHttpTransport,
+    IntegrationOAuthProviderAdapterRegistry,
+    IntegrationOAuthProviderService,
     IntegrationCredentialProbeRegistry,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
@@ -89,6 +99,8 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
   exports: [
     IntegrationProviderRegistry,
     IntegrationOAuthCoreService,
+    IntegrationOAuthProviderAdapterRegistry,
+    IntegrationOAuthProviderService,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
     IntegrationCredentialProbeRegistry,
