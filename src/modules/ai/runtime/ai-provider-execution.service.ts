@@ -6,6 +6,7 @@ import {
 import { AiConfigurationResolverService } from '../configuration/ai-configuration-resolver.service';
 import { AiProviderRegistryService } from '../providers/ai-provider-registry.service';
 import { AiSecretReferenceService } from '../secrets/ai-secret-reference.service';
+import { IntegrationSecretValue } from '../../integrations/secrets/integration-secret-vault.port';
 
 @Injectable()
 export class AiProviderExecutionService {
@@ -55,7 +56,7 @@ export class AiProviderExecutionService {
 
     let runtime = {
       connectionId: null as string | null,
-      credential: null as import('../../integrations/secrets/integration-secret-vault.port').IntegrationSecretValue | null,
+      credential: null as IntegrationSecretValue | null,
     };
 
     if (
