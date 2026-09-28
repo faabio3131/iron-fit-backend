@@ -882,6 +882,7 @@ model FiscalHandoff {
   providerAccessKey         String?
   providerProtocolReference String?
   cancellationRequestId     String?
+  cancellationJustification  String?
   cancellationProtocolReference String?
   cancellationRejectionCode String?
   cancellationRejectionMessage String?
