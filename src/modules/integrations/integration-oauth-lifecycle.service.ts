@@ -230,7 +230,24 @@ export class IntegrationOAuthLifecycleService {
         accessToken: bundle.accessToken,
         refreshToken: bundle.refreshToken,
       });
-      await this.vault.revokeSecret(connection.secretReference);
+
+      try {
+        await this.vault.revokeSecret(connection.secretReference);
+      } catch {
+        await this.scheduleCleanup(
+          connection.id,
+          connection.secretReference,
+          OAUTH_LOCAL_REVOKE_PENDING,
+        );
+        return {
+          id: connection.id,
+          revoked: true,
+          revokedAt,
+          providerRevocation: 'COMPLETED',
+          physicalRevocation: 'PENDING_RETRY',
+          idempotent: false,
+        };
+      }
 
       return {
         id: connection.id,
