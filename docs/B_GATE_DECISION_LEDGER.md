@@ -22,6 +22,15 @@ Conforme Cronograma Mestre e autoridade codificada:
 - `service.billing` → `LAUNCH`
 - `content.external_youtube` → `LAUNCH`
 
+### Mobile e IA
+
+Decisões explicitamente aprovadas pelo owner do produto:
+
+- `mobile.android` → `LAUNCH`
+- `mobile.ios` → `LAUNCH`
+- `ai.workout_generation` → `LAUNCH`
+- `ai.content_recommendation` → `LAUNCH`
+
 ### Oferta comercial já aprovada
 
 - mensal: **R$ 269/mês**
@@ -33,30 +42,50 @@ Conforme Cronograma Mestre e autoridade codificada:
 
 Esses valores devem ser materializados por `ProductPlanVersion`, `ProductPlanEntitlement`, `SaasPlanPrice` e `CommercialLaunchOffering`; não devem virar constantes de código.
 
-### Conteúdo
+### Política financeira aprovada
+
+- `invoiceDueDays = 0`
+- `dunningGraceDays = 7`
+- vencimento da recorrência no próprio dia de renovação;
+- após o vencimento, o acordo entra em `PAST_DUE`;
+- durante 7 dias corridos permanece em recuperação de cobrança;
+- após 7 dias de inadimplência, pode transicionar para `SUSPENDED`;
+- suspensão não equivale a cancelamento nem exclusão de dados;
+- pagamento conciliado deve permitir reativação conforme o provider e o fluxo de billing.
+
+### Conteúdo, agregadores e canais externos
 
 - conteúdo público gratuito por provider externo/YouTube faz parte do launch;
-- Creator Network comercial/premium não deve ser apresentado como capacidade live sem aprovação/homologação própria.
+- `creator.iron_managed` → `OUT` na V1, preservado no roadmap oficial IRON-CREATOR;
+- `creator.tenant_private` → `OUT` na V1; tenant-owned storage permanece evolução futura;
+- `provider.wellhub` → `EXTERNAL_BLOCKER`; arquitetura Aggregator Hub preservada, homologação depende de parceiro/credenciais/evidência externa;
+- `provider.totalpass` → `EXTERNAL_BLOCKER`; arquitetura Aggregator Hub preservada, homologação depende de parceiro/credenciais/evidência externa;
+- `channel.google` → `LAUNCH`.
+
+Google deve obedecer ao padrão mestre FM de configuração externa:
+
+- novo cliente = configuração, nunca alteração de código;
+- OAuth/configuração por tenant;
+- `IntegrationConnection + Vault` como autoridade;
+- app/config global quando aplicável + tokens tenant-scoped;
+- nenhum client secret, refresh token, API key ou account ID hardcoded;
+- nenhum caminho privilegiado por cliente/academia;
+- rotação/revogação/reautorização governadas;
+- integração só recebe status homologado/live com evidência externa real.
+
+### Fiscal V1
+
+- modelo fiscal → `PROVIDER_NFSE`;
+- integração pelo FM Fiscal Core / contrato universal já preparado;
+- homologação externa de provider/prefeitura/credenciais permanece separada e não pode ser inventada.
 
 ## Decisões humanas ainda obrigatórias para fechar Gate B
 
-Os itens abaixo **não podem ser inventados pelo código** e permanecem pendentes até aprovação explícita:
+Os itens abaixo permanecem pendentes até aprovação explícita:
 
 | Item | Estado |
 |---|---|
-| `mobile.android` | UNDECIDED |
-| `mobile.ios` | UNDECIDED |
-| `ai.workout_generation` | UNDECIDED |
-| `ai.content_recommendation` | UNDECIDED |
-| `creator.iron_managed` | UNDECIDED |
-| `creator.tenant_private` | UNDECIDED |
-| `provider.wellhub` | UNDECIDED |
-| `provider.totalpass` | UNDECIDED |
 | `channel.meta` | UNDECIDED |
-| `channel.google` | UNDECIDED |
-| modelo fiscal V1 | UNDECIDED |
-| invoice due days | UNDECIDED |
-| dunning grace days | UNDECIDED |
 
 As políticas de upgrade, downgrade, cancelamento e refund já possuem apenas opções suportadas pelo runtime atual; a matriz real ainda precisa selecioná-las e ser aprovada por SUPER_ADMIN + step-up.
 
@@ -76,4 +105,4 @@ Gate B somente passa quando:
 
 **GATE B: OPEN / IN_PROGRESS**
 
-A autoridade técnica está implementada e certificada. O fechamento depende apenas das decisões comerciais restantes e da materialização/aprovação da matriz real.
+A autoridade técnica está implementada e certificada. Mobile, IA, política financeira, Creator V1, agregadores, Google e modelo fiscal já estão classificados. O fechamento depende da decisão comercial restante sobre Meta, das políticas comerciais ainda não selecionadas e da materialização/aprovação da matriz real.
