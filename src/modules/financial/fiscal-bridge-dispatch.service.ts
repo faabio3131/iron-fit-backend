@@ -16,7 +16,6 @@ import { IntegrationSecretResolverService } from '../integrations/secrets/integr
 import {
   FM_FISCAL_CAPABILITY,
   FM_FISCAL_PROVIDER_CODE,
-  FM_FISCAL_SCHEMA_VERSION,
   FiscalBridgeHttpTransport,
   FiscalBridgeRequestContext,
   FiscalBridgeTransportError,
@@ -24,6 +23,10 @@ import {
   parseFiscalBridgePublicConfiguration,
 } from './fiscal-bridge.contract';
 import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
+import {
+  assertCanonicalFiscalHandoff,
+  buildFiscalIssuanceRequest,
+} from './fiscal-bridge-payload';
 
 const DISPATCH_BATCH_SIZE = 20;
 const DISPATCH_LEASE_MS = 2 * 60_000;
@@ -38,28 +41,6 @@ function hasCapability(raw: unknown, required: string): boolean {
         value.trim().toLowerCase() === required,
     )
   );
-}
-
-function money(amountMinor: number) {
-  if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
-    throw new ServiceUnavailableException(
-      'Fiscal handoff possui amountMinor invalido',
-    );
-  }
-  return {
-    amount: (amountMinor / 100).toFixed(2),
-    currency: 'BRL',
-  };
-}
-
-function paymentMethod(raw: unknown): string {
-  const value = typeof raw === 'string' ? raw.trim() : '';
-  if (!value || value.length > 64) {
-    throw new ServiceUnavailableException(
-      'Fiscal handoff sem paymentMethod valido',
-    );
-  }
-  return value;
 }
 
 function errorCode(error: unknown): string {
@@ -86,7 +67,7 @@ export class FiscalBridgeDispatchService {
     private readonly audit: AuditService,
   ) {}
 
-  private async bridgeContext(
+  async resolveBridgeContext(
     gymId: string,
   ): Promise<{
     connectionId: string;
@@ -151,101 +132,6 @@ export class FiscalBridgeDispatchService {
         },
         configuration,
         credential,
-      },
-    };
-  }
-
-  private assertCanonicalHandoff(row: any) {
-    if (
-      row.hostNamespace !== 'fm.iron' ||
-      row.packId !== 'iron' ||
-      row.documentKind !== 'nfse' ||
-      row.contractVersion !== 'v1'
-    ) {
-      throw new ServiceUnavailableException(
-        'Fiscal handoff diverge do contrato IRON certificado',
-      );
-    }
-    if (
-      row.operationKind !== 'membership' &&
-      row.operationKind !== 'recurring_charge'
-    ) {
-      throw new ServiceUnavailableException(
-        'Fiscal handoff possui operationKind nao suportado',
-      );
-    }
-    if (!(row.settledAt instanceof Date)) {
-      throw new ServiceUnavailableException(
-        'Fiscal handoff sem settlement autoritativo',
-      );
-    }
-  }
-
-  private issuancePayload(row: any) {
-    this.assertCanonicalHandoff(row);
-    const amount = money(row.amountMinor);
-    const method = paymentMethod(row.paymentMethod);
-    const settledAt = row.settledAt.toISOString();
-
-    return {
-      contract_version: FM_FISCAL_SCHEMA_VERSION,
-      operation: {
-        operation_reference: {
-          type: 'iron_charge',
-          id: row.chargeId,
-        },
-        operation_kind: row.operationKind,
-        occurred_at: settledAt,
-        settled_at: settledAt,
-        totals: {
-          gross_amount: amount,
-          discount_amount: {
-            amount: '0.00',
-            currency: 'BRL',
-          },
-          surcharge_amount: {
-            amount: '0.00',
-            currency: 'BRL',
-          },
-          net_amount: amount,
-        },
-        payments: [
-          {
-            method,
-            amount,
-            reference: row.transactionId,
-          },
-        ],
-        change_amount: {
-          amount: '0.00',
-          currency: 'BRL',
-        },
-      },
-      document: {
-        kind: 'nfse',
-        items: [
-          {
-            line_id: row.chargeId,
-            item_reference: {
-              type: 'iron_membership',
-              id: row.chargeId,
-            },
-            description:
-              row.operationKind === 'recurring_charge'
-                ? 'IRON recurring membership charge'
-                : 'IRON membership charge',
-            quantity: '1',
-            unit_price: amount,
-            discount_amount: {
-              amount: '0.00',
-              currency: 'BRL',
-            },
-            surcharge_amount: {
-              amount: '0.00',
-              currency: 'BRL',
-            },
-          },
-        ],
       },
     };
   }
@@ -319,8 +205,8 @@ export class FiscalBridgeDispatchService {
     let issuanceStarted = false;
 
     try {
-      this.assertCanonicalHandoff(row);
-      const resolved = await this.bridgeContext(row.gymId);
+      assertCanonicalFiscalHandoff(row);
+      const resolved = await this.resolveBridgeContext(row.gymId);
       connectionId = resolved.connectionId;
       const correlationId = randomUUID();
 
@@ -377,7 +263,7 @@ export class FiscalBridgeDispatchService {
         });
       if (readyUpdate.count !== 1) return false;
 
-      const issuanceRequest = this.issuancePayload(row);
+      const issuanceRequest = buildFiscalIssuanceRequest(row);
       issuanceStarted = true;
       const issuancePayload = await this.http.post(
         '/v1/issuances',
