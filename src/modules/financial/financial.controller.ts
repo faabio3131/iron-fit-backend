@@ -4,6 +4,8 @@ import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CreateChargeDto } from './dto/create-charge.dto';
 import { PayChargeDto } from './dto/pay-charge.dto';
+import { CreateChargePaymentSessionDto } from './dto/create-charge-payment-session.dto';
+import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -13,7 +15,10 @@ import { resolveTenantOperationGymId } from '../../common/security/tenant-operat
 @Controller('financial')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class FinancialController {
-  constructor(private financialService: FinancialService) {}
+  constructor(
+    private financialService: FinancialService,
+    private tenantPaymentCheckout: TenantPaymentCheckoutService,
+  ) {}
 
   private resolveGymId(user: any, requestedGymId?: string) {
     return resolveTenantOperationGymId({
@@ -68,6 +73,22 @@ export class FinancialController {
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   findAllCharges(@CurrentUser() user: any, @Query('gymId') requestedGymId?: string) {
     return this.financialService.findAllCharges(this.resolveGymId(user, requestedGymId));
+  }
+
+  @Post('charges/:id/payment-session')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  createPaymentSession(
+    @Param('id') id: string,
+    @Body() dto: CreateChargePaymentSessionDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.tenantPaymentCheckout.createSession(
+      id,
+      dto,
+      this.resolveGymId(user, requestedGymId),
+      user.id,
+    );
   }
 
   @Patch('charges/:id/pay')

@@ -800,22 +800,31 @@ model Subscription {
 }
 
 model Charge {
-  id              String       @id @default(uuid())
-  gymId           String
-  studentId       String
-  subscriptionId  String?
-  gatewayChargeId String?
-  amount          Int
-  dueDate         DateTime?
-  paidAt          DateTime?
-  status          ChargeStatus @default(PENDING)
-  paymentMethod   String?
-  pixQrCode       String?
-  paymentLink     String?
-  gym             Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  student         Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+  id                       String       @id @default(uuid())
+  gymId                    String
+  studentId                String
+  subscriptionId           String?
+  gatewayProviderCode      String?
+  gatewayConnectionId      String?
+  gatewayRequestId         String?      @unique
+  gatewayChargeId          String?
+  gatewayCheckoutExpiresAt DateTime?
+  amount                   Int
+  dueDate                  DateTime?
+  paidAt                   DateTime?
+  status                   ChargeStatus @default(PENDING)
+  paymentMethod            String?
+  pixQrCode                String?
+  paymentLink              String?
+  gym                      Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  student                  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription             Subscription? @relation(fields: [subscriptionId], references: [id])
+  gatewayConnection        IntegrationConnection? @relation(fields: [gatewayConnectionId], references: [id], onDelete: SetNull)
+
   @@index([gymId])
+  @@index([gymId, status])
+  @@index([gatewayConnectionId, status])
+  @@unique([gatewayProviderCode, gatewayChargeId])
 }
 
 model CommunicationTemplate {
