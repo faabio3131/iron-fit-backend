@@ -12,7 +12,16 @@ import { IntegrationCredentialTenantController } from './integration-credential-
 import { IntegrationConnectionService } from './integration-connection.service';
 import { IntegrationProviderCatalogController } from './integration-provider-catalog.controller';
 import { IntegrationOAuthController } from './integration-oauth.controller';
+import { IntegrationOAuthCallbackController } from './integration-oauth-callback.controller';
 import { IntegrationOAuthCoreService } from './integration-oauth-core.service';
+import { IntegrationOAuthAuthorizationService } from './integration-oauth-authorization.service';
+import { IntegrationOAuthTokenService } from './integration-oauth-token.service';
+import {
+  GoogleOAuthProviderAdapter,
+  IntegrationOAuthProviderAdapterRegistry,
+  MetaOAuthProviderAdapter,
+} from './integration-oauth-provider.adapter';
+import { IntegrationOAuthAdapterBootstrapService } from './integration-oauth-adapter-bootstrap.service';
 import { IntegrationProviderBootstrapService } from './integration-provider-bootstrap.service';
 import { IntegrationCredentialProbeRegistry } from './provider-credential-probe.registry';
 import { IntegrationProviderRegistry } from './provider-registry.service';
@@ -34,6 +43,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationCredentialGlobalController,
     IntegrationProviderCatalogController,
     IntegrationOAuthController,
+    IntegrationOAuthCallbackController,
     IntegrationSecretDrController,
     IntegrationBreakGlassController,
   ],
@@ -43,6 +53,12 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationProviderRegistry,
     IntegrationProviderBootstrapService,
     IntegrationOAuthCoreService,
+    IntegrationOAuthAuthorizationService,
+    IntegrationOAuthTokenService,
+    IntegrationOAuthProviderAdapterRegistry,
+    MetaOAuthProviderAdapter,
+    GoogleOAuthProviderAdapter,
+    IntegrationOAuthAdapterBootstrapService,
     IntegrationCredentialProbeRegistry,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
@@ -89,6 +105,8 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
   exports: [
     IntegrationProviderRegistry,
     IntegrationOAuthCoreService,
+    IntegrationOAuthTokenService,
+    IntegrationOAuthProviderAdapterRegistry,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
     IntegrationCredentialProbeRegistry,
