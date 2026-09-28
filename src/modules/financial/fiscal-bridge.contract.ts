@@ -47,6 +47,39 @@ export interface FiscalIssuanceResponse {
   protocolReference: string | null;
 }
 
+export interface FiscalReconciliationResponse {
+  status: 'matched' | 'pending' | 'divergent';
+  operationReference: {
+    type: string;
+    id: string;
+  };
+  fingerprint: string;
+  issues: Array<{
+    code: string;
+    message: string;
+    documentId: string | null;
+  }>;
+  selectedDocumentId: string | null;
+  correlationId: string;
+}
+
+export interface FiscalQueryResponse {
+  status: 'authorized' | 'cancelled' | 'not_found' | 'pending';
+  accessKey: string;
+  protocolReference: string | null;
+  correlationId: string;
+}
+
+export interface FiscalCancellationResponse {
+  status: 'accepted' | 'rejected' | 'pending';
+  requestId: string;
+  accessKey: string;
+  correlationId: string;
+  eventProtocolReference: string | null;
+  rejectionCode: string | null;
+  rejectionMessage: string | null;
+}
+
 export class FiscalBridgeTransportError extends Error {
   constructor(
     readonly code: string,
@@ -287,6 +320,170 @@ export class FiscalBridgeHttpTransport {
         payload.correlation_id,
         'correlation_id',
         256,
+      ),
+    };
+  }
+
+
+  parseReconciliation(
+    payload: Record<string, unknown>,
+  ): FiscalReconciliationResponse {
+    const status = boundedString(payload.status, 'status', 32);
+    if (
+      status !== 'matched' &&
+      status !== 'pending' &&
+      status !== 'divergent'
+    ) {
+      throw new FiscalBridgeTransportError(
+        'FISCAL_RECONCILIATION_STATUS_INVALID',
+        false,
+      );
+    }
+
+    const reference = payload.operation_reference;
+    if (!reference || typeof reference !== 'object' || Array.isArray(reference)) {
+      throw new FiscalBridgeTransportError(
+        'FISCAL_RECONCILIATION_REFERENCE_INVALID',
+        false,
+      );
+    }
+    const ref = reference as Record<string, unknown>;
+
+    const fingerprint = boundedString(
+      payload.fingerprint,
+      'fingerprint',
+      64,
+    );
+    if (!/^[0-9a-f]{64}$/.test(fingerprint)) {
+      throw new FiscalBridgeTransportError(
+        'FISCAL_RECONCILIATION_FINGERPRINT_INVALID',
+        false,
+      );
+    }
+
+    if (!Array.isArray(payload.issues)) {
+      throw new FiscalBridgeTransportError(
+        'FISCAL_RECONCILIATION_ISSUES_INVALID',
+        false,
+      );
+    }
+    const issues = payload.issues.map((issue) => {
+      if (!issue || typeof issue !== 'object' || Array.isArray(issue)) {
+        throw new FiscalBridgeTransportError(
+          'FISCAL_RECONCILIATION_ISSUE_INVALID',
+          false,
+        );
+      }
+      const item = issue as Record<string, unknown>;
+      return {
+        code: boundedString(item.code, 'issue.code', 128),
+        message: boundedString(item.message, 'issue.message', 500),
+        documentId: nullableString(item.document_id, 128),
+      };
+    });
+
+    return {
+      status,
+      operationReference: {
+        type: boundedString(ref.type, 'operation_reference.type', 64),
+        id: boundedString(ref.id, 'operation_reference.id', 256),
+      },
+      fingerprint,
+      issues,
+      selectedDocumentId: nullableString(
+        payload.selected_document_id,
+        128,
+      ),
+      correlationId: boundedString(
+        payload.correlation_id,
+        'correlation_id',
+        256,
+      ),
+    };
+  }
+
+  parseQuery(
+    payload: Record<string, unknown>,
+  ): FiscalQueryResponse {
+    const status = boundedString(payload.status, 'status', 32);
+    if (
+      status !== 'authorized' &&
+      status !== 'cancelled' &&
+      status !== 'not_found' &&
+      status !== 'pending'
+    ) {
+      throw new FiscalBridgeTransportError(
+        'FISCAL_QUERY_STATUS_INVALID',
+        false,
+      );
+    }
+    const accessKey = nullableAccessKey(payload.access_key);
+    if (!accessKey) {
+      throw new FiscalBridgeTransportError(
+        'FISCAL_QUERY_ACCESS_KEY_MISSING',
+        false,
+      );
+    }
+    return {
+      status,
+      accessKey,
+      protocolReference: nullableString(
+        payload.protocol_reference,
+        512,
+      ),
+      correlationId: boundedString(
+        payload.correlation_id,
+        'correlation_id',
+        256,
+      ),
+    };
+  }
+
+  parseCancellation(
+    payload: Record<string, unknown>,
+  ): FiscalCancellationResponse {
+    const status = boundedString(payload.status, 'status', 32);
+    if (
+      status !== 'accepted' &&
+      status !== 'rejected' &&
+      status !== 'pending'
+    ) {
+      throw new FiscalBridgeTransportError(
+        'FISCAL_CANCELLATION_STATUS_INVALID',
+        true,
+      );
+    }
+    const accessKey = nullableAccessKey(payload.access_key);
+    if (!accessKey) {
+      throw new FiscalBridgeTransportError(
+        'FISCAL_CANCELLATION_ACCESS_KEY_MISSING',
+        true,
+      );
+    }
+    return {
+      status,
+      requestId: boundedString(
+        payload.request_id,
+        'request_id',
+        256,
+      ),
+      accessKey,
+      correlationId: boundedString(
+        payload.correlation_id,
+        'correlation_id',
+        256,
+      ),
+      eventProtocolReference: nullableString(
+        payload.event_protocol_reference,
+        512,
+      ),
+      rejectionCode: nullableString(
+        payload.rejection_code,
+        128,
+      ),
+      rejectionMessage: nullableString(
+        payload.rejection_message,
+        512,
       ),
     };
   }
