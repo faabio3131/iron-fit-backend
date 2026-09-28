@@ -256,20 +256,32 @@ enum AuthActionDeliveryStatus {
 }
 
 model AuthActionToken {
-  id          String              @id @default(uuid())
-  userId      String
-  kind        AuthActionTokenKind
-  tokenHash          String                   @unique
-  deliveryCiphertext String
-  deliveryStatus     AuthActionDeliveryStatus @default(PENDING)
-  deliveredAt        DateTime?
-  targetEmail        String?
-  expiresAt          DateTime
-  consumedAt  DateTime?
-  createdAt   DateTime            @default(now())
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                         String                   @id @default(uuid())
+  userId                     String
+  kind                       AuthActionTokenKind
+  tokenHash                  String                   @unique
+  deliveryCiphertext         String?
+  deliveryStatus             AuthActionDeliveryStatus @default(PENDING)
+  deliveryAttemptCount       Int                      @default(0)
+  deliveryNextAttemptAt      DateTime?
+  deliveryLastAttemptAt      DateTime?
+  deliveryLeaseOwner         String?
+  deliveryLeaseUntil         DateTime?
+  deliveryProviderCode       String?
+  deliveryConnectionId       String?
+  deliveryProviderMessageRef String?
+  deliveryErrorCode          String?
+  deliveredAt                DateTime?
+  targetEmail                String?
+  expiresAt                  DateTime
+  consumedAt                 DateTime?
+  createdAt                  DateTime                 @default(now())
+  user                       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, kind, consumedAt])
   @@index([expiresAt])
+  @@index([deliveryStatus, deliveryNextAttemptAt])
+  @@index([deliveryLeaseUntil])
 }
 
 model AuthRecoveryCode {
