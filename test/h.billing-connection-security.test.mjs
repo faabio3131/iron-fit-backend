@@ -174,7 +174,7 @@ test('H3/H4 source keeps card secrets out of SaaS billing DTO/schema and binds c
 
   const billingSchema = schema.slice(
     schema.indexOf('model SaasPlanPrice'),
-    schema.indexOf('model ProductFeature'),
+    schema.indexOf('model TenantProductConfiguration'),
   );
   assert.doesNotMatch(
     billingSchema,
