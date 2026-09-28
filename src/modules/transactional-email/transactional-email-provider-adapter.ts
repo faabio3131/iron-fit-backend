@@ -1,6 +1,13 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { IntegrationSecretValue } from '../integrations/secrets/integration-secret-vault.port';
 
+export class TransactionalEmailDispatchFailure extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = 'TransactionalEmailDispatchFailure';
+  }
+}
+
 export interface TransactionalEmailDispatchInput {
   dispatchKey: string;
   recipient: string;
