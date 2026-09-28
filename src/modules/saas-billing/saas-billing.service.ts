@@ -1470,7 +1470,7 @@ export class SaasBillingService {
   }
 
   async refund(dto: RefundSaasBillingDto, actorUserId?: string) {
-    const provider = this.provider();
+    const provider = await this.provider();
     const replay = await this.prisma.saasRefund.findUnique({
       where: { requestId: dto.requestId },
     });
