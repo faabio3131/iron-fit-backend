@@ -21,6 +21,8 @@ import {
   IntegrationOAuthProviderAdapterRegistry,
 } from './integration-oauth-provider-adapters';
 import { IntegrationOAuthProviderService } from './integration-oauth-provider.service';
+import { IntegrationOAuthScopePolicyController } from './integration-oauth-scope-policy.controller';
+import { IntegrationOAuthScopePolicyService } from './integration-oauth-scope-policy.service';
 import { IntegrationProviderBootstrapService } from './integration-provider-bootstrap.service';
 import { IntegrationCredentialProbeRegistry } from './provider-credential-probe.registry';
 import { IntegrationProviderRegistry } from './provider-registry.service';
@@ -43,6 +45,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationProviderCatalogController,
     IntegrationOAuthController,
     IntegrationOAuthCallbackController,
+    IntegrationOAuthScopePolicyController,
     IntegrationSecretDrController,
     IntegrationBreakGlassController,
   ],
@@ -55,6 +58,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationOAuthHttpTransport,
     IntegrationOAuthProviderAdapterRegistry,
     IntegrationOAuthProviderService,
+    IntegrationOAuthScopePolicyService,
     IntegrationOAuthLifecycleService,
     IntegrationOAuthMaintenanceService,
     IntegrationCredentialProbeRegistry,
@@ -105,6 +109,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationOAuthCoreService,
     IntegrationOAuthProviderAdapterRegistry,
     IntegrationOAuthProviderService,
+    IntegrationOAuthScopePolicyService,
     IntegrationOAuthLifecycleService,
     IntegrationOAuthMaintenanceService,
     IntegrationConnectionService,
