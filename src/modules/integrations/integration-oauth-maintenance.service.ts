@@ -490,11 +490,15 @@ export class IntegrationOAuthMaintenanceService
         })
       : null;
 
+    let providerRevoked = task.reason !== OAUTH_PROVIDER_REVOKE_PENDING;
+
     try {
-      if (
-        task.reason === OAUTH_PROVIDER_REVOKE_PENDING &&
-        connection
-      ) {
+      if (task.reason === OAUTH_PROVIDER_REVOKE_PENDING) {
+        if (!connection) {
+          throw new ServiceUnavailableException(
+            'Cleanup OAuth perdeu connection canonica',
+          );
+        }
         const adapter = this.adapters.require(connection.providerCode);
         if (adapter.revoke) {
           const [physical, app] = await Promise.all([
@@ -514,9 +518,36 @@ export class IntegrationOAuthMaintenanceService
             refreshToken: bundle.refreshToken,
           });
         }
+        providerRevoked = true;
       }
 
-      await this.vault.revokeSecret(task.secretReference);
+      try {
+        await this.vault.revokeSecret(task.secretReference);
+      } catch {
+        if (providerRevoked) {
+          await this.prisma.integrationSecretCleanupTask.updateMany({
+            where: {
+              id: task.id,
+              status: IntegrationSecretCleanupStatus.PENDING,
+            },
+            data: {
+              reason: OAUTH_LOCAL_REVOKE_PENDING,
+              attempts: { increment: 1 },
+              lastAttemptAt: new Date(),
+            },
+          });
+          return {
+            cleanupTaskId: task.id,
+            completed: false,
+            providerRevoked: true,
+            localRevocationPending: true,
+          };
+        }
+        throw new ServiceUnavailableException(
+          'Provider revoke pendente antes do cleanup local',
+        );
+      }
+
       await this.prisma.integrationSecretCleanupTask.updateMany({
         where: {
           id: task.id,
@@ -528,7 +559,11 @@ export class IntegrationOAuthMaintenanceService
           lastAttemptAt: new Date(),
         },
       });
-      return { cleanupTaskId: task.id, completed: true };
+      return {
+        cleanupTaskId: task.id,
+        completed: true,
+        providerRevoked,
+      };
     } catch {
       await this.prisma.integrationSecretCleanupTask.updateMany({
         where: {
