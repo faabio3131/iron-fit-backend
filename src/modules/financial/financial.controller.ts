@@ -8,6 +8,8 @@ import { CreateChargePaymentSessionDto } from './dto/create-charge-payment-sessi
 import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
 import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
 import { UpsertFiscalScopeBindingDto } from './dto/upsert-fiscal-scope-binding.dto';
+import { CancelFiscalHandoffDto } from './dto/cancel-fiscal-handoff.dto';
+import { FiscalReconciliationCancellationService } from './fiscal-reconciliation-cancellation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -21,6 +23,7 @@ export class FinancialController {
     private financialService: FinancialService,
     private tenantPaymentCheckout: TenantPaymentCheckoutService,
     private fiscalScopeBinding: FiscalScopeBindingService,
+    private fiscalLifecycle: FiscalReconciliationCancellationService,
   ) {}
 
   private resolveGymId(user: any, requestedGymId?: string) {
@@ -116,6 +119,22 @@ export class FinancialController {
   ) {
     return this.fiscalScopeBinding.getSafe(
       this.resolveGymId(user, requestedGymId),
+    );
+  }
+
+  @Post('fiscal/handoffs/:id/cancel')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  cancelFiscalHandoff(
+    @Param('id') id: string,
+    @Body() dto: CancelFiscalHandoffDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.fiscalLifecycle.requestCancellation(
+      id,
+      this.resolveGymId(user, requestedGymId),
+      user.id,
+      dto,
     );
   }
 
