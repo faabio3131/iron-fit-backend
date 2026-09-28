@@ -31,5 +31,14 @@ export class IntegrationProviderBootstrapService implements OnModuleInit {
       supportsOAuth: true,
       tenantEntitlementFeatureKey: 'integration.google',
     });
+
+    this.providers.register({
+      providerCode: 'fm-fiscal-core',
+      capabilities: ['fiscal.bridge'],
+      authModels: ['ACCESS_TOKEN'],
+      environments: ['HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+    });
   }
 }
