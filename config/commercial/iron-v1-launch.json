@@ -34,6 +34,14 @@
         {
           "featureKey": "commercial.trial_students_max",
           "limitValue": 15
+        },
+        {
+          "featureKey": "integration.meta",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "integration.google",
+          "featureEnabled": true
         }
       ],
       "prices": []
@@ -62,6 +70,14 @@
         },
         {
           "featureKey": "ai.content_recommendation",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "integration.meta",
+          "featureEnabled": true
+        },
+        {
+          "featureKey": "integration.google",
           "featureEnabled": true
         }
       ],
@@ -166,13 +182,15 @@
       "itemKey": "channel.meta",
       "kind": "CHANNEL",
       "decision": "LAUNCH",
-      "rationale": "Meta é a autoridade guarda-chuva da V1 para Facebook, Instagram e WhatsApp; configuração por tenant via IntegrationConnection + Vault, sem hardcode."
+      "rationale": "Meta é a autoridade guarda-chuva da V1 para Facebook, Instagram e WhatsApp; configuração por tenant via IntegrationConnection + Vault, sem hardcode.",
+      "featureKey": "integration.meta"
     },
     {
       "itemKey": "channel.google",
       "kind": "CHANNEL",
       "decision": "LAUNCH",
-      "rationale": "Google integra a V1 por configuração governada, OAuth/credenciais externas e Vault, sem hardcode por tenant."
+      "rationale": "Google integra a V1 por configuração governada, OAuth/credenciais externas e Vault, sem hardcode por tenant.",
+      "featureKey": "integration.google"
     }
   ],
   "offerings": [
