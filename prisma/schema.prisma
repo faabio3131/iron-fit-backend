@@ -819,6 +819,7 @@ model Charge {
   gym                      Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
   student                  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   subscription             Subscription? @relation(fields: [subscriptionId], references: [id])
+  gatewayConnection        IntegrationConnection? @relation(fields: [gatewayConnectionId], references: [id], onDelete: SetNull)
 
   @@index([gymId])
   @@index([gymId, status])
