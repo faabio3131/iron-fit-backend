@@ -11,6 +11,7 @@ import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
 import { FiscalBridgeHttpTransport } from './fiscal-bridge.contract';
 import { FiscalBridgeDispatchService } from './fiscal-bridge-dispatch.service';
 import { FiscalBridgeMaintenanceService } from './fiscal-bridge-maintenance.service';
+import { FiscalReconciliationCancellationService } from './fiscal-reconciliation-cancellation.service';
 
 @Module({
   imports: [IntegrationsModule, AuthModule],
@@ -23,6 +24,7 @@ import { FiscalBridgeMaintenanceService } from './fiscal-bridge-maintenance.serv
     FiscalBridgeHttpTransport,
     FiscalBridgeDispatchService,
     FiscalBridgeMaintenanceService,
+    FiscalReconciliationCancellationService,
     PrismaService,
     AuditService,
   ],
@@ -31,6 +33,7 @@ import { FiscalBridgeMaintenanceService } from './fiscal-bridge-maintenance.serv
     TenantPaymentCheckoutService,
     FiscalScopeBindingService,
     FiscalBridgeDispatchService,
+    FiscalReconciliationCancellationService,
   ],
 })
 export class FinancialModule {}
