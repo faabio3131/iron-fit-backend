@@ -881,6 +881,13 @@ model FiscalHandoff {
   providerDocumentId        String?
   providerAccessKey         String?
   providerProtocolReference String?
+  cancellationRequestId     String?
+  cancellationJustification  String?
+  cancellationProtocolReference String?
+  cancellationRejectionCode String?
+  cancellationRejectionMessage String?
+  reconciliationFingerprint String?
+  reconciliationIssueCodes  Json?
   bridgeConnectionId        String?
   attemptCount              Int                 @default(0)
   nextAttemptAt             DateTime?
