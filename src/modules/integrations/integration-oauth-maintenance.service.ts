@@ -183,7 +183,7 @@ export class IntegrationOAuthMaintenanceService
       select: { id: true },
     });
 
-    const results = [];
+    const results: Array<Record<string, unknown>> = [];
     for (const row of rows) {
       results.push(await this.refreshOne(row.id));
     }
@@ -486,7 +486,7 @@ export class IntegrationOAuthMaintenanceService
       take: Math.min(Math.max(limit, 1), 100),
     });
 
-    const results = [];
+    const results: Array<Record<string, unknown>> = [];
     for (const task of tasks) {
       if (!this.cleanupRetryDue(task)) continue;
       results.push(await this.processCleanupTask(task));
