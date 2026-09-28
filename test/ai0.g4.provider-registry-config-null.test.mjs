@@ -58,10 +58,12 @@ test('AI0 G4 config resolver enforces TENANT precedence and fail-closed override
   assert.match(resolver, /defineAiExternalConfiguration/);
 });
 
-test('AI0 G4 secret boundary validates references and never resolves cleartext secrets', async () => {
+test('AI0 G4/K1 secret boundary uses canonical Integration Vault and never reads ad-hoc cleartext secrets', async () => {
   const secrets = await source('src/modules/ai/secrets/ai-secret-reference.service.ts');
-  assert.match(secrets, /assertSecretReference/);
-  assert.match(secrets, /SECRET_BACKEND_NOT_CONFIGURED/);
+  assert.match(secrets, /assertIntegrationSecretReference/);
+  assert.match(secrets, /IntegrationSecretResolverService/);
+  assert.match(secrets, /resolveForExternalBoundary/);
+  assert.equal(secrets.includes('SECRET_BACKEND_NOT_CONFIGURED'), false);
   for (const forbidden of ['process.env', 'apiKey:', 'password:', 'token:']) {
     assert.equal(secrets.includes(forbidden), false);
   }
