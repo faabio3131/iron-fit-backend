@@ -91,6 +91,13 @@ export class CommercialLaunchController {
     return this.service.setPolicy(id, dto, user.id);
   }
 
+  @Post('matrices/:id/validate')
+  validateDraft(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.service.validateDraft(id);
+  }
+
   @Post('matrices/:id/approve')
   approve(
     @Param('id', new ParseUUIDPipe()) id: string,
