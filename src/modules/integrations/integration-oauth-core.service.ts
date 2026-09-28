@@ -97,6 +97,22 @@ function stringArray(raw: unknown, field: string): string[] {
   return [...new Set(raw.map((item) => item.trim()))];
 }
 
+function oauthScopeArray(raw: unknown, field: string): string[] {
+  const scopes = stringArray(raw, field);
+  if (scopes.length > 32) {
+    throw new ServiceUnavailableException(field + ' excede limite de least privilege');
+  }
+  for (const scope of scopes) {
+    if (
+      scope.length > 256 ||
+      !/^[\x21\x23-\x5B\x5D-\x7E]+$/.test(scope)
+    ) {
+      throw new ServiceUnavailableException(field + ' contem scope OAuth invalido');
+    }
+  }
+  return scopes;
+}
+
 function sameStringSet(left: readonly string[], right: readonly string[]): boolean {
   return (
     left.length === right.length &&
@@ -158,7 +174,7 @@ export class IntegrationOAuthCoreService {
     const capabilityScopes: Record<string, string[]> = {};
     for (const [capability, scopes] of Object.entries(capabilityScopesRaw)) {
       const normalized = assertCapability(capability);
-      capabilityScopes[normalized] = stringArray(
+      capabilityScopes[normalized] = oauthScopeArray(
         scopes,
         'OAuth scopes de ' + normalized,
       );
@@ -240,8 +256,15 @@ export class IntegrationOAuthCoreService {
     requested: readonly string[] | undefined,
     providerCapabilities: readonly string[],
   ): string[] {
+    if ((!requested || requested.length === 0) && providerCapabilities.length > 1) {
+      throw new BadRequestException(
+        'OAuth exige selecao explicita de capability para least privilege',
+      );
+    }
     const capabilities = [
-      ...new Set((requested?.length ? requested : providerCapabilities).map(assertCapability)),
+      ...new Set(
+        (requested?.length ? requested : providerCapabilities).map(assertCapability),
+      ),
     ].sort();
     if (capabilities.length === 0) {
       throw new BadRequestException('OAuth exige ao menos uma capability');
@@ -269,6 +292,11 @@ export class IntegrationOAuthCoreService {
         );
       }
       configured.forEach((scope) => scopes.add(scope));
+    }
+    if (scopes.size > 64) {
+      throw new ServiceUnavailableException(
+        'OAuth scope set excede limite de least privilege',
+      );
     }
     return [...scopes].sort();
   }
@@ -463,6 +491,7 @@ export class IntegrationOAuthCoreService {
         authorizationUrl: authorizationUrl.toString(),
         expiresAt,
         capabilities,
+        scopes,
         pkceMode: configuration.pkceMode,
       };
     } catch (error) {
