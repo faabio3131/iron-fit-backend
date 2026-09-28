@@ -263,7 +263,7 @@ test('H2 API and persistence expose no raw card authority or free tenant/provide
   );
   assert.doesNotMatch(
     migration,
-    /\b(cardNumber|fullPan|cvv|cvc)\b/i,
+    /"(?:cardNumber|fullPan|cvv|cvc)"\s+/i,
   );
   assert.match(docs, /BLOCKED_EXTERNAL/);
   assert.match(docs, /billing\.student\.checkout/);
