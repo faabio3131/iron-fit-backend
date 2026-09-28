@@ -27,6 +27,7 @@ import {
 } from './contracts/integration-contract';
 import { StartIntegrationOAuthDto } from './dto/integration-oauth.dto';
 import { IntegrationProviderRegistry } from './provider-registry.service';
+import { IntegrationOAuthScopePolicyService } from './integration-oauth-scope-policy.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
 import {
   INTEGRATION_SECRET_VAULT,
@@ -115,6 +116,7 @@ export class IntegrationOAuthCoreService {
     private readonly audit: AuditService,
     @Inject(INTEGRATION_SECRET_VAULT)
     private readonly vault: IntegrationSecretVaultPort,
+    private readonly scopePolicies: IntegrationOAuthScopePolicyService,
   ) {}
 
   private appConfiguration(connection: any): OAuthAppConfiguration {
@@ -256,23 +258,6 @@ export class IntegrationOAuthCoreService {
     return capabilities;
   }
 
-  private scopesForCapabilities(
-    capabilities: readonly string[],
-    configuration: OAuthAppConfiguration,
-  ): string[] {
-    const scopes = new Set<string>();
-    for (const capability of capabilities) {
-      const configured = configuration.capabilityScopes[capability];
-      if (!configured?.length) {
-        throw new ServiceUnavailableException(
-          'OAuth App global sem scopes governados para ' + capability,
-        );
-      }
-      configured.forEach((scope) => scopes.add(scope));
-    }
-    return [...scopes].sort();
-  }
-
   async startTenantAuthorization(
     actor: TenantOAuthActor,
     providerCodeInput: string,
@@ -341,7 +326,12 @@ export class IntegrationOAuthCoreService {
       dto.capabilities,
       provider.capabilities,
     );
-    const scopes = this.scopesForCapabilities(capabilities, configuration);
+    const scopes = await this.scopePolicies.assertApprovedScopes(
+      providerCode,
+      environment,
+      capabilities,
+      configuration.capabilityScopes,
+    );
 
     const state = randomBytes(OAUTH_STATE_BYTES).toString('base64url');
     const stateHash = sha256Hex(state);
