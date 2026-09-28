@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FiscalBridgeDispatchService } from './fiscal-bridge-dispatch.service';
+import { FiscalReconciliationCancellationService } from './fiscal-reconciliation-cancellation.service';
 
 const FISCAL_DISPATCH_INTERVAL_MS = 10_000;
 
@@ -18,6 +19,7 @@ export class FiscalBridgeMaintenanceService
   constructor(
     private readonly config: ConfigService,
     private readonly dispatch: FiscalBridgeDispatchService,
+    private readonly lifecycle: FiscalReconciliationCancellationService,
   ) {}
 
   onModuleInit() {
@@ -46,6 +48,8 @@ export class FiscalBridgeMaintenanceService
     this.running = true;
     try {
       await this.dispatch.dispatchDue();
+      await this.lifecycle.reconcileDue();
+      await this.lifecycle.resumeCancellations();
     } catch {
       // The next governed cycle retries capability-stage failures.
       // Issuance-stage uncertainty is persisted as RECONCILIATION_PENDING.
