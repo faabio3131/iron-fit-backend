@@ -14,6 +14,8 @@ import { IntegrationProviderCatalogController } from './integration-provider-cat
 import { IntegrationOAuthCallbackController } from './integration-oauth-callback.controller';
 import { IntegrationOAuthController } from './integration-oauth.controller';
 import { IntegrationOAuthCoreService } from './integration-oauth-core.service';
+import { IntegrationOAuthLifecycleService } from './integration-oauth-lifecycle.service';
+import { IntegrationOAuthMaintenanceService } from './integration-oauth-maintenance.service';
 import {
   IntegrationOAuthHttpTransport,
   IntegrationOAuthProviderAdapterRegistry,
@@ -53,6 +55,8 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationOAuthHttpTransport,
     IntegrationOAuthProviderAdapterRegistry,
     IntegrationOAuthProviderService,
+    IntegrationOAuthLifecycleService,
+    IntegrationOAuthMaintenanceService,
     IntegrationCredentialProbeRegistry,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
@@ -101,6 +105,8 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationOAuthCoreService,
     IntegrationOAuthProviderAdapterRegistry,
     IntegrationOAuthProviderService,
+    IntegrationOAuthLifecycleService,
+    IntegrationOAuthMaintenanceService,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
     IntegrationCredentialProbeRegistry,

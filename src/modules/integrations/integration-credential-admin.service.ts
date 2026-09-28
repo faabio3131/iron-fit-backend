@@ -30,6 +30,7 @@ import {
   RotateIntegrationCredentialDto,
 } from './dto/integration-credential-admin.dto';
 import { IntegrationCredentialProbeRegistry } from './provider-credential-probe.registry';
+import { IntegrationOAuthLifecycleService } from './integration-oauth-lifecycle.service';
 import { IntegrationProviderRegistry } from './provider-registry.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
 import {
@@ -105,6 +106,7 @@ export class IntegrationCredentialAdminService {
     private readonly probes: IntegrationCredentialProbeRegistry,
     @Inject(INTEGRATION_SECRET_VAULT)
     private readonly vault: IntegrationSecretVaultPort,
+    private readonly oauthLifecycle: IntegrationOAuthLifecycleService,
   ) {}
 
   private async stepUp(userId: string, input: StepUpInput) {
@@ -654,6 +656,17 @@ export class IntegrationCredentialAdminService {
     );
     if (!connection.secretReference) {
       throw new ConflictException('Conexao sem credencial para revogacao');
+    }
+
+    if (
+      connection.authModel === 'OAUTH2' &&
+      connection.scope === IntegrationScope.TENANT
+    ) {
+      return this.oauthLifecycle.disconnect(
+        connection,
+        userId,
+        where.gymId,
+      );
     }
 
     const reference = connection.secretReference;

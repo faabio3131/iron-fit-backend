@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -16,26 +17,14 @@ import {
 import { IntegrationOAuthCoreService } from './integration-oauth-core.service';
 import {
   IntegrationOAuthProviderAdapterRegistry,
-  OAuthTokenSet,
   parseOAuthAppPublicConfiguration,
 } from './integration-oauth-provider-adapters';
+import { serializeOAuthTokenBundle } from './integration-oauth-token-bundle';
 import {
   INTEGRATION_SECRET_VAULT,
   IntegrationSecretValue,
   IntegrationSecretVaultPort,
 } from './secrets/integration-secret-vault.port';
-import { Inject } from '@nestjs/common';
-
-type OAuthVaultBundle = {
-  schemaVersion: 1;
-  providerCode: string;
-  accessToken: string;
-  refreshToken: string | null;
-  tokenType: string | null;
-  grantedScopes: string[];
-  issuedAt: string;
-  accessExpiresAt: string | null;
-};
 
 function minDate(left: Date | null, right: Date | null): Date | null {
   if (!left) return right;
@@ -43,23 +32,6 @@ function minDate(left: Date | null, right: Date | null): Date | null {
   return left <= right ? left : right;
 }
 
-function serializeTokenBundle(
-  providerCode: string,
-  tokenSet: OAuthTokenSet,
-  issuedAt: Date,
-): string {
-  const bundle: OAuthVaultBundle = {
-    schemaVersion: 1,
-    providerCode,
-    accessToken: tokenSet.accessToken.reveal(),
-    refreshToken: tokenSet.refreshToken?.reveal() ?? null,
-    tokenType: tokenSet.tokenType,
-    grantedScopes: [...tokenSet.grantedScopes],
-    issuedAt: issuedAt.toISOString(),
-    accessExpiresAt: tokenSet.accessExpiresAt?.toISOString() ?? null,
-  };
-  return JSON.stringify(bundle);
-}
 
 @Injectable()
 export class IntegrationOAuthProviderService {
@@ -202,7 +174,7 @@ export class IntegrationOAuthProviderService {
       try {
         physical = await this.vault.putSecret({
           reference: newReference,
-          value: serializeTokenBundle(providerCode, tokenSet, issuedAt),
+          value: serializeOAuthTokenBundle(providerCode, tokenSet, issuedAt),
         });
       } catch (error) {
         if (adapter.revoke) {
