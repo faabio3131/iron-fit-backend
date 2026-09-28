@@ -16,6 +16,17 @@ function auditMock() {
   };
 }
 
+function entitlementsMock(limit = 15) {
+  return {
+    resolveFeature: async () => ({
+      featureKey: 'commercial.trial_students_max',
+      kind: 'LIMIT',
+      value: limit,
+      source: 'PLAN_ENTITLEMENT',
+    }),
+  };
+}
+
 test('student service no longer contains the fixed aluno123 credential', async () => {
   const source = await readFile('src/modules/students/students.service.ts', 'utf8');
   assert.equal(source.includes("bcrypt.hash('aluno123'"), false);
@@ -69,10 +80,11 @@ test('existing active user is reused instead of creating a duplicate User', asyn
     student: { findFirst: async () => null },
     user: { findUnique: async () => existingUser },
     role: { findUnique: async () => studentRole() },
+    commercialTrialProvisioning: { findFirst: async () => null },
     $transaction: async (callback) => callback(tx),
   };
 
-  const service = new StudentsService(prisma, auditMock());
+  const service = new StudentsService(prisma, auditMock(), entitlementsMock());
   const result = await service.create(
     { name: 'Outro Nome', email: existingUser.email },
     'gym-a',
@@ -133,6 +145,7 @@ test('new student receives a random one-time onboarding token and starts inactiv
     student: { findFirst: async () => null },
     user: { findUnique: async () => null },
     role: { findUnique: async () => studentRole() },
+    commercialTrialProvisioning: { findFirst: async () => null },
     $transaction: async (callback) => callback(tx),
   };
 
@@ -152,7 +165,7 @@ test('new student receives a random one-time onboarding token and starts inactiv
 });
 
 test('cross-tenant gymId in student payload is rejected', async () => {
-  const service = new StudentsService({}, auditMock());
+  const service = new StudentsService({}, auditMock(), entitlementsMock());
 
   await assert.rejects(
     () => service.create({ gymId: 'gym-b', name: 'A', email: 'a@b.com' }, 'gym-a'),
@@ -164,10 +177,102 @@ test('invalid or already-used onboarding token is rejected', async () => {
   const prisma = {
     session: { findFirst: async () => null },
   };
-  const service = new StudentsService(prisma, auditMock());
+  const service = new StudentsService(prisma, auditMock(), entitlementsMock());
 
   await assert.rejects(
     () => service.acceptInvite({ token: 'x'.repeat(43), password: 'SenhaNova123!' }),
     /Convite invalido ou expirado/,
   );
+});
+
+
+test('trial student cap blocks the 16th non-canceled student', async () => {
+  let transactionCalls = 0;
+  const prisma = {
+    gym: { findFirst: async () => ({ id: 'gym-a', active: true }) },
+    student: { findFirst: async () => null },
+    user: { findUnique: async () => null },
+    role: { findUnique: async () => studentRole() },
+    commercialTrialProvisioning: {
+      findFirst: async () => ({
+        subscriptionId: 'subscription-trial',
+      }),
+    },
+    tenantProductSubscription: {
+      findFirst: async () => ({ id: 'subscription-trial' }),
+    },
+    $transaction: async (callback, options) => {
+      transactionCalls += 1;
+      assert.equal(options.isolationLevel, 'Serializable');
+      return callback({
+        student: {
+          count: async () => 15,
+        },
+      });
+    },
+  };
+
+  const service = new StudentsService(prisma, auditMock(), entitlementsMock(15));
+  await assert.rejects(
+    () =>
+      service.create(
+        { name: 'Aluno 16', email: 'aluno16@example.com' },
+        'gym-a',
+        'owner-a',
+      ),
+    /Trial limitado a 15 alunos/,
+  );
+  assert.equal(transactionCalls, 1);
+});
+
+test('paid/non-trial tenant does not receive the trial-only student cap', async () => {
+  const existingUser = {
+    id: 'user-paid',
+    email: 'paid@example.com',
+    name: 'Paid Student',
+    phone: null,
+    active: true,
+  };
+  const tx = {
+    userRole: {
+      findFirst: async () => ({ id: 'existing-role' }),
+      create: async () => {
+        throw new Error('MUST_NOT_CREATE_ROLE');
+      },
+    },
+    student: {
+      create: async ({ data }) => ({
+        id: 'student-paid',
+        ...data,
+        status: 'ACTIVE',
+        enrollmentDate: new Date('2026-09-28T00:00:00Z'),
+        user: existingUser,
+      }),
+    },
+    session: {
+      updateMany: async () => ({ count: 0 }),
+      create: async () => {
+        throw new Error('MUST_NOT_CREATE_SESSION');
+      },
+    },
+  };
+  const prisma = {
+    gym: { findFirst: async () => ({ id: 'gym-a', active: true }) },
+    student: { findFirst: async () => null },
+    user: { findUnique: async () => existingUser },
+    role: { findUnique: async () => studentRole() },
+    commercialTrialProvisioning: { findFirst: async () => null },
+    $transaction: async (callback, options) => {
+      assert.equal(options.isolationLevel, 'Serializable');
+      return callback(tx);
+    },
+  };
+
+  const service = new StudentsService(prisma, auditMock(), entitlementsMock(15));
+  const result = await service.create(
+    { name: existingUser.name, email: existingUser.email },
+    'gym-a',
+    'owner-a',
+  );
+  assert.equal(result.id, 'student-paid');
 });
