@@ -65,7 +65,7 @@ test('webhook/payment replay and checkout have physical idempotency authorities'
   assert.match(schema, /@@unique\(\[providerCode, providerPaymentRef\]\)/);
   assert.match(schema, /requestId\s+String\s+@unique/);
   assert.match(controller, /x-saas-billing-signature/);
-  assert.match(service, /verifyWebhook\(dto, signature\)/);
+  assert.match(service, /verifyWebhook\(dto, signature(?:, provider\.context)?\)/);
   assert.match(service, /Webhook eventId reutilizado com payload diferente/);
 });
 
