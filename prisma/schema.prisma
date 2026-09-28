@@ -224,6 +224,7 @@ model User {
   auditLogs    AuditLog[]
   productPreferences UserProductPreference[]
   commercialOnboardingCheckpoints CommercialOnboardingCheckpoint[]
+  dataSubjectRequests DataSubjectRequest[]
   equipmentCandidatesSubmitted EquipmentCatalogCandidate[] @relation("EquipmentCandidateSubmittedBy")
   equipmentCandidatesReviewed  EquipmentCatalogCandidate[] @relation("EquipmentCandidateReviewedBy")
 }
@@ -425,6 +426,7 @@ model Gym {
   communicationMessages CommunicationMessage[]
   aggregatorConnections AggregatorProviderConnection[]
   commercialOnboardingCheckpoints CommercialOnboardingCheckpoint[]
+  dataSubjectRequests DataSubjectRequest[]
   @@index([slug])
 }
 
@@ -454,6 +456,44 @@ model Student {
   communicationPreference CommunicationPreference?
   aggregatorMembers AggregatorMember[]
   @@index([gymId])
+}
+
+enum DataSubjectRequestType {
+  TREATMENT_CONFIRMATION
+  ACCESS
+  CORRECTION
+  PORTABILITY
+  DELETION
+  OBJECTION
+  CONSENT_REVOCATION
+}
+
+enum DataSubjectRequestStatus {
+  RECEIVED
+  IDENTITY_VERIFICATION
+  IN_REVIEW
+  FULFILLED
+  DENIED
+  CANCELLED
+}
+
+model DataSubjectRequest {
+  id                 String                   @id @default(uuid())
+  requestId          String                   @unique
+  gymId              String
+  subjectUserId      String
+  requestType        DataSubjectRequestType
+  status             DataSubjectRequestStatus @default(RECEIVED)
+  identityVerifiedAt DateTime?
+  resolutionCode     String?
+  resolvedAt         DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  gym                Gym                      @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  subjectUser        User                     @relation(fields: [subjectUserId], references: [id], onDelete: Restrict)
+
+  @@index([gymId, status, createdAt])
+  @@index([subjectUserId, createdAt])
 }
 
 model Assessment {
