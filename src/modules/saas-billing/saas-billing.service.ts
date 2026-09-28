@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -24,10 +25,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CommercialLaunchService } from '../commercial-launch/commercial-launch.service';
 import { TenantProductSubscriptionLifecycleService } from '../product-entitlements/tenant-product-subscription-lifecycle.service';
 import { InternalSandboxBillingAdapter } from './adapters/internal-sandbox-billing.adapter';
+import { billingPayloadHash } from './contracts/saas-billing-provider.port';
 import {
-  billingPayloadHash,
-  SaasBillingProviderPort,
-} from './contracts/saas-billing-provider.port';
+  ResolvedSaasBillingProvider,
+  SaasBillingProviderConnectionService,
+} from './saas-billing-provider-connection.service';
 import {
   BillingWebhookDto,
   CancelSaasBillingDto,
@@ -52,6 +54,8 @@ export class SaasBillingService {
     private readonly audit: AuditService,
     private readonly lifecycle: TenantProductSubscriptionLifecycleService,
     private readonly sandbox: InternalSandboxBillingAdapter,
+    @Optional()
+    private readonly providerConnections?: SaasBillingProviderConnectionService,
   ) {}
 
   private async serializable<T>(
@@ -79,14 +83,25 @@ export class SaasBillingService {
     return gymId;
   }
 
-  private provider(expectedCode?: string): SaasBillingProviderPort {
+  private async provider(
+    expectedCode?: string,
+  ): Promise<ResolvedSaasBillingProvider> {
+    if (this.providerConnections) {
+      return this.providerConnections.resolve(expectedCode);
+    }
+
+    // Backward-compatible internal test fallback. Production/runtime wiring
+    // always injects SaasBillingProviderConnectionService.
     const configured = this.config.get<string>('SAAS_BILLING_PROVIDER')?.trim();
     if (!configured) {
       throw new ServiceUnavailableException(
         'Provider SaaS billing nao configurado/homologado',
       );
     }
-    if (expectedCode && expectedCode !== configured) {
+    if (
+      expectedCode &&
+      expectedCode.toLowerCase() !== configured.toLowerCase()
+    ) {
       throw new BadRequestException('Provider SaaS billing nao autorizado');
     }
     if (configured !== this.sandbox.code) {
@@ -95,7 +110,17 @@ export class SaasBillingService {
       );
     }
     this.sandbox.assertAvailable();
-    return this.sandbox;
+    return {
+      code: this.sandbox.code,
+      adapter: this.sandbox,
+      context: {
+        connectionId: null,
+        publicConfiguration: null,
+        credential: null,
+      },
+      connectionId: null,
+      sandboxOnly: true,
+    };
   }
 
   private async approvedCommercialPolicy() {
@@ -288,7 +313,7 @@ export class SaasBillingService {
     dto: CreateSaasCheckoutDto,
     amountOverride?: number,
   ) {
-    const provider = this.provider();
+    const provider = await this.provider();
 
     const prepared = await this.serializable(async (tx) => {
       const replay = await tx.saasCheckoutSession.findUnique({
@@ -392,18 +417,18 @@ export class SaasBillingService {
         ...prepared.checkout,
         idempotent: true,
         checkoutUrl: prepared.checkout.checkoutUrl ?? null,
-        sandboxOnly: prepared.checkout.providerCode === this.sandbox.code,
+        sandboxOnly: provider.sandboxOnly,
       };
     }
 
-    const providerResult = await provider.createCheckout({
+    const providerResult = await provider.adapter.createCheckout({
       requestId: prepared.checkout.requestId,
       gymId,
       agreementId: prepared.checkout.agreementId,
       priceCode: prepared.checkout.price.priceCode,
       amountMinor: prepared.checkout.amountMinor,
       currency: prepared.checkout.currency,
-    });
+    }, provider.context);
 
     return this.serializable(async (tx) => {
       const current = await tx.saasCheckoutSession.findUnique({
@@ -1128,8 +1153,8 @@ export class SaasBillingService {
     signature: string | undefined,
     dto: BillingWebhookDto,
   ) {
-    const provider = this.provider(providerCode);
-    provider.verifyWebhook(dto, signature);
+    const provider = await this.provider(providerCode);
+    provider.adapter.verifyWebhook(dto, signature, provider.context);
     const payloadHash = billingPayloadHash(dto);
 
     const previous = await this.prisma.saasWebhookEvent.findUnique({
@@ -1485,13 +1510,13 @@ export class SaasBillingService {
       throw new ConflictException('Refund excede valor pago do invoice SaaS');
     }
 
-    const providerResult = await provider.requestRefund({
+    const providerResult = await provider.adapter.requestRefund({
       requestId: dto.requestId,
       providerPaymentRef: payment.providerPaymentRef,
       amountMinor: dto.amountMinor,
       currency: payment.currency,
       reason: dto.reason,
-    });
+    }, provider.context);
 
     return this.serializable(async (tx) => {
       const existing = await tx.saasRefund.findUnique({
