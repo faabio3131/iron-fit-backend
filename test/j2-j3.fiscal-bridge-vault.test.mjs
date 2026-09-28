@@ -18,6 +18,11 @@ const {
   '../dist/src/modules/financial/fiscal-bridge-dispatch.service.js',
 );
 const {
+  FiscalScopeBindingService,
+} = require(
+  '../dist/src/modules/financial/fiscal-scope-binding.service.js',
+);
+const {
   IntegrationSecretValue,
 } = require(
   '../dist/src/modules/integrations/secrets/integration-secret-vault.port.js',
@@ -172,6 +177,73 @@ function fixture({
 
   return { service, writes, audits, posts };
 }
+
+test('J2 fiscal scope binding is tenant-derived, environment-scoped and step-up governed', async () => {
+  const calls = {
+    stepUp: [],
+    upserts: [],
+    audits: [],
+  };
+  let current = null;
+  const service = new FiscalScopeBindingService(
+    {
+      fiscalScopeBinding: {
+        findUnique: async () => current,
+        upsert: async ({ create, update }) => {
+          calls.upserts.push({ create, update });
+          current = {
+            id: 'binding-a',
+            ...create,
+            ...update,
+            updatedAt: new Date('2026-09-28T13:00:00.000Z'),
+          };
+          return current;
+        },
+      },
+    },
+    { current: () => 'HOMOLOG' },
+    {
+      assertStepUp: async (...args) => {
+        calls.stepUp.push(args);
+      },
+    },
+    {
+      record: async (record) => {
+        calls.audits.push(record);
+      },
+    },
+  );
+
+  const result = await service.upsert(
+    'gym-a',
+    'owner-a',
+    {
+      externalTenantId: ' fiscal-tenant-a ',
+      externalUnitId: ' fiscal-unit-a ',
+      currentPassword: 'OwnerPassword123!',
+    },
+  );
+
+  assert.equal(calls.stepUp.length, 1);
+  assert.equal(calls.stepUp[0][0], 'owner-a');
+  assert.equal(calls.upserts[0].create.gymId, 'gym-a');
+  assert.equal(calls.upserts[0].create.environment, 'HOMOLOG');
+  assert.equal(
+    calls.upserts[0].create.externalTenantId,
+    'fiscal-tenant-a',
+  );
+  assert.equal(
+    calls.upserts[0].create.externalUnitId,
+    'fiscal-unit-a',
+  );
+  assert.equal(result.gymId, 'gym-a');
+  assert.equal(result.environment, 'HOMOLOG');
+  assert.equal(calls.audits[0].gymId, 'gym-a');
+  assert.equal(
+    calls.audits[0].action,
+    'FISCAL_SCOPE_BINDING_CREATED',
+  );
+});
 
 test('J2/J3 parses only HTTPS FM Fiscal public configuration with non-secret workload id', () => {
   const parsed = parseFiscalBridgePublicConfiguration({
