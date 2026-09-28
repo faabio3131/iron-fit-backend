@@ -377,10 +377,11 @@ export class FiscalBridgeDispatchService {
         });
       if (readyUpdate.count !== 1) return false;
 
+      const issuanceRequest = this.issuancePayload(row);
       issuanceStarted = true;
       const issuancePayload = await this.http.post(
         '/v1/issuances',
-        this.issuancePayload(row),
+        issuanceRequest,
         resolved.context,
         correlationId,
         row.idempotencyKey,
