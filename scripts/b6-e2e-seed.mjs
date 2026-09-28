@@ -83,6 +83,26 @@ async function main() {
   }
 
   const trial = await ensurePlan('IRON_B6_TRIAL', 'IRON B6 Trial');
+  await prisma.productPlanEntitlement.upsert({
+    where: {
+      planVersionId_featureKey: {
+        planVersionId: trial.version.id,
+        featureKey: 'commercial.trial_students_max',
+      },
+    },
+    update: {
+      kind: 'LIMIT',
+      featureEnabled: null,
+      limitValue: 15,
+      policyValues: null,
+    },
+    create: {
+      planVersionId: trial.version.id,
+      featureKey: 'commercial.trial_students_max',
+      kind: 'LIMIT',
+      limitValue: 15,
+    },
+  });
   const basic = await ensurePlan('IRON_B6_BASIC', 'IRON B6 Basic');
   const pro = await ensurePlan('IRON_B6_PRO', 'IRON B6 Pro');
 
