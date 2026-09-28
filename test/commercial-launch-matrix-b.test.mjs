@@ -192,6 +192,9 @@ test('B Launch Matrix requires mandatory launch surfaces but leaves optional dec
     'provider.wellhub',
     'provider.totalpass',
     'channel.meta',
+    'channel.facebook',
+    'channel.instagram',
+    'channel.whatsapp',
     'channel.google',
   ]) {
     assert.equal(byKey.get(key)?.requiredDecision, undefined);
@@ -205,6 +208,19 @@ test('B Launch Matrix requires mandatory launch surfaces but leaves optional dec
     byKey.get('creator.tenant_private')?.expectedFeatureKey,
     'content.tenant_private',
   );
+});
+
+test('B Launch Matrix keeps each Meta ecosystem channel as an explicit launch decision', () => {
+  const byKey = new Map(requiredItems().map((item) => [item.itemKey, item]));
+  for (const key of [
+    'channel.meta',
+    'channel.facebook',
+    'channel.instagram',
+    'channel.whatsapp',
+  ]) {
+    assert.equal(byKey.get(key)?.kind, 'CHANNEL');
+    assert.equal(byKey.get(key)?.requiredDecision, undefined);
+  }
 });
 
 test('B Launch Matrix approval fails when a required human decision is missing', async () => {
