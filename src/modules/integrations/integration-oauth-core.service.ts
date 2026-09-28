@@ -436,7 +436,7 @@ export class IntegrationOAuthCoreService {
         );
 
         return { connection, attempt };
-      });
+      }, { isolationLevel: 'Serializable' });
 
       const authorizationUrl = new URL(configuration.authorizationEndpoint);
       for (const [key, value] of Object.entries(
