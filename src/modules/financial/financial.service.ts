@@ -6,7 +6,7 @@ import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CreateChargeDto } from './dto/create-charge.dto';
 import { PayChargeDto } from './dto/pay-charge.dto';
-import { buildIronFiscalHandoff } from './iron-fiscal-handoff';
+import { materializeIronFiscalHandoff } from './fiscal-handoff.persistence';
 
 const MAX_SERIALIZABLE_RETRIES = 3;
 
@@ -219,7 +219,7 @@ export class FinancialService {
             if (!existingTransaction) {
               throw new BadRequestException('Cobranca paga sem transacao financeira correspondente');
             }
-            const fiscalHandoff = buildIronFiscalHandoff({
+            const materialized = await materializeIronFiscalHandoff(tx, {
               gymId,
               chargeId: charge.id,
               transactionId: existingTransaction.id,
@@ -232,7 +232,8 @@ export class FinancialService {
             return {
               charge,
               transaction: existingTransaction,
-              fiscalHandoff,
+              fiscalHandoff: materialized.contract,
+              fiscalHandoffRecordId: materialized.record.id,
               idempotent: true,
             };
           }
@@ -260,7 +261,7 @@ export class FinancialService {
               where: { gymId, source: 'charge', sourceId: charge.id },
             });
             if (concurrentCharge?.status === 'PAID' && concurrentTransaction) {
-              const fiscalHandoff = buildIronFiscalHandoff({
+              const materialized = await materializeIronFiscalHandoff(tx, {
                 gymId,
                 chargeId: concurrentCharge.id,
                 transactionId: concurrentTransaction.id,
@@ -273,7 +274,8 @@ export class FinancialService {
               return {
                 charge: concurrentCharge,
                 transaction: concurrentTransaction,
-                fiscalHandoff,
+                fiscalHandoff: materialized.contract,
+                fiscalHandoffRecordId: materialized.record.id,
                 idempotent: true,
               };
             }
@@ -297,7 +299,7 @@ export class FinancialService {
           });
 
           const updatedCharge = await tx.charge.findUnique({ where: { id: charge.id } });
-          const fiscalHandoff = buildIronFiscalHandoff({
+          const materialized = await materializeIronFiscalHandoff(tx, {
             gymId,
             chargeId: charge.id,
             transactionId: transaction.id,
@@ -305,8 +307,12 @@ export class FinancialService {
             subscriptionId: charge.subscriptionId,
             amount: transaction.amount,
             paidAt: updatedCharge?.paidAt ?? paidAt,
-            paymentMethod: updatedCharge?.paymentMethod ?? dto.paymentMethod ?? charge.paymentMethod,
+            paymentMethod:
+              updatedCharge?.paymentMethod ??
+              dto.paymentMethod ??
+              charge.paymentMethod,
           });
+          const fiscalHandoff = materialized.contract;
 
           await this.audit.record({
             gymId,
@@ -327,6 +333,7 @@ export class FinancialService {
               accountId: account.id,
               amount: transaction.amount,
               fiscalHandoff,
+              fiscalHandoffRecordId: materialized.record.id,
             },
           }, tx);
 
@@ -336,13 +343,17 @@ export class FinancialService {
             action: 'FISCAL_HANDOFF_PENDING_CAPABILITY',
             entity: 'Charge',
             entityId: charge.id,
-            next: fiscalHandoff,
+            next: {
+              ...fiscalHandoff,
+              fiscalHandoffRecordId: materialized.record.id,
+            },
           }, tx);
 
           return {
             charge: updatedCharge,
             transaction,
             fiscalHandoff,
+            fiscalHandoffRecordId: materialized.record.id,
             idempotent: false,
           };
         },
