@@ -1,6 +1,6 @@
 # IRON — Macro I1/I5 — OAuth Core + Tenant Binding
 
-Status: **CANDIDATE — aguardando CI/PR/merge/post-merge**
+Status: **DONE — PR #92 mergeada na `main` em `f8faeb2aaa2af45c97d32d62f66c5b291a93fb57`; Quality Gate #645 PASS**
 
 ## Autoridade única
 
