@@ -35,7 +35,11 @@ test('I bootstraps Meta as one umbrella provider and Google as a separate OAuth 
   assert.equal(google.supportsOAuth, true);
   assert.equal(google.tenantEntitlementFeatureKey, 'integration.google');
 
-  assert.equal(registry.list().length, 2);
+  assert.equal(registry.list().length, 3);
+  const fiscal = registry.require('fm-fiscal-core');
+  assert.deepEqual(fiscal.capabilities, ['fiscal.bridge']);
+  assert.deepEqual(fiscal.authModels, ['ACCESS_TOKEN']);
+  assert.equal(fiscal.supportsOAuth, false);
   assert.equal(registry.list().some((p) => p.providerCode === 'facebook'), false);
   assert.equal(registry.list().some((p) => p.providerCode === 'instagram'), false);
   assert.equal(registry.list().some((p) => p.providerCode === 'whatsapp'), false);
