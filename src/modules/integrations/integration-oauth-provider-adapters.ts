@@ -125,6 +125,7 @@ type OAuthHttpResponse = {
   payload: Record<string, unknown>;
 };
 
+@Injectable()
 export class IntegrationOAuthHttpTransport {
   async postForm(
     endpoint: string,
