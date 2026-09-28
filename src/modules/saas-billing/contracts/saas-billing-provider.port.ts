@@ -1,4 +1,11 @@
 import { createHash } from 'node:crypto';
+import { IntegrationSecretValue } from '../../integrations/secrets/integration-secret-vault.port';
+
+export interface SaasBillingProviderContext {
+  connectionId: string | null;
+  publicConfiguration: unknown;
+  credential: IntegrationSecretValue | null;
+}
 
 export interface SaasCheckoutProviderInput {
   requestId: string;
@@ -30,10 +37,20 @@ export interface SaasRefundProviderResult {
 
 export interface SaasBillingProviderPort {
   readonly code: string;
-  assertAvailable(): void;
-  createCheckout(input: SaasCheckoutProviderInput): Promise<SaasCheckoutProviderResult>;
-  requestRefund(input: SaasRefundProviderInput): Promise<SaasRefundProviderResult>;
-  verifyWebhook(payload: unknown, signature?: string): void;
+  assertAvailable(context?: SaasBillingProviderContext): void;
+  createCheckout(
+    input: SaasCheckoutProviderInput,
+    context?: SaasBillingProviderContext,
+  ): Promise<SaasCheckoutProviderResult>;
+  requestRefund(
+    input: SaasRefundProviderInput,
+    context?: SaasBillingProviderContext,
+  ): Promise<SaasRefundProviderResult>;
+  verifyWebhook(
+    payload: unknown,
+    signature?: string,
+    context?: SaasBillingProviderContext,
+  ): void;
 }
 
 export function canonicalBillingPayload(value: unknown): string {
