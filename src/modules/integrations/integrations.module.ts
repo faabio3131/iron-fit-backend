@@ -16,6 +16,7 @@ import { IntegrationOAuthCallbackController } from './integration-oauth-callback
 import { IntegrationOAuthCoreService } from './integration-oauth-core.service';
 import { IntegrationOAuthAuthorizationService } from './integration-oauth-authorization.service';
 import { IntegrationOAuthTokenService } from './integration-oauth-token.service';
+import { IntegrationOAuthRefreshCoordinator } from './integration-oauth-refresh-coordinator.service';
 import {
   GoogleOAuthProviderAdapter,
   IntegrationOAuthProviderAdapterRegistry,
@@ -55,6 +56,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationOAuthCoreService,
     IntegrationOAuthAuthorizationService,
     IntegrationOAuthTokenService,
+    IntegrationOAuthRefreshCoordinator,
     IntegrationOAuthProviderAdapterRegistry,
     MetaOAuthProviderAdapter,
     GoogleOAuthProviderAdapter,
@@ -106,6 +108,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationProviderRegistry,
     IntegrationOAuthCoreService,
     IntegrationOAuthTokenService,
+    IntegrationOAuthRefreshCoordinator,
     IntegrationOAuthProviderAdapterRegistry,
     IntegrationConnectionService,
     IntegrationCredentialAdminService,
