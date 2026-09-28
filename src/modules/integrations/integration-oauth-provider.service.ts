@@ -21,6 +21,7 @@ import {
 } from './integration-oauth-provider-adapters';
 import {
   INTEGRATION_SECRET_VAULT,
+  IntegrationSecretValue,
   IntegrationSecretVaultPort,
 } from './secrets/integration-secret-vault.port';
 import { Inject } from '@nestjs/common';
@@ -185,9 +186,7 @@ export class IntegrationOAuthProviderService {
       );
       const tokenSet = await adapter.exchange({
         configuration,
-        clientSecret: new (
-          await import('./secrets/integration-secret-vault.port')
-        ).IntegrationSecretValue(appSecret.value),
+        clientSecret: new IntegrationSecretValue(appSecret.value),
         authorizationCode: claimed.authorizationCode,
         redirectUri: claimed.redirectUri,
         requestedScopes: claimed.scopes,
