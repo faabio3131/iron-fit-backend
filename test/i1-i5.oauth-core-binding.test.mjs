@@ -214,6 +214,7 @@ test('I5 callback claims canonical tenant/session context without accepting a fr
     {
       currentPassword: 'OwnerPassword123!',
       redirectUri: 'https://iron.example.com/api/v1/integrations/oauth/meta/callback',
+      capabilities: ['meta.whatsapp'],
     },
   );
   const state = new URL(started.authorizationUrl).searchParams.get('state');
@@ -240,6 +241,7 @@ test('I5 forged or replayed OAuth state fails closed', async () => {
     {
       currentPassword: 'OwnerPassword123!',
       redirectUri: 'https://iron.example.com/api/v1/integrations/oauth/meta/callback',
+      capabilities: ['meta.whatsapp'],
     },
   );
   const state = new URL(started.authorizationUrl).searchParams.get('state');
@@ -253,6 +255,60 @@ test('I5 forged or replayed OAuth state fails closed', async () => {
   await assert.rejects(
     () => fx.service.claimCallback('meta', state, 'code-b'),
     /callback invalido|ja consumido/,
+  );
+});
+
+test('I7 enforces explicit least-privilege capability selection and exact scoped union', async () => {
+  const fx = fixture();
+
+  await assert.rejects(
+    () =>
+      fx.service.startTenantAuthorization(
+        { userId: 'owner-a', sessionId: 'session-a', gymId: 'gym-a' },
+        'meta',
+        {
+          currentPassword: 'OwnerPassword123!',
+          redirectUri:
+            'https://iron.example.com/api/v1/integrations/oauth/meta/callback',
+        },
+      ),
+    /selecao explicita.*least privilege/,
+  );
+
+  const started = await fx.service.startTenantAuthorization(
+    { userId: 'owner-a', sessionId: 'session-a', gymId: 'gym-a' },
+    'meta',
+    {
+      currentPassword: 'OwnerPassword123!',
+      redirectUri:
+        'https://iron.example.com/api/v1/integrations/oauth/meta/callback',
+      capabilities: ['meta.whatsapp'],
+    },
+  );
+
+  const url = new URL(started.authorizationUrl);
+  assert.equal(url.searchParams.get('scope'), 'whatsapp.scope');
+  assert.deepEqual(started.capabilities, ['meta.whatsapp']);
+  assert.deepEqual(started.scopes, ['whatsapp.scope']);
+  assert.deepEqual(fx.getAttemptData().capabilities, ['meta.whatsapp']);
+  assert.deepEqual(fx.getAttemptData().scopes, ['whatsapp.scope']);
+
+  fx.appConnection.publicConfiguration.capabilityScopes['meta.whatsapp'] = [
+    'invalid scope with spaces',
+  ];
+  await assert.rejects(
+    () =>
+      fx.service.startTenantAuthorization(
+        { userId: 'owner-a', sessionId: 'session-a', gymId: 'gym-a' },
+        'meta',
+        {
+          currentPassword: 'OwnerPassword123!',
+          redirectUri:
+            'https://iron.example.com/api/v1/integrations/oauth/meta/callback',
+          capabilities: ['meta.whatsapp'],
+        },
+      ),
+    /scope OAuth invalido/,
   );
 });
 
