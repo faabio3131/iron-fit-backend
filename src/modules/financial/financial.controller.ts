@@ -6,6 +6,8 @@ import { CreateChargeDto } from './dto/create-charge.dto';
 import { PayChargeDto } from './dto/pay-charge.dto';
 import { CreateChargePaymentSessionDto } from './dto/create-charge-payment-session.dto';
 import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
+import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
+import { UpsertFiscalScopeBindingDto } from './dto/upsert-fiscal-scope-binding.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -18,6 +20,7 @@ export class FinancialController {
   constructor(
     private financialService: FinancialService,
     private tenantPaymentCheckout: TenantPaymentCheckoutService,
+    private fiscalScopeBinding: FiscalScopeBindingService,
   ) {}
 
   private resolveGymId(user: any, requestedGymId?: string) {
@@ -88,6 +91,31 @@ export class FinancialController {
       dto,
       this.resolveGymId(user, requestedGymId),
       user.id,
+    );
+  }
+
+  @Post('fiscal/scope-binding')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  upsertFiscalScopeBinding(
+    @Body() dto: UpsertFiscalScopeBindingDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.fiscalScopeBinding.upsert(
+      this.resolveGymId(user, requestedGymId),
+      user.id,
+      dto,
+    );
+  }
+
+  @Get('fiscal/scope-binding')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  getFiscalScopeBinding(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.fiscalScopeBinding.getSafe(
+      this.resolveGymId(user, requestedGymId),
     );
   }
 
