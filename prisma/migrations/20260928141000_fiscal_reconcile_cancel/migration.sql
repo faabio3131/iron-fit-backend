@@ -2,6 +2,7 @@
 
 ALTER TABLE "FiscalHandoff"
   ADD COLUMN "cancellationRequestId" TEXT,
+  ADD COLUMN "cancellationJustification" TEXT,
   ADD COLUMN "cancellationProtocolReference" TEXT,
   ADD COLUMN "cancellationRejectionCode" TEXT,
   ADD COLUMN "cancellationRejectionMessage" TEXT,
