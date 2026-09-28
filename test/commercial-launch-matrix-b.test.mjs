@@ -207,6 +207,19 @@ test('B Launch Matrix requires mandatory launch surfaces but leaves optional dec
   );
 });
 
+test('B Launch Matrix keeps Meta as one umbrella launch decision for its product ecosystem', () => {
+  const byKey = new Map(requiredItems().map((item) => [item.itemKey, item]));
+  assert.equal(byKey.get('channel.meta')?.kind, 'CHANNEL');
+  assert.equal(byKey.get('channel.meta')?.requiredDecision, undefined);
+  for (const duplicateKey of [
+    'channel.facebook',
+    'channel.instagram',
+    'channel.whatsapp',
+  ]) {
+    assert.equal(byKey.has(duplicateKey), false);
+  }
+});
+
 test('B Launch Matrix approval fails when a required human decision is missing', async () => {
   const matrix = baseMatrix({
     items: matrixItems({ 'mobile.android': 'UNDECIDED' }),
