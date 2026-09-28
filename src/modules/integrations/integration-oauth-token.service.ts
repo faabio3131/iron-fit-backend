@@ -172,6 +172,14 @@ export class IntegrationOAuthTokenService {
     }
   }
 
+  async cleanupEphemeralSecret(
+    connectionId: string,
+    secretReference: string | null | undefined,
+    reason: string,
+  ) {
+    await this.revokeOrQueue(connectionId, secretReference, reason);
+  }
+
   async completeAuthorization(
     claim: ClaimedOAuthCallback,
     bundle: OAuthTokenBundle,
