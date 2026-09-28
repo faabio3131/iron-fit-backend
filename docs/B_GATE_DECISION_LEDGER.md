@@ -60,9 +60,10 @@ Esses valores devem ser materializados por `ProductPlanVersion`, `ProductPlanEnt
 - `creator.tenant_private` → `OUT` na V1; tenant-owned storage permanece evolução futura;
 - `provider.wellhub` → `EXTERNAL_BLOCKER`; arquitetura Aggregator Hub preservada, homologação depende de parceiro/credenciais/evidência externa;
 - `provider.totalpass` → `EXTERNAL_BLOCKER`; arquitetura Aggregator Hub preservada, homologação depende de parceiro/credenciais/evidência externa;
-- `channel.google` → `LAUNCH`.
+- `channel.google` → `LAUNCH`;
+- `channel.meta` → `LAUNCH`, como autoridade guarda-chuva para o ecossistema Meta suportado na V1: **Facebook, Instagram e WhatsApp**.
 
-Google deve obedecer ao padrão mestre FM de configuração externa:
+Google e Meta devem obedecer ao padrão mestre FM de configuração externa:
 
 - novo cliente = configuração, nunca alteração de código;
 - OAuth/configuração por tenant;
@@ -79,15 +80,11 @@ Google deve obedecer ao padrão mestre FM de configuração externa:
 - integração pelo FM Fiscal Core / contrato universal já preparado;
 - homologação externa de provider/prefeitura/credenciais permanece separada e não pode ser inventada.
 
-## Decisões humanas ainda obrigatórias para fechar Gate B
+## Decisões humanas restantes
 
-Os itens abaixo permanecem pendentes até aprovação explícita:
+Não há mais decisão de capability/canal pendente entre os itens obrigatórios do escopo V1.
 
-| Item | Estado |
-|---|---|
-| `channel.meta` | UNDECIDED |
-
-As políticas de upgrade, downgrade, cancelamento e refund já possuem apenas opções suportadas pelo runtime atual; a matriz real ainda precisa selecioná-las e ser aprovada por SUPER_ADMIN + step-up.
+As políticas de upgrade, downgrade, cancelamento e refund já possuem apenas opções suportadas pelo runtime atual; a matriz real ainda precisa selecioná-las/materializá-las e ser aprovada por SUPER_ADMIN + step-up.
 
 ## Critério de fechamento
 
@@ -105,4 +102,4 @@ Gate B somente passa quando:
 
 **GATE B: OPEN / IN_PROGRESS**
 
-A autoridade técnica está implementada e certificada. Mobile, IA, política financeira, Creator V1, agregadores, Google e modelo fiscal já estão classificados. O fechamento depende da decisão comercial restante sobre Meta, das políticas comerciais ainda não selecionadas e da materialização/aprovação da matriz real.
+A autoridade técnica está implementada e certificada. Mobile, IA, política financeira, Creator V1, agregadores, Google, Meta (Facebook/Instagram/WhatsApp) e modelo fiscal já estão classificados. O fechamento depende da materialização das políticas/ofertas na matriz real e da aprovação governada por SUPER_ADMIN + step-up.
