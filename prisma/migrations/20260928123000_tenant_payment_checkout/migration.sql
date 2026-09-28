@@ -21,3 +21,8 @@ CREATE INDEX "Charge_gymId_status_idx"
 
 CREATE INDEX "Charge_gatewayConnectionId_status_idx"
   ON "Charge"("gatewayConnectionId", "status");
+
+ALTER TABLE "Charge"
+  ADD CONSTRAINT "Charge_gatewayConnectionId_fkey"
+  FOREIGN KEY ("gatewayConnectionId") REFERENCES "IntegrationConnection"("id")
+  ON DELETE SET NULL ON UPDATE CASCADE;
