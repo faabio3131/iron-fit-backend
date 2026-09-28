@@ -20,7 +20,7 @@ test('D runtime contract accepts explicit DEV without production-only infrastruc
   );
   const identity = assertRuntimeStartupConfiguration(base());
   assert.equal(identity.runtimeEnvironment, 'DEV');
-  assert.equal(identity.service, 'iron-fit-backend');
+  assert.equal(identity.service, 'gym-saas-backend');
 });
 
 test('D runtime contract rejects invalid/missing environment authority', () => {
