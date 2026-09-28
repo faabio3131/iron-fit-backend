@@ -1,6 +1,6 @@
 # IRON — Macro I4/I8 — OAuth Refresh Coordinator + Disconnect/Revoke
 
-Status: **CANDIDATE — engenharia interna implementada; aguardando CI/PR/merge. Homologacao fisica continua dependente de C Gate e providers reais.**
+Status: **DONE (engenharia interna) — PR #94 mergeada na `main` em `a116b39559990cfe2ff2413f4267228c99df302a`; Quality Gate #651 PASS. Homologacao fisica continua dependente de C Gate e providers reais.**
 
 ## I4 — Token Refresh Coordinator
 

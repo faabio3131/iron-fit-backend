@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -64,6 +65,7 @@ export class CommunicationService {
         title: dto.title,
         body: dto.body,
         status: 'QUEUED',
+        dispatchKey: randomUUID(),
       } as any,
     });
   }
