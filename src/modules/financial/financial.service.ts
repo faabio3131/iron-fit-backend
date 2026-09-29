@@ -7,6 +7,7 @@ import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CreateChargeDto } from './dto/create-charge.dto';
 import { PayChargeDto } from './dto/pay-charge.dto';
 import { materializeIronFiscalHandoff } from './fiscal-handoff.persistence';
+import { tenantChargeReadSelect } from './charge-read-model';
 
 const MAX_SERIALIZABLE_RETRIES = 3;
 
@@ -365,10 +366,7 @@ export class FinancialService {
   async findAllCharges(gymId: string) {
     return this.prisma.charge.findMany({
       where: { gymId },
-      include: {
-        student: { include: { user: true } },
-        subscription: true,
-      },
+      select: tenantChargeReadSelect,
       orderBy: { dueDate: 'desc' },
     });
   }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { tenantChargeReadSelect } from '../financial/charge-read-model';
 
 @Injectable()
 export class DashboardService {
@@ -143,7 +144,7 @@ export class DashboardService {
         dueDate: { lt: now },
         ...this.gymFilter(userGymId),
       },
-      include: { student: { include: { user: true } } },
+      select: tenantChargeReadSelect,
       orderBy: { dueDate: 'asc' },
       take: 20,
     });
