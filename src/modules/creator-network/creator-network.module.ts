@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
 import { ContentCatalogController } from './content-catalog.controller';
 import { ContentCatalogService } from './content-catalog.service';
@@ -23,7 +23,7 @@ import { RightsVaultController } from './rights-vault.controller';
 import { RightsVaultService } from './rights-vault.service';
 
 @Module({
-  imports: [ProductEntitlementsModule],
+  imports: [PrismaModule, ProductEntitlementsModule],
   controllers: [
     CreatorRegistryController,
     RightsVaultController,
@@ -46,7 +46,6 @@ import { RightsVaultService } from './rights-vault.service';
     CreatorOperationsConsoleService,
     CreatorAnalyticsService,
     CreatorMediaProviderRegistry,
-    PrismaService,
     AuditService,
   ],
   exports: [

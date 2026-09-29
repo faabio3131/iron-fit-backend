@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { ProductEntitlementsController } from './product-entitlements.controller';
 import { ProductCapabilitiesController } from './product-capabilities.controller';
 import { ProductCapabilityCatalogService } from './product-capability-catalog.service';
@@ -11,6 +11,7 @@ import { TenantProductSubscriptionLifecycleController } from './tenant-product-s
 import { TenantProductSubscriptionLifecycleService } from './tenant-product-subscription-lifecycle.service';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [
     ProductCapabilitiesController,
     ProductEntitlementsController,
@@ -22,7 +23,6 @@ import { TenantProductSubscriptionLifecycleService } from './tenant-product-subs
     ProductEntitlementsService,
     TenantProductEntitlementsService,
     TenantProductSubscriptionLifecycleService,
-    PrismaService,
     AuditService,
   ],
   exports: [

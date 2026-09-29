@@ -4,14 +4,14 @@ import {
   StudentsController,
 } from './students.controller';
 import { StudentsService } from './students.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditService } from '../../common/audit/audit.service';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
 
 @Module({
-  imports: [ProductEntitlementsModule],
+  imports: [PrismaModule, ProductEntitlementsModule],
   controllers: [StudentsController, StudentOnboardingController],
-  providers: [StudentsService, PrismaService, AuditService],
+  providers: [StudentsService, AuditService],
   exports: [StudentsService],
 })
 export class StudentsModule {}

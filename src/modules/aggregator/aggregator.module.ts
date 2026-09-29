@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditService } from '../../common/audit/audit.service';
 import { AggregatorAgreementsController } from './agreements/aggregator-agreements.controller';
 import { AggregatorAgreementsService } from './agreements/aggregator-agreements.service';
@@ -21,6 +21,7 @@ import { WellhubAdapterService } from './providers/wellhub/wellhub-adapter.servi
 import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter.service';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [
     AggregatorAgreementsController,
     AggregatorEligibilityController,
@@ -42,7 +43,6 @@ import { TotalPassAdapterService } from './providers/totalpass/totalpass-adapter
     AggregatorIntelligenceService,
     WellhubAdapterService,
     TotalPassAdapterService,
-    PrismaService,
     AuditService,
   ],
   exports: [

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CommunicationController } from './communication.controller';
 import { CommunicationService } from './communication.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditService } from '../../common/audit/audit.service';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import {
@@ -11,14 +11,13 @@ import {
 import { CommunicationDispatchService } from './communication-dispatch.service';
 
 @Module({
-  imports: [IntegrationsModule],
+  imports: [PrismaModule, IntegrationsModule],
   controllers: [CommunicationController],
   providers: [
     CommunicationService,
     CommunicationDispatchService,
     ExternalCommunicationAdapterRegistry,
     MetaWhatsAppCommunicationAdapter,
-    PrismaService,
     AuditService,
   ],
   exports: [CommunicationService, CommunicationDispatchService],
