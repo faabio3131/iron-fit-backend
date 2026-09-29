@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { CreatorNetworkModule } from '../creator-network/creator-network.module';
 import { EquipmentsModule } from '../equipments/equipments.module';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
@@ -23,6 +23,7 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
 
 @Module({
   imports: [
+    PrismaModule,
     ProductEntitlementsModule,
     EquipmentsModule,
     CreatorNetworkModule,
@@ -31,7 +32,6 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
   ],
   controllers: [AiController, AiWorkoutCandidateController],
   providers: [
-    PrismaService,
     AuditService,
     AiPersistenceService,
     AiSanitizerService,

@@ -28,10 +28,11 @@ import { SaasBillingModule } from './modules/saas-billing/saas-billing.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { TransactionalEmailModule } from './modules/transactional-email/transactional-email.module';
 import { PrivacyGovernanceModule } from './modules/privacy/privacy-governance.module';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
+    PrismaModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -62,7 +63,7 @@ import { PrismaService } from './prisma/prisma.service';
     PrivacyGovernanceModule,
   ],
   controllers: [HealthController, MetricsController],
-  providers: [PrismaService, RuntimeMetricsService, RequestObservabilityMiddleware],
+  providers: [RuntimeMetricsService, RequestObservabilityMiddleware],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

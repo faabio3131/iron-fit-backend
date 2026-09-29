@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../common/audit/audit.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
 import { IntegrationBreakGlassController } from './integration-break-glass.controller';
@@ -36,7 +36,7 @@ import { OciVaultConfigurationService } from './secrets/oci/oci-vault-configurat
 import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-integration-secret-vault.adapter';
 
 @Module({
-  imports: [AuthModule, ProductEntitlementsModule],
+  imports: [PrismaModule, AuthModule, ProductEntitlementsModule],
   controllers: [
     IntegrationCredentialTenantController,
     IntegrationCredentialGlobalController,
@@ -47,7 +47,6 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationBreakGlassController,
   ],
   providers: [
-    PrismaService,
     AuditService,
     IntegrationProviderRegistry,
     IntegrationProviderBootstrapService,
