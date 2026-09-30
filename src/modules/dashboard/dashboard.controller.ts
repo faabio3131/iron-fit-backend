@@ -13,7 +13,12 @@ export class DashboardController {
   @Get('summary')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   getSummary(@CurrentUser() user: any) {
-    return this.dashboardService.getSummary(user.gymId);
+    const includeRevenue = Array.isArray(user?.roles)
+      && user.roles.some((role: string) => ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(role));
+    return this.dashboardService.getSummary(
+      user.activeGymId ?? user.gymId,
+      { includeRevenue },
+    );
   }
 
   @Get('revenue')
