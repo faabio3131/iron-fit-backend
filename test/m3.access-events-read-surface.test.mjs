@@ -24,7 +24,7 @@ test('M3 access history exposes facts only and does not move physical authorizat
   const controller = await source('src/modules/access/access.controller.ts');
   const service = await source('src/modules/access/access.service.ts');
 
-  const history = service.slice(service.indexOf('async findRecentEvents'), service.indexOf('async createCredential'));
+  const history = service.slice(service.indexOf('async findRecentEvents'), service.indexOf('async findCredentials'));
   assert.match(history, /accessEvent\.findMany/);
   assert.equal(history.includes('accessEvent.create'), false);
   assert.equal(history.includes('allowed ='), false);
