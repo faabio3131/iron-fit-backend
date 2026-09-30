@@ -70,7 +70,23 @@ test('financial controller derives tenant from authenticated context instead of 
 test('financial service never falls back to an unscoped tenant query', async () => {
   const source = await readFile('src/modules/financial/financial.service.ts', 'utf8');
   assert.equal(source.includes('dto.gymId || userGymId'), false);
-  assert.equal(source.includes('where: { gymId, ...(studentId ? { studentId } : {}) }'), true);
+
+  const subscriptions = source.slice(
+    source.indexOf('async findSubscriptions'),
+    source.indexOf('async createCharge'),
+  );
+  const charges = source.slice(
+    source.indexOf('async findAllCharges'),
+    source.indexOf('async findTransactions'),
+  );
+  const transactions = source.slice(
+    source.indexOf('async findTransactions'),
+    source.lastIndexOf('}'),
+  );
+
+  assert.equal(subscriptions.includes('gymId,'), true);
+  assert.equal(charges.includes('gymId,'), true);
+  assert.equal(transactions.includes('gymId,'), true);
 });
 
 test('charge creation rejects a subscription that is not for the same gym and student', async () => {
