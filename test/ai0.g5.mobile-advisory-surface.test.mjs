@@ -39,6 +39,12 @@ test('AI0 G5 gates both capabilities by canonical policy before provider executi
   const chatExecution = service.indexOf("capability: 'ADVISORY_CHAT'", chatPolicy + 1);
   assert.ok(workoutPolicy >= 0 && workoutExecution > workoutPolicy);
   assert.ok(chatPolicy >= 0 && chatExecution > chatPolicy);
+  const contentPolicy = service.indexOf("capability: 'CONTENT_RECOMMENDATION'");
+  const contentExecution = service.indexOf(
+    "capability: 'CONTENT_RECOMMENDATION'",
+    contentPolicy + 1,
+  );
+  assert.ok(contentPolicy >= 0 && contentExecution > contentPolicy);
   assert.match(service, /this\.policy\.assertAllowed/);
   assert.match(service, /this\.execution\.execute/);
 });
