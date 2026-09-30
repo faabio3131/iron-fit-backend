@@ -297,14 +297,37 @@ export class SaasBillingService {
   async getCurrent(gymId?: string) {
     const scopedGymId = this.requireGymId(gymId);
     const agreement = await this.liveAgreement(this.prisma, scopedGymId);
-    if (!agreement) return { agreement: null, invoices: [] };
-    const invoices = await this.prisma.saasInvoice.findMany({
-      where: { agreementId: agreement.id },
-      orderBy: { createdAt: 'desc' },
-      take: 24,
-      include: { payments: true, refunds: true, price: true },
-    });
-    return { agreement, invoices };
+    if (!agreement) {
+      return { agreement: null, invoices: [], billingPolicy: null };
+    }
+
+    const [invoices, commercialPolicy] = await Promise.all([
+      this.prisma.saasInvoice.findMany({
+        where: { agreementId: agreement.id },
+        orderBy: { createdAt: 'desc' },
+        take: 24,
+        include: { payments: true, refunds: true, price: true },
+      }),
+      this.approvedCommercialPolicy(),
+    ]);
+
+    const dunningGraceDays = commercialPolicy.dunningGraceDays as number;
+    const gracePeriodEndsAt = agreement.pastDueSince
+      ? new Date(
+          agreement.pastDueSince.getTime() +
+            dunningGraceDays * DAY_MS,
+        )
+      : null;
+
+    return {
+      agreement,
+      invoices,
+      billingPolicy: {
+        invoiceDueDays: commercialPolicy.invoiceDueDays as number,
+        dunningGraceDays,
+        gracePeriodEndsAt,
+      },
+    };
   }
 
   private async prepareCheckout(
