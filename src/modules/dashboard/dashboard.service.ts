@@ -10,8 +10,8 @@ export class DashboardService {
     return userGymId ? { gymId: userGymId } : {};
   }
 
-  async getSummary(userGymId?: string, options: { includeRevenue?: boolean } = {}) {
-    const includeRevenue = options.includeRevenue !== false;
+  async getSummary(userGymId?: string, options: { includeFinancial?: boolean } = {}) {
+    const includeFinancial = options.includeFinancial !== false;
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -44,15 +44,19 @@ export class DashboardService {
     const activeStudents = await this.prisma.student.count({ where: activeStudentWhere });
     const totalEquipments = await this.prisma.equipment.count({ where: equipmentWhere });
 
-    const revenueThisMonth = includeRevenue
+    const revenueThisMonth = includeFinancial
       ? await this.prisma.financialTransaction.aggregate({
           where: revenueWhere,
           _sum: { amount: true },
         })
       : null;
 
-    const pendingCharges = await this.prisma.charge.count({ where: chargePendingWhere });
-    const overdueCharges = await this.prisma.charge.count({ where: chargeOverdueWhere });
+    const pendingCharges = includeFinancial
+      ? await this.prisma.charge.count({ where: chargePendingWhere })
+      : null;
+    const overdueCharges = includeFinancial
+      ? await this.prisma.charge.count({ where: chargeOverdueWhere })
+      : null;
     const totalWorkouts = await this.prisma.workout.count({ where: workoutWhere });
     const approvedWorkouts = await this.prisma.workout.count({ where: workoutApprovedWhere });
 
@@ -63,10 +67,12 @@ export class DashboardService {
         inactive: totalStudents - activeStudents,
       },
       equipments: { total: totalEquipments },
-      ...(includeRevenue
-        ? { revenue: { thisMonth: revenueThisMonth?._sum.amount || 0 } }
+      ...(includeFinancial
+        ? {
+            revenue: { thisMonth: revenueThisMonth?._sum.amount || 0 },
+            charges: { pending: pendingCharges ?? 0, overdue: overdueCharges ?? 0 },
+          }
         : {}),
-      charges: { pending: pendingCharges, overdue: overdueCharges },
       workouts: {
         total: totalWorkouts,
         approved: approvedWorkouts,
