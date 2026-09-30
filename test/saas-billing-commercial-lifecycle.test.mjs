@@ -28,7 +28,7 @@ test('pricing is PUBLISHED-plan-version based and tenant mutations cannot spoof 
   assert.match(service, /priceCode/);
   assert.equal(/if\s*\(\s*plan\s*===/.test(service), false);
   assert.match(controller, /user\?\.activeGymId \?\? user\?\.gymId/);
-  assert.match(controller, /@Roles\('OWNER', 'MANAGER'\)/);
+  assert.match(controller, /@Roles\('OWNER'\)/);
   assert.equal(dto.includes('gymId'), false);
 });
 

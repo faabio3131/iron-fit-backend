@@ -42,14 +42,14 @@ export class SaasBillingController {
 
   @Get('current')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('OWNER', 'MANAGER')
+  @Roles('OWNER')
   current(@CurrentUser() user: any) {
     return this.service.getCurrent(user?.activeGymId ?? user?.gymId);
   }
 
   @Post('checkout')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('OWNER', 'MANAGER')
+  @Roles('OWNER')
   checkout(
     @Body() dto: CreateSaasCheckoutDto,
     @CurrentUser() user: any,
@@ -63,7 +63,7 @@ export class SaasBillingController {
 
   @Post('change-plan')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('OWNER', 'MANAGER')
+  @Roles('OWNER')
   changePlan(
     @Body() dto: ChangeSaasPlanDto,
     @CurrentUser() user: any,
@@ -77,7 +77,7 @@ export class SaasBillingController {
 
   @Post('cancel')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('OWNER', 'MANAGER')
+  @Roles('OWNER')
   cancel(
     @Body() dto: CancelSaasBillingDto,
     @CurrentUser() user: any,

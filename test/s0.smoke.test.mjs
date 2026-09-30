@@ -34,7 +34,9 @@ test('workouts findAll scopes listing by authenticated gym when provided', async
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0].where, { student: { gymId: 'gym-a' } });
   assert.deepEqual(calls[0].orderBy, { createdAt: 'desc' });
-  assert.equal(calls[0].include.student.include.user, true);
+  assert.equal(calls[0].include.student.include.user.select.name, true);
+  assert.equal(calls[0].include.student.include.user.select.passwordHash, undefined);
+  assert.equal(calls[0].include.student.include.user.select.mfaSecret, undefined);
 });
 
 test('workouts findAll refuses an unscoped tenant context', async () => {
