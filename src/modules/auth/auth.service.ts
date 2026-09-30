@@ -44,6 +44,7 @@ export class AuthService {
   private userInclude() {
     return {
       userRoles: {
+        where: { active: true },
         include: {
           gym: { select: { id: true, name: true, active: true } },
           role: {

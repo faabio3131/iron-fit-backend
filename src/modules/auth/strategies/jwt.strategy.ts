@@ -42,6 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         where: { id: payload.sub },
         include: {
           userRoles: {
+            where: { active: true },
             include: {
               gym: {
                 select: {
