@@ -6,11 +6,12 @@ async function source(path) {
   return readFile(path, 'utf8');
 }
 
-test('AI0 G5 exposes only the two canonical POST mobile advisory endpoints', async () => {
+test('AI0 G5 exposes the canonical POST mobile advisory endpoints', async () => {
   const controller = await source('src/modules/ai/ai.controller.ts');
   assert.match(controller, /@Controller\('me\/ai'\)/);
   assert.match(controller, /@Post\('workout-insights'\)/);
   assert.match(controller, /@Post\('chat'\)/);
+  assert.match(controller, /@Post\('content-recommendations'\)/);
   assert.match(controller, /@UseGuards\(JwtAuthGuard, RolesGuard\)/);
   assert.match(controller, /@Roles\('STUDENT'\)/);
   assert.equal(controller.includes('@Get('), false);
@@ -31,7 +32,7 @@ test('AI0 G5 treats mobile context as non-authoritative and rebuilds canonical c
   assert.match(service, /this\.sanitizer\.sanitize/);
 });
 
-test('AI0 G5 gates both capabilities by canonical policy before provider execution', async () => {
+test('AI0 G5 gates all advisory capabilities by canonical policy before provider execution', async () => {
   const service = await source('src/modules/ai/ai-mobile-advisory.service.ts');
   const workoutPolicy = service.indexOf("capability: 'WORKOUT_INSIGHTS'");
   const workoutExecution = service.indexOf("capability: 'WORKOUT_INSIGHTS'", workoutPolicy + 1);
@@ -39,6 +40,12 @@ test('AI0 G5 gates both capabilities by canonical policy before provider executi
   const chatExecution = service.indexOf("capability: 'ADVISORY_CHAT'", chatPolicy + 1);
   assert.ok(workoutPolicy >= 0 && workoutExecution > workoutPolicy);
   assert.ok(chatPolicy >= 0 && chatExecution > chatPolicy);
+  const contentPolicy = service.indexOf("capability: 'CONTENT_RECOMMENDATION'");
+  const contentExecution = service.indexOf(
+    "capability: 'CONTENT_RECOMMENDATION'",
+    contentPolicy + 1,
+  );
+  assert.ok(contentPolicy >= 0 && contentExecution > contentPolicy);
   assert.match(service, /this\.policy\.assertAllowed/);
   assert.match(service, /this\.execution\.execute/);
 });

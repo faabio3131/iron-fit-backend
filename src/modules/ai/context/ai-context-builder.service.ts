@@ -18,6 +18,13 @@ export interface AiWorkoutGenerationContextRequest {
   includeHealthData?: boolean;
 }
 
+export interface AiContentRecommendationContextRequest {
+  gymId: string;
+  userId: string;
+  purpose: string;
+  exerciseIds?: readonly string[];
+}
+
 @Injectable()
 export class AiContextBuilderService {
   constructor(
@@ -200,6 +207,137 @@ export class AiContextBuilderService {
       equipment,
       health,
     });
+  }
+
+
+  async buildStudentContentRecommendationContext(
+    request: AiContentRecommendationContextRequest,
+  ) {
+    if (!request.gymId?.trim() || !request.userId?.trim()) {
+      throw new ForbiddenException(
+        'Recomendacao de conteudo exige tenant e aluno autenticados',
+      );
+    }
+
+    const student = await this.prisma.student.findFirst({
+      where: {
+        gymId: request.gymId,
+        userId: request.userId,
+        status: 'ACTIVE',
+      },
+      select: {
+        id: true,
+        workouts: {
+          where: {
+            status: { in: ['ACTIVE', 'APPROVED'] },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: {
+            id: true,
+            status: true,
+            sessions: {
+              orderBy: { order: 'asc' },
+              select: {
+                exercises: {
+                  orderBy: { order: 'asc' },
+                  select: {
+                    exercise: {
+                      select: {
+                        id: true,
+                        name: true,
+                        muscleGroup: true,
+                        movement: true,
+                        level: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!student) {
+      throw new NotFoundException('Aluno ativo nao encontrado no tenant');
+    }
+
+    const canonicalExercises = new Map<
+      string,
+      {
+        exerciseId: string;
+        name: string;
+        muscleGroup: string | null;
+        movement: string | null;
+        level: string | null;
+      }
+    >();
+    for (const workout of student.workouts) {
+      for (const session of workout.sessions) {
+        for (const item of session.exercises) {
+          canonicalExercises.set(item.exercise.id, {
+            exerciseId: item.exercise.id,
+            name: item.exercise.name,
+            muscleGroup: item.exercise.muscleGroup,
+            movement: item.exercise.movement,
+            level: item.exercise.level,
+          });
+        }
+      }
+    }
+
+    const requestedIds = request.exerciseIds?.length
+      ? [...new Set(request.exerciseIds)]
+      : null;
+    if (requestedIds) {
+      for (const exerciseId of requestedIds) {
+        if (!canonicalExercises.has(exerciseId)) {
+          throw new ForbiddenException(
+            'Exercicio solicitado nao pertence ao treino ativo/aprovado do aluno',
+          );
+        }
+      }
+    }
+
+    const selected = requestedIds
+      ? requestedIds.map((exerciseId) => canonicalExercises.get(exerciseId)!)
+      : [...canonicalExercises.values()];
+
+    const eligibleExercises: Array<{
+      exerciseId: string;
+      name: string;
+      muscleGroup: string | null;
+      movement: string | null;
+      level: string | null;
+      contentKind: string;
+      policyMode: string | null;
+    }> = [];
+
+    for (const exercise of selected.slice(0, 40)) {
+      const resolved = await this.resolveEligibleExerciseContent(
+        request.gymId,
+        exercise.exerciseId,
+        request.userId,
+        true,
+      );
+      if (resolved.kind === 'NONE') continue;
+      eligibleExercises.push({
+        ...exercise,
+        contentKind: resolved.kind,
+        policyMode: resolved.policyMode,
+      });
+    }
+
+    return {
+      modelContext: this.sanitizer.sanitize({
+        purpose: request.purpose,
+        studentId: student.id,
+        workoutIds: student.workouts.map((workout) => workout.id),
+        eligibleExercises,
+      }),
+      eligibleExercises,
+    };
   }
 
   async resolveEligibleExerciseContent(

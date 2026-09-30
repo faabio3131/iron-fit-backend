@@ -1,4 +1,18 @@
-import { IsIn, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class AiWorkoutInsightsDto {
   @IsIn(['workout_insights', 'evolution_projection'])
@@ -22,4 +36,20 @@ export class AiChatDto {
   @IsObject()
   @IsOptional()
   context?: Record<string, unknown>;
+}
+
+
+export class AiContentRecommendationDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(20)
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  exerciseIds?: string[];
+
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  @IsOptional()
+  limit?: number;
 }

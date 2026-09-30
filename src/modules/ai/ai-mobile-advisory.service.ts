@@ -6,7 +6,11 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { AiContextBuilderService } from './context/ai-context-builder.service';
-import { AiChatDto, AiWorkoutInsightsDto } from './dto/ai-mobile-advisory.dto';
+import {
+  AiChatDto,
+  AiContentRecommendationDto,
+  AiWorkoutInsightsDto,
+} from './dto/ai-mobile-advisory.dto';
 import { AiPolicyGuardService } from './policy/ai-policy-guard.service';
 import { AiProviderExecutionService } from './runtime/ai-provider-execution.service';
 import { AiSanitizerService } from './security/ai-sanitizer.service';
@@ -30,6 +34,10 @@ interface ChatOutput extends AiGovernedOutput {
   message?: unknown;
   reply?: unknown;
   answer?: unknown;
+}
+
+interface ContentRecommendationOutput extends AiGovernedOutput {
+  recommendations?: unknown;
 }
 
 @Injectable()
@@ -126,6 +134,103 @@ export class AiMobileAdvisoryService {
     return { message: this.requireText((output as ChatOutput).message ?? (output as ChatOutput).reply ?? (output as ChatOutput).answer) };
   }
 
+
+  async contentRecommendations(
+    user: AuthenticatedStudentIdentity,
+    dto: AiContentRecommendationDto,
+  ) {
+    const identity = this.resolveIdentity(user);
+    const purpose = 'content_recommendation';
+
+    await this.policy.assertAllowed({
+      gymId: identity.gymId,
+      userId: identity.userId,
+      capability: 'CONTENT_RECOMMENDATION',
+      purpose,
+      isStudent: true,
+    });
+
+    const canonical =
+      await this.contextBuilder.buildStudentContentRecommendationContext({
+        gymId: identity.gymId,
+        userId: identity.userId,
+        purpose,
+        exerciseIds: dto.exerciseIds,
+      });
+
+    if (canonical.eligibleExercises.length === 0) {
+      return {
+        recommendations: [],
+        advisory: true,
+        reason: 'NO_ELIGIBLE_CONTENT',
+      };
+    }
+
+    const limit = Math.min(
+      dto.limit ?? 5,
+      canonical.eligibleExercises.length,
+      10,
+    );
+    const response = await this.execution.execute<
+      unknown,
+      ContentRecommendationOutput
+    >({
+      capability: 'CONTENT_RECOMMENDATION',
+      prompt: {
+        promptKey: 'student.content_recommendation',
+        promptVersion: 1,
+      },
+      context: {
+        tenantId: identity.gymId,
+        actorId: identity.userId,
+        purpose,
+        requestId: randomUUID(),
+      },
+      input: this.sanitizer.sanitize({
+        limit,
+        context: canonical.modelContext,
+      }),
+    });
+
+    const output = await this.requireValidatedOutput(
+      identity.gymId,
+      identity.userId,
+      response,
+    );
+    const selected = this.normalizeContentRecommendations(
+      output as ContentRecommendationOutput,
+      canonical.eligibleExercises,
+      limit,
+    );
+
+    const recommendations: Array<{
+      exerciseId: string;
+      exerciseName: string;
+      reason: string;
+      content: Awaited<
+        ReturnType<AiContextBuilderService['resolveEligibleExerciseContent']>
+      >;
+    }> = [];
+    for (const recommendation of selected) {
+      const content = await this.contextBuilder.resolveEligibleExerciseContent(
+        identity.gymId,
+        recommendation.exerciseId,
+        identity.userId,
+        true,
+      );
+      if (content.kind === 'NONE') continue;
+      recommendations.push({
+        ...recommendation,
+        content,
+      });
+    }
+
+    return {
+      recommendations,
+      advisory: true,
+    };
+  }
+
   private resolveIdentity(user: AuthenticatedStudentIdentity) {
     const userId = user?.id?.trim();
     const gymId = (user?.activeGymId ?? user?.gymId)?.trim();
@@ -167,6 +272,65 @@ export class AiMobileAdvisoryService {
       });
     }
     return validation.output;
+  }
+
+
+  private normalizeContentRecommendations(
+    output: ContentRecommendationOutput,
+    eligibleExercises: readonly {
+      exerciseId: string;
+      name: string;
+    }[],
+    limit: number,
+  ) {
+    if (!Array.isArray(output.recommendations)) {
+      throw new BadGatewayException(
+        'Resposta AI de conteudo exige lista de recomendacoes',
+      );
+    }
+
+    const eligible = new Map(
+      eligibleExercises.map((exercise) => [exercise.exerciseId, exercise]),
+    );
+    const seen = new Set<string>();
+    const recommendations: Array<{
+      exerciseId: string;
+      exerciseName: string;
+      reason: string;
+    }> = [];
+
+    for (const value of output.recommendations) {
+      if (recommendations.length >= limit) break;
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new BadGatewayException(
+          'Resposta AI contem recomendacao de conteudo invalida',
+        );
+      }
+      const record = value as Record<string, unknown>;
+      const exerciseId = this.requireText(record.exerciseId);
+      const canonical = eligible.get(exerciseId);
+      if (!canonical) {
+        throw new BadGatewayException(
+          'Resposta AI referencia exercicio fora do contexto canonico',
+        );
+      }
+      if (seen.has(exerciseId)) continue;
+      seen.add(exerciseId);
+      recommendations.push({
+        exerciseId,
+        exerciseName: canonical.name,
+        reason: this.requireText(
+          record.reason ?? record.detail ?? record.description,
+        ),
+      });
+    }
+
+    if (recommendations.length === 0) {
+      throw new BadGatewayException(
+        'Resposta AI nao contem recomendacao de conteudo utilizavel',
+      );
+    }
+    return recommendations;
   }
 
   private normalizeWorkoutInsight(output: WorkoutInsightOutput) {
