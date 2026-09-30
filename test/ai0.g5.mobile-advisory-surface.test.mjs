@@ -6,7 +6,7 @@ async function source(path) {
   return readFile(path, 'utf8');
 }
 
-test('AI0 G5 exposes only the two canonical POST mobile advisory endpoints', async () => {
+test('AI0 G5 exposes the canonical POST mobile advisory endpoints', async () => {
   const controller = await source('src/modules/ai/ai.controller.ts');
   assert.match(controller, /@Controller\('me\/ai'\)/);
   assert.match(controller, /@Post\('workout-insights'\)/);
