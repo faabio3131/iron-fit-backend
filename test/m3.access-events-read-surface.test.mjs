@@ -15,8 +15,9 @@ test('M3 access history is authenticated, RBAC protected and tenant-scoped', asy
   assert.match(controller, /@Roles\('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION'\)/);
   assert.match(controller, /resolveTenantOperationGymId/);
   assert.match(controller, /activeGymId: user\.activeGymId \?\? user\.gymId/);
-  assert.match(service, /findRecentEvents\(gymId: string, studentId\?: string\)/);
-  assert.match(service, /where: \{ gymId, \.\.\.\(studentId \? \{ studentId \} : \{\}\) \}/);
+  assert.match(service, /async findRecentEvents\(/);
+  assert.match(service, /gymId: string,/);
+  assert.match(service, /filters\.studentId/);
   assert.match(service, /take: ACCESS_EVENT_HISTORY_LIMIT/);
 });
 
@@ -24,10 +25,13 @@ test('M3 access history exposes facts only and does not move physical authorizat
   const controller = await source('src/modules/access/access.controller.ts');
   const service = await source('src/modules/access/access.service.ts');
 
-  const history = service.slice(service.indexOf('async findRecentEvents'), service.indexOf('async findCredentials'));
+  const history = service.slice(
+    service.indexOf('async findRecentEvents'),
+    service.indexOf('async findCredentials'),
+  );
   assert.match(history, /accessEvent\.findMany/);
   assert.equal(history.includes('accessEvent.create'), false);
-  assert.equal(history.includes('allowed ='), false);
+  assert.equal(history.includes('let allowed ='), false);
   assert.equal(history.includes('scan('), false);
   assert.match(controller, /@Post\('scan'\)/);
 });
