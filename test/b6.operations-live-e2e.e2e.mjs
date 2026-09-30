@@ -207,6 +207,10 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
       active: true,
     },
   })).payload;
+  const bookingDate = plus(new Date(), DAY);
+  while (bookingDate.getUTCDay() !== slot.weekday) {
+    bookingDate.setUTCDate(bookingDate.getUTCDate() + 1);
+  }
   const booking = (await request('/schedules', {
     method: 'POST',
     token: reception.access_token,
@@ -214,7 +218,7 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
     body: {
       studentId: created.id,
       slotId: slot.id,
-      date: plus(new Date(), 2 * DAY).toISOString(),
+      date: bookingDate.toISOString(),
     },
   })).payload;
   await request(`/schedules/${booking.id}/check-in`, {
