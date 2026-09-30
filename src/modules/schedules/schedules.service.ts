@@ -16,6 +16,12 @@ export class SchedulesService {
       throw new NotFoundException('Academia nao encontrada');
     }
 
+    if (dto.startTime >= dto.endTime) {
+      throw new BadRequestException(
+        'Horario inicial deve ser anterior ao horario final',
+      );
+    }
+
     return this.prisma.scheduleSlot.create({
       data: {
         gymId,
@@ -144,6 +150,13 @@ export class SchedulesService {
 
             if (!slot) {
               throw new NotFoundException('Horario nao encontrado');
+            }
+
+            const calendarDate = new Date(`${dto.date.slice(0, 10)}T00:00:00.000Z`);
+            if (calendarDate.getUTCDay() !== slot.weekday) {
+              throw new BadRequestException(
+                'Data escolhida nao corresponde ao dia da semana do horario',
+              );
             }
 
             const existing = await tx.studentSchedule.findFirst({

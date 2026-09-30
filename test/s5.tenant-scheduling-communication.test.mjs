@@ -57,7 +57,7 @@ test('booking retries serialization conflicts and runs capacity decision at Seri
       findFirst: async ({ where }) => ({ id: where.id, gymId: where.gymId }),
     },
     scheduleSlot: {
-      findFirst: async ({ where }) => ({ id: where.id, gymId: where.gymId, capacity: 1, active: true }),
+      findFirst: async ({ where }) => ({ id: where.id, gymId: where.gymId, weekday: 5, capacity: 1, active: true }),
     },
     studentSchedule: {
       findFirst: async () => null,
@@ -102,7 +102,7 @@ test('booking validates both student and slot inside the same tenant transaction
     scheduleSlot: {
       findFirst: async (args) => {
         calls.slot = args;
-        return { id: 'slot-a', gymId: 'gym-a', capacity: 2, active: true };
+        return { id: 'slot-a', gymId: 'gym-a', weekday: 5, capacity: 2, active: true };
       },
     },
     studentSchedule: {
