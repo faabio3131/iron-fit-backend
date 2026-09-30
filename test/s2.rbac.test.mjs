@@ -8,6 +8,7 @@ const {
   resolveAssignmentGymId,
 } = require('../dist/src/common/security/rbac-policy.js');
 const { GymsService } = require('../dist/src/modules/gyms/gyms.service.js');
+const { UsersController } = require('../dist/src/modules/users/users.controller.js');
 
 test('OWNER cannot assign SUPER_ADMIN', () => {
   assert.equal(canAssignRole(['OWNER'], 'SUPER_ADMIN', false), false);
@@ -78,6 +79,17 @@ test('tenant administrator derives assignment gym from active tenant when dto om
       isSuperAdmin: false,
     }),
     'gym-a',
+  );
+});
+
+test('MANAGER can open tenant team workspace but controller keeps creation hierarchy in service policy', () => {
+  assert.deepEqual(
+    Reflect.getMetadata('roles', UsersController.prototype.findAll),
+    ['SUPER_ADMIN', 'OWNER', 'MANAGER'],
+  );
+  assert.deepEqual(
+    Reflect.getMetadata('roles', UsersController.prototype.create),
+    ['SUPER_ADMIN', 'OWNER', 'MANAGER'],
   );
 });
 
