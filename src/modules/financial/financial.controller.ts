@@ -12,12 +12,13 @@ import { CancelFiscalHandoffDto } from './dto/cancel-fiscal-handoff.dto';
 import { FiscalReconciliationCancellationService } from './fiscal-reconciliation-cancellation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { StepUpGuard } from '../auth/guards/step-up.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { resolveTenantOperationGymId } from '../../common/security/tenant-operation-scope';
 
 @Controller('financial')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
 export class FinancialController {
   constructor(
     private financialService: FinancialService,
