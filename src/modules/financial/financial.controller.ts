@@ -62,6 +62,19 @@ export class FinancialController {
     );
   }
 
+  @Get('subscriptions')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  findSubscriptions(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+    @Query('studentId') studentId?: string,
+  ) {
+    return this.financialService.findSubscriptions(
+      this.resolveGymId(user, requestedGymId),
+      studentId,
+    );
+  }
+
   @Post('charges')
   @Roles('SUPER_ADMIN', 'OWNER')
   createCharge(
@@ -78,8 +91,15 @@ export class FinancialController {
 
   @Get('charges')
   @Roles('SUPER_ADMIN', 'OWNER')
-  findAllCharges(@CurrentUser() user: any, @Query('gymId') requestedGymId?: string) {
-    return this.financialService.findAllCharges(this.resolveGymId(user, requestedGymId));
+  findAllCharges(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+    @Query('studentId') studentId?: string,
+  ) {
+    return this.financialService.findAllCharges(
+      this.resolveGymId(user, requestedGymId),
+      studentId,
+    );
   }
 
   @Post('charges/:id/payment-session')

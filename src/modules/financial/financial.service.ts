@@ -119,6 +119,14 @@ export class FinancialService {
     return subscription;
   }
 
+  async findSubscriptions(gymId: string, studentId?: string) {
+    return this.prisma.subscription.findMany({
+      where: { gymId, ...(studentId ? { studentId } : {}) },
+      include: { student: { include: { user: true } } },
+      orderBy: { startedAt: 'desc' },
+    });
+  }
+
   async createCharge(
     dto: CreateChargeDto,
     gymId: string,
@@ -363,9 +371,9 @@ export class FinancialService {
     );
   }
 
-  async findAllCharges(gymId: string) {
+  async findAllCharges(gymId: string, studentId?: string) {
     return this.prisma.charge.findMany({
-      where: { gymId },
+      where: { gymId, ...(studentId ? { studentId } : {}) },
       select: tenantChargeReadSelect,
       orderBy: { dueDate: 'desc' },
     });

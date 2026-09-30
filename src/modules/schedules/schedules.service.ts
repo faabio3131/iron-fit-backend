@@ -38,6 +38,27 @@ export class SchedulesService {
     });
   }
 
+  async findByStudent(studentId: string, gymId: string) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, gymId },
+      select: { id: true },
+    });
+    if (!student) {
+      throw new NotFoundException('Aluno nao encontrado');
+    }
+
+    return this.prisma.studentSchedule.findMany({
+      where: {
+        studentId,
+        student: { gymId },
+        slot: { gymId },
+      },
+      include: { slot: true },
+      orderBy: { date: 'desc' },
+      take: 100,
+    });
+  }
+
   async book(dto: BookStudentDto, gymId: string) {
     const bookingDate = new Date(dto.date);
 

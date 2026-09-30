@@ -18,13 +18,14 @@ export class AccessController {
   findRecentEvents(
     @CurrentUser() user: any,
     @Query('gymId') requestedGymId?: string,
+    @Query('studentId') studentId?: string,
   ) {
     const gymId = resolveTenantOperationGymId({
       activeGymId: user.activeGymId ?? user.gymId,
       requestedGymId,
       isSuperAdmin: user.isSuperAdmin === true,
     });
-    return this.accessService.findRecentEvents(gymId);
+    return this.accessService.findRecentEvents(gymId, studentId);
   }
 
   @Post('credentials')

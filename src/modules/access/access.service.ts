@@ -60,9 +60,9 @@ export class AccessService {
     return event;
   }
 
-  async findRecentEvents(gymId: string) {
+  async findRecentEvents(gymId: string, studentId?: string) {
     return this.prisma.accessEvent.findMany({
-      where: { gymId },
+      where: { gymId, ...(studentId ? { studentId } : {}) },
       orderBy: { occurredAt: 'desc' },
       take: ACCESS_EVENT_HISTORY_LIMIT,
       select: {
