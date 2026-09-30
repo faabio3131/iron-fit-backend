@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const { DashboardController } = await import('../dist/src/modules/dashboard/dashboard.controller.js');
 const { DashboardService } = await import('../dist/src/modules/dashboard/dashboard.service.js');
 
-test('dashboard controller excludes revenue for reception and includes it for management roles', async () => {
+test('dashboard controller excludes financial data for staff and includes it for owner', async () => {
   const calls = [];
   const service = {
     getSummary: async (gymId, options) => {
@@ -19,15 +19,15 @@ test('dashboard controller excludes revenue for reception and includes it for ma
 
   assert.deepEqual(calls[0], {
     gymId: 'gym-reception',
-    options: { includeRevenue: false },
+    options: { includeFinancial: false },
   });
   assert.deepEqual(calls[1], {
     gymId: 'gym-owner',
-    options: { includeRevenue: true },
+    options: { includeFinancial: true },
   });
 });
 
-test('dashboard service does not query or return revenue when includeRevenue is false', async () => {
+test('dashboard service does not query or return financial data when includeFinancial is false', async () => {
   let aggregateCalls = 0;
   const prisma = {
     student: { count: async () => 0 },
@@ -42,10 +42,10 @@ test('dashboard service does not query or return revenue when includeRevenue is 
     workout: { count: async () => 0 },
   };
   const service = new DashboardService(prisma);
-  const summary = await service.getSummary('gym-1', { includeRevenue: false });
+  const summary = await service.getSummary('gym-1', { includeFinancial: false });
 
   assert.equal(aggregateCalls, 0);
   assert.equal(Object.prototype.hasOwnProperty.call(summary, 'revenue'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(summary, 'charges'), false);
   assert.equal(summary.students.total, 0);
-  assert.equal(summary.charges.overdue, 0);
 });
