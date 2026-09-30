@@ -98,6 +98,28 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('step-up')
+  @HttpCode(200)
+  stepUp(@CurrentUser() user: any, @Body() dto: StepUpDto) {
+    return this.authService.grantAdministrativeStepUp(
+      user.id,
+      user.sessionId,
+      dto.currentPassword,
+      dto.mfaCode,
+      dto.recoveryCode,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('step-up/status')
+  stepUpStatus(@CurrentUser() user: any) {
+    return this.authService.getAdministrativeStepUpStatus(
+      user.id,
+      user.sessionId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('password/change')
   @HttpCode(200)
   changePassword(@CurrentUser() user: any, @Body() dto: ChangePasswordDto) {
