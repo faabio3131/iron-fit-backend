@@ -38,6 +38,70 @@ export class SchedulesService {
     });
   }
 
+
+  async findAllSchedules(
+    gymId: string,
+    filters: {
+      from?: string;
+      to?: string;
+      status?: string;
+      studentId?: string;
+    } = {},
+  ) {
+    const allowedStatuses = new Set([
+      'SCHEDULED',
+      'CHECKED_IN',
+      'NO_SHOW',
+      'CANCELED',
+    ]);
+    if (filters.status && !allowedStatuses.has(filters.status)) {
+      throw new BadRequestException('Status de agendamento invalido');
+    }
+
+    const parseBoundary = (value: string | undefined, label: string) => {
+      if (!value) return undefined;
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new BadRequestException(
+          `Data ${label} invalida para consulta da agenda`,
+        );
+      }
+      return parsed;
+    };
+
+    const from = parseBoundary(filters.from, 'inicial');
+    const to = parseBoundary(filters.to, 'final');
+    if (from && to && from.getTime() > to.getTime()) {
+      throw new BadRequestException(
+        'Data inicial nao pode ser posterior a data final',
+      );
+    }
+
+    const date =
+      from || to
+        ? {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          }
+        : undefined;
+
+    return this.prisma.studentSchedule.findMany({
+      where: {
+        student: { gymId },
+        slot: { gymId },
+        ...(filters.studentId ? { studentId: filters.studentId } : {}),
+        ...(filters.status ? { status: filters.status as any } : {}),
+        ...(date ? { date } : {}),
+      },
+      include: {
+        student: { include: { user: true } },
+        slot: true,
+      },
+      orderBy: { date: 'asc' },
+      take: 500,
+    });
+  }
+
   async findByStudent(studentId: string, gymId: string) {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, gymId },
