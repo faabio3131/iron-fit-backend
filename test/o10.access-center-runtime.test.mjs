@@ -92,7 +92,7 @@ test('O10 event timeline applies tenant and operational filters with enriched sa
   assert.equal(query.where.studentId, 'student-a');
   assert.equal(query.where.deviceId, 'device-a');
   assert.equal(query.where.allowed, false);
-  assert.equal(query.select.student.user.select.name, true);
+  assert.equal(query.select.student.select.user.select.name, true);
   assert.equal(query.select.device.name, true);
 });
 
