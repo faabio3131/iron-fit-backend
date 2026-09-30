@@ -134,6 +134,12 @@ export class UsersService {
   async findAll(actor: any) {
     const isGlobalSuperAdmin =
       actor.isSuperAdmin === true && actor.scope === 'global';
+    const activeGymId = actor.activeGymId ?? actor.gymId;
+    const isManagerOnly =
+      !isGlobalSuperAdmin &&
+      Array.isArray(actor.roles) &&
+      actor.roles.includes('MANAGER') &&
+      !actor.roles.includes('OWNER');
 
     return this.prisma.user.findMany({
       where: isGlobalSuperAdmin
@@ -141,7 +147,10 @@ export class UsersService {
         : {
             userRoles: {
               some: {
-                gymId: actor.activeGymId ?? actor.gymId,
+                gymId: activeGymId,
+                ...(isManagerOnly
+                  ? { role: { name: { in: ['RECEPTION', 'TRAINER'] } } }
+                  : { role: { name: { in: ['OWNER', 'MANAGER', 'RECEPTION', 'TRAINER'] } } }),
               },
             },
           },

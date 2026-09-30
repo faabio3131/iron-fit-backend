@@ -18,7 +18,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles('SUPER_ADMIN', 'OWNER')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
   findAll(@CurrentUser() user: any) {
     return this.usersService.findAll(user);
   }

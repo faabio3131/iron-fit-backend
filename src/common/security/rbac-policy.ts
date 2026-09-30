@@ -21,7 +21,11 @@ export function canAssignRole(
     ...actorRoles.map((role) => ROLE_RANK[role] ?? 0),
   );
 
-  return actorRank >= ROLE_RANK[targetRole] && actorRank >= ROLE_RANK.MANAGER;
+  if (actorRank < ROLE_RANK.MANAGER) return false;
+
+  // Tenant roles may only delegate strictly lower authority.
+  // OWNER cannot create another OWNER and MANAGER cannot create another MANAGER.
+  return actorRank > ROLE_RANK[targetRole];
 }
 
 export function resolveAssignmentGymId(params: {

@@ -71,7 +71,13 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
   const manager = await login(roles.manager, staffPassword);
   const trainer = await login(roles.trainer, staffPassword);
   const reception = await login(roles.reception, staffPassword);
-  await request('/users', { token: manager.access_token, expected: 403 });
+  const managerTeam = (await request('/users', { token: manager.access_token, expected: 200 })).payload;
+  assert.deepEqual(
+    managerTeam.map((member) => member.email).sort(),
+    [roles.reception, roles.trainer].sort(),
+  );
+  assert.equal(managerTeam.some((member) => member.email === a.email), false);
+  assert.equal(managerTeam.some((member) => member.email === roles.manager), false);
   await request('/financial/accounts', { token: trainer.access_token, expected: 403 });
 
   const studentEmail = `student-${a.suffix}@example.com`;
