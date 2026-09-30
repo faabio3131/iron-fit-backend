@@ -4,7 +4,11 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AiMobileAdvisoryService } from './ai-mobile-advisory.service';
-import { AiChatDto, AiWorkoutInsightsDto } from './dto/ai-mobile-advisory.dto';
+import {
+  AiChatDto,
+  AiContentRecommendationDto,
+  AiWorkoutInsightsDto,
+} from './dto/ai-mobile-advisory.dto';
 
 @Controller('me/ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,5 +24,13 @@ export class AiController {
   @Post('chat')
   chat(@CurrentUser() user: any, @Body() dto: AiChatDto) {
     return this.advisory.chat(user, dto);
+  }
+
+  @Post('content-recommendations')
+  contentRecommendations(
+    @CurrentUser() user: any,
+    @Body() dto: AiContentRecommendationDto,
+  ) {
+    return this.advisory.contentRecommendations(user, dto);
   }
 }
