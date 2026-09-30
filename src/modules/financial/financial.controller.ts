@@ -68,10 +68,11 @@ export class FinancialController {
     @CurrentUser() user: any,
     @Query('gymId') requestedGymId?: string,
     @Query('studentId') studentId?: string,
+    @Query('status') status?: string,
   ) {
     return this.financialService.findSubscriptions(
       this.resolveGymId(user, requestedGymId),
-      studentId,
+      { studentId, status },
     );
   }
 
@@ -95,10 +96,32 @@ export class FinancialController {
     @CurrentUser() user: any,
     @Query('gymId') requestedGymId?: string,
     @Query('studentId') studentId?: string,
+    @Query('status') status?: string,
+    @Query('dueFrom') dueFrom?: string,
+    @Query('dueTo') dueTo?: string,
+    @Query('overdue') overdue?: string,
   ) {
     return this.financialService.findAllCharges(
       this.resolveGymId(user, requestedGymId),
-      studentId,
+      { studentId, status, dueFrom, dueTo, overdue },
+    );
+  }
+
+  @Get('transactions')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  findTransactions(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+    @Query('studentId') studentId?: string,
+    @Query('accountId') accountId?: string,
+    @Query('status') status?: string,
+    @Query('type') type?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.financialService.findTransactions(
+      this.resolveGymId(user, requestedGymId),
+      { studentId, accountId, status, type, from, to },
     );
   }
 
