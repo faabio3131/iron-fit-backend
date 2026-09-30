@@ -93,7 +93,7 @@ test('O10 event timeline applies tenant and operational filters with enriched sa
   assert.equal(query.where.deviceId, 'device-a');
   assert.equal(query.where.allowed, false);
   assert.equal(query.select.student.select.user.select.name, true);
-  assert.equal(query.select.device.name, true);
+  assert.equal(query.select.device.select.name, true);
 });
 
 test('O10 credentials are tenant-scoped and never select secret hashes', async () => {
