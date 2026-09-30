@@ -2,11 +2,12 @@ import { Controller, Get, UseGuards } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { StepUpGuard } from '../auth/guards/step-up.guard';
 import { IntegrationProviderRegistry } from './provider-registry.service';
 import { IntegrationRuntimeEnvironmentService } from './runtime-environment.service';
 
 @Controller('integrations/providers')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
 @Roles('OWNER', 'SUPER_ADMIN')
 export class IntegrationProviderCatalogController {
   constructor(
