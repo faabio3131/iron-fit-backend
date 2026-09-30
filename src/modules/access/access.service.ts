@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -60,9 +60,56 @@ export class AccessService {
     return event;
   }
 
-  async findRecentEvents(gymId: string, studentId?: string) {
+  private parseBooleanFilter(value: string | undefined, label: string) {
+    if (value === undefined) return undefined;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    throw new BadRequestException(`${label} deve ser true ou false`);
+  }
+
+  private parseDateFilter(value: string | undefined, label: string) {
+    if (!value) return undefined;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(`Data ${label} invalida`);
+    }
+    return date;
+  }
+
+  async findRecentEvents(
+    gymId: string,
+    filters: {
+      studentId?: string;
+      deviceId?: string;
+      allowed?: string;
+      from?: string;
+      to?: string;
+    } = {},
+  ) {
+    const allowed = this.parseBooleanFilter(filters.allowed, 'allowed');
+    const from = this.parseDateFilter(filters.from, 'inicial');
+    const to = this.parseDateFilter(filters.to, 'final');
+    if (from && to && from.getTime() > to.getTime()) {
+      throw new BadRequestException(
+        'Data inicial nao pode ser posterior a data final',
+      );
+    }
+
     return this.prisma.accessEvent.findMany({
-      where: { gymId, ...(studentId ? { studentId } : {}) },
+      where: {
+        gymId,
+        ...(filters.studentId ? { studentId: filters.studentId } : {}),
+        ...(filters.deviceId ? { deviceId: filters.deviceId } : {}),
+        ...(allowed !== undefined ? { allowed } : {}),
+        ...(from || to
+          ? {
+              occurredAt: {
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lte: to } : {}),
+              },
+            }
+          : {}),
+      },
       orderBy: { occurredAt: 'desc' },
       take: ACCESS_EVENT_HISTORY_LIMIT,
       select: {
@@ -72,6 +119,128 @@ export class AccessService {
         allowed: true,
         denialReason: true,
         occurredAt: true,
+        student: {
+          select: {
+            id: true,
+            user: { select: { name: true, email: true } },
+          },
+        },
+        device: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            active: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findCredentials(
+    gymId: string,
+    filters: { studentId?: string; active?: string } = {},
+  ) {
+    const active = this.parseBooleanFilter(filters.active, 'active');
+    const credentials = await this.prisma.accessCredential.findMany({
+      where: {
+        student: { gymId },
+        ...(filters.studentId ? { studentId: filters.studentId } : {}),
+        ...(active !== undefined ? { active } : {}),
+      },
+      take: 500,
+      select: {
+        id: true,
+        studentId: true,
+        type: true,
+        active: true,
+        expiresAt: true,
+        student: {
+          select: {
+            id: true,
+            status: true,
+            user: { select: { name: true, email: true } },
+          },
+        },
+      },
+    });
+    const now = new Date();
+    return credentials.map((credential) => ({
+      ...credential,
+      status: !credential.active
+        ? 'INACTIVE'
+        : credential.expiresAt && credential.expiresAt < now
+          ? 'EXPIRED'
+          : 'ACTIVE',
+    }));
+  }
+
+  async revokeCredential(
+    id: string,
+    gymId: string,
+    actorUserId?: string,
+  ) {
+    const credential = await this.prisma.accessCredential.findFirst({
+      where: { id, student: { gymId } },
+      select: {
+        id: true,
+        studentId: true,
+        type: true,
+        active: true,
+        expiresAt: true,
+      },
+    });
+    if (!credential) {
+      throw new NotFoundException('Credencial nao encontrada');
+    }
+
+    const revoked = credential.active
+      ? await this.prisma.accessCredential.update({
+          where: { id: credential.id },
+          data: { active: false },
+          select: {
+            id: true,
+            studentId: true,
+            type: true,
+            active: true,
+            expiresAt: true,
+          },
+        })
+      : credential;
+
+    await this.audit.record({
+      gymId,
+      userId: actorUserId ?? null,
+      action: 'ACCESS_CREDENTIAL_REVOKED',
+      entity: 'AccessCredential',
+      entityId: credential.id,
+      previous: { active: credential.active },
+      next: { active: false },
+    });
+
+    return { ...revoked, status: 'INACTIVE' };
+  }
+
+  async findDevices(
+    gymId: string,
+    filters: { active?: string } = {},
+  ) {
+    const active = this.parseBooleanFilter(filters.active, 'active');
+    return this.prisma.accessDevice.findMany({
+      where: {
+        gymId,
+        ...(active !== undefined ? { active } : {}),
+      },
+      orderBy: { name: 'asc' },
+      take: 200,
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        protocol: true,
+        active: true,
+        lastSyncAt: true,
+        tokenRotatedAt: true,
       },
     });
   }
