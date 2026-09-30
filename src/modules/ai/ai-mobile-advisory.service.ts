@@ -203,7 +203,14 @@ export class AiMobileAdvisoryService {
       limit,
     );
 
-    const recommendations = [];
+    const recommendations: Array<{
+      exerciseId: string;
+      exerciseName: string;
+      reason: string;
+      content: Awaited<
+        ReturnType<AiContextBuilderService['resolveEligibleExerciseContent']>
+      >;
+    }> = [];
     for (const recommendation of selected) {
       const content = await this.contextBuilder.resolveEligibleExerciseContent(
         identity.gymId,
