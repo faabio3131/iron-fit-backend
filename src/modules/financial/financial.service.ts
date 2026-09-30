@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ChargeStatus, Prisma, SubscriptionStatus, TransactionStatus, TransactionType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
@@ -33,6 +33,34 @@ export class FinancialService {
       }
     }
     throw new BadRequestException('Falha de concorrencia financeira');
+  }
+
+  private parseBooleanFilter(value: string | undefined, label: string) {
+    if (value === undefined) return undefined;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    throw new BadRequestException(`${label} deve ser true ou false`);
+  }
+
+  private parseDateFilter(value: string | undefined, label: string) {
+    if (!value) return undefined;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(`Data ${label} invalida`);
+    }
+    return date;
+  }
+
+  private parseEnumFilter<T extends string>(
+    value: string | undefined,
+    allowed: readonly T[],
+    label: string,
+  ): T | undefined {
+    if (!value) return undefined;
+    if (!allowed.includes(value as T)) {
+      throw new BadRequestException(`${label} invalido`);
+    }
+    return value as T;
   }
 
   async createAccount(
@@ -119,9 +147,25 @@ export class FinancialService {
     return subscription;
   }
 
-  async findSubscriptions(gymId: string, studentId?: string) {
+  async findSubscriptions(
+    gymId: string,
+    filters:
+      | string
+      | { studentId?: string; status?: string } = {},
+  ) {
+    const normalized =
+      typeof filters === 'string' ? { studentId: filters } : filters;
+    const status = this.parseEnumFilter(
+      normalized.status,
+      Object.values(SubscriptionStatus),
+      'Status da assinatura',
+    );
     return this.prisma.subscription.findMany({
-      where: { gymId, ...(studentId ? { studentId } : {}) },
+      where: {
+        gymId,
+        ...(normalized.studentId ? { studentId: normalized.studentId } : {}),
+        ...(status ? { status } : {}),
+      },
       include: { student: { include: { user: true } } },
       orderBy: { startedAt: 'desc' },
     });
@@ -371,11 +415,141 @@ export class FinancialService {
     );
   }
 
-  async findAllCharges(gymId: string, studentId?: string) {
+  async findAllCharges(
+    gymId: string,
+    filters:
+      | string
+      | {
+          studentId?: string;
+          status?: string;
+          dueFrom?: string;
+          dueTo?: string;
+          overdue?: string;
+        } = {},
+  ) {
+    const normalized =
+      typeof filters === 'string' ? { studentId: filters } : filters;
+    const status = this.parseEnumFilter(
+      normalized.status,
+      Object.values(ChargeStatus),
+      'Status da cobranca',
+    );
+    const dueFrom = this.parseDateFilter(normalized.dueFrom, 'inicial');
+    const dueTo = this.parseDateFilter(normalized.dueTo, 'final');
+    const overdue = this.parseBooleanFilter(normalized.overdue, 'overdue');
+
+    if (dueFrom && dueTo && dueFrom.getTime() > dueTo.getTime()) {
+      throw new BadRequestException(
+        'Data inicial nao pode ser posterior a data final',
+      );
+    }
+    if (overdue === true && status && status !== ChargeStatus.PENDING) {
+      throw new BadRequestException(
+        'Filtro de inadimplencia exige cobranca PENDING',
+      );
+    }
+
+    const dueDate = {
+      ...(dueFrom ? { gte: dueFrom } : {}),
+      ...(dueTo ? { lte: dueTo } : {}),
+      ...(overdue === true ? { lt: new Date() } : {}),
+    };
+    const hasDueDateFilter = Object.keys(dueDate).length > 0;
+
     return this.prisma.charge.findMany({
-      where: { gymId, ...(studentId ? { studentId } : {}) },
+      where: {
+        gymId,
+        ...(normalized.studentId ? { studentId: normalized.studentId } : {}),
+        ...(overdue === true
+          ? { status: ChargeStatus.PENDING }
+          : status
+            ? { status }
+            : {}),
+        ...(hasDueDateFilter ? { dueDate } : {}),
+        ...(overdue === false
+          ? {
+              NOT: {
+                status: ChargeStatus.PENDING,
+                dueDate: { lt: new Date() },
+              },
+            }
+          : {}),
+      },
       select: tenantChargeReadSelect,
       orderBy: { dueDate: 'desc' },
+    });
+  }
+
+  async findTransactions(
+    gymId: string,
+    filters: {
+      studentId?: string;
+      accountId?: string;
+      status?: string;
+      type?: string;
+      from?: string;
+      to?: string;
+    } = {},
+  ) {
+    const status = this.parseEnumFilter(
+      filters.status,
+      Object.values(TransactionStatus),
+      'Status da transacao',
+    );
+    const type = this.parseEnumFilter(
+      filters.type,
+      Object.values(TransactionType),
+      'Tipo da transacao',
+    );
+    const from = this.parseDateFilter(filters.from, 'inicial');
+    const to = this.parseDateFilter(filters.to, 'final');
+    if (from && to && from.getTime() > to.getTime()) {
+      throw new BadRequestException(
+        'Data inicial nao pode ser posterior a data final',
+      );
+    }
+
+    return this.prisma.financialTransaction.findMany({
+      where: {
+        gymId,
+        ...(filters.studentId ? { studentId: filters.studentId } : {}),
+        ...(filters.accountId ? { accountId: filters.accountId } : {}),
+        ...(status ? { status } : {}),
+        ...(type ? { type } : {}),
+        ...(from || to
+          ? {
+              paidAt: {
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lte: to } : {}),
+              },
+            }
+          : {}),
+      },
+      orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+      take: 500,
+      select: {
+        id: true,
+        type: true,
+        accountId: true,
+        description: true,
+        amount: true,
+        dueDate: true,
+        paidAt: true,
+        status: true,
+        source: true,
+        sourceId: true,
+        studentId: true,
+        paymentMethod: true,
+        receiptUrl: true,
+        createdAt: true,
+        account: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
+      },
     });
   }
 }
