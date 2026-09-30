@@ -459,6 +459,7 @@ model UserRole {
   roleId     String
   gymId      String?
   assignedBy String?
+  active     Boolean  @default(true)
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
