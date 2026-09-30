@@ -11,7 +11,7 @@ test('AI0 G5 exposes the canonical POST mobile advisory endpoints', async () => 
   assert.match(controller, /@Controller\('me\/ai'\)/);
   assert.match(controller, /@Post\('workout-insights'\)/);
   assert.match(controller, /@Post\('chat'\)/);
-  assert.match(controller, /@Post\\('content-recommendations'\\)/);
+  assert.match(controller, /@Post\('content-recommendations'\)/);
   assert.match(controller, /@UseGuards\(JwtAuthGuard, RolesGuard\)/);
   assert.match(controller, /@Roles\('STUDENT'\)/);
   assert.equal(controller.includes('@Get('), false);
