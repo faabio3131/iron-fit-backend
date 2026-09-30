@@ -39,7 +39,7 @@ test('O4 access history filter cannot remove tenant scope', async () => {
     },
   };
   const service = new AccessService(prisma);
-  await service.findRecentEvents('gym-1', 'student-1');
+  await service.findRecentEvents('gym-1', { studentId: 'student-1' });
   assert.deepEqual(where, { gymId: 'gym-1', studentId: 'student-1' });
 });
 
