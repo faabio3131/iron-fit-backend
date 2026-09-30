@@ -326,6 +326,20 @@ export class WorkoutsService {
       throw new BadRequestException('Status invalido');
     }
 
+    const transitions: Record<string, string[]> = {
+      DRAFT: ['APPROVED', 'EXPIRED'],
+      PENDING_REVIEW: ['APPROVED', 'EXPIRED'],
+      APPROVED: ['ACTIVE', 'EXPIRED'],
+      ACTIVE: ['EXPIRED'],
+      EXPIRED: [],
+    };
+    const nextAllowed = transitions[workout.status] ?? [];
+    if (!nextAllowed.includes(status)) {
+      throw new BadRequestException(
+        `Transicao de treino invalida: ${workout.status} -> ${status}`,
+      );
+    }
+
     const data: any = { status };
 
     if (status === 'APPROVED' || status === 'ACTIVE') {
