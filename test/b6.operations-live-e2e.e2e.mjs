@@ -264,9 +264,20 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
     expected: 201,
     body: { name: 'B6 Caixa', type: 'CASH', initialBalance: 0 },
   })).payload;
-  const plan = (await request('/financial/subscriptions', {
+  await request('/financial/subscriptions', {
     method: 'POST',
     token: reception.access_token,
+    expected: 403,
+    body: {
+      studentId: created.id,
+      planName: 'Mensal B6',
+      amount: 14990,
+      nextBillingAt: plus(new Date(), 30 * DAY).toISOString(),
+    },
+  });
+  const plan = (await request('/financial/subscriptions', {
+    method: 'POST',
+    token: a.owner.access_token,
     expected: 201,
     body: {
       studentId: created.id,
@@ -275,9 +286,21 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
       nextBillingAt: plus(new Date(), 30 * DAY).toISOString(),
     },
   })).payload;
-  const charge = (await request('/financial/charges', {
+  await request('/financial/charges', {
     method: 'POST',
     token: reception.access_token,
+    expected: 403,
+    body: {
+      studentId: created.id,
+      subscriptionId: plan.id,
+      amount: 14990,
+      dueDate: plus(new Date(), 5 * DAY).toISOString(),
+      paymentMethod: 'PIX',
+    },
+  });
+  const charge = (await request('/financial/charges', {
+    method: 'POST',
+    token: a.owner.access_token,
     expected: 201,
     body: {
       studentId: created.id,
@@ -290,6 +313,12 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
   await request(`/financial/charges/${charge.id}/pay`, {
     method: 'PATCH',
     token: reception.access_token,
+    expected: 403,
+    body: { accountId: account.id, paymentMethod: 'PIX' },
+  });
+  await request(`/financial/charges/${charge.id}/pay`, {
+    method: 'PATCH',
+    token: a.owner.access_token,
     expected: 200,
     body: { accountId: account.id, paymentMethod: 'PIX' },
   });
