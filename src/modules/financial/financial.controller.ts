@@ -12,12 +12,14 @@ import { CancelFiscalHandoffDto } from './dto/cancel-fiscal-handoff.dto';
 import { FiscalReconciliationCancellationService } from './fiscal-reconciliation-cancellation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermissionsOrRoles } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { resolveTenantOperationGymId } from '../../common/security/tenant-operation-scope';
 
 @Controller('financial')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 export class FinancialController {
   constructor(
     private financialService: FinancialService,
@@ -35,19 +37,21 @@ export class FinancialController {
   }
 
   @Post('accounts')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
+  @Roles('SUPER_ADMIN', 'OWNER')
   createAccount(@Body() dto: CreateFinancialAccountDto, @CurrentUser() user: any) {
     const gymId = this.resolveGymId(user, dto.gymId);
     return this.financialService.createAccount(dto, gymId, user.id);
   }
 
   @Get('accounts')
+  @PermissionsOrRoles(['financial:read'], ['SUPER_ADMIN', 'OWNER'])
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   findAllAccounts(@CurrentUser() user: any, @Query('gymId') requestedGymId?: string) {
     return this.financialService.findAllAccounts(this.resolveGymId(user, requestedGymId));
   }
 
   @Post('subscriptions')
+  @PermissionsOrRoles(['financial:write'], ['SUPER_ADMIN', 'OWNER'])
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   createSubscription(
     @Body() dto: CreateSubscriptionDto,
@@ -62,6 +66,7 @@ export class FinancialController {
   }
 
   @Post('charges')
+  @PermissionsOrRoles(['financial:write'], ['SUPER_ADMIN', 'OWNER'])
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   createCharge(
     @Body() dto: CreateChargeDto,
@@ -76,12 +81,14 @@ export class FinancialController {
   }
 
   @Get('charges')
+  @PermissionsOrRoles(['financial:read'], ['SUPER_ADMIN', 'OWNER'])
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   findAllCharges(@CurrentUser() user: any, @Query('gymId') requestedGymId?: string) {
     return this.financialService.findAllCharges(this.resolveGymId(user, requestedGymId));
   }
 
   @Post('charges/:id/payment-session')
+  @PermissionsOrRoles(['financial:write'], ['SUPER_ADMIN', 'OWNER'])
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   createPaymentSession(
     @Param('id') id: string,
@@ -139,6 +146,7 @@ export class FinancialController {
   }
 
   @Patch('charges/:id/pay')
+  @PermissionsOrRoles(['financial:write'], ['SUPER_ADMIN', 'OWNER'])
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   payCharge(
     @Param('id') id: string,

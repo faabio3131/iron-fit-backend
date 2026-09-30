@@ -219,7 +219,7 @@ test('PE3 APIs derive tenant and student identity from auth and expose no target
     'src/modules/product-entitlements/dto/set-product-configuration-value.dto.ts',
   );
 
-  assert.match(controller, /@Put\('tenant\/configurations\/:featureKey'\)[\s\S]*?@Roles\('OWNER', 'MANAGER'\)/);
+  assert.match(controller, /@Put\('tenant\/configurations\/:featureKey'\)[\s\S]*?@Roles\('OWNER'\)/);
   assert.match(controller, /@Put\('me\/preferences\/:featureKey'\)[\s\S]*?@Roles\('STUDENT'\)/);
   assert.match(controller, /user\.activeGymId \?\? user\.gymId/);
   assert.match(controller, /user\?\.id/);

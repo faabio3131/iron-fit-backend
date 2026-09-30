@@ -12,7 +12,7 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Post()
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
+  @Roles('SUPER_ADMIN', 'OWNER')
   create(@Body() dto: CreateUserDto, @CurrentUser() user: any) {
     return this.usersService.create(dto, user);
   }

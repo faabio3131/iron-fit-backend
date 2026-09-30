@@ -98,7 +98,7 @@ export class FinancialService {
         amount: dto.amount,
         nextBillingAt: dto.nextBillingAt ? new Date(dto.nextBillingAt) : null,
       } as any,
-      include: { student: { include: { user: true } } },
+      include: { student: { select: { id: true, user: { select: { id: true, name: true } } } } },
     });
 
     await this.audit.record({

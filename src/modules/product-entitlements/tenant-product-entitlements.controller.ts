@@ -57,7 +57,7 @@ export class TenantProductEntitlementsController {
   }
 
   @Get('tenant/configurations')
-  @Roles('OWNER', 'MANAGER')
+  @Roles('OWNER')
   listTenantConfigurations(@CurrentUser() user: any) {
     return this.tenantEntitlements.listTenantConfigurations(
       user.activeGymId ?? user.gymId,
@@ -65,7 +65,7 @@ export class TenantProductEntitlementsController {
   }
 
   @Put('tenant/configurations/:featureKey')
-  @Roles('OWNER', 'MANAGER')
+  @Roles('OWNER')
   setTenantConfiguration(
     @CurrentUser() user: any,
     @Param('featureKey') featureKey: string,
@@ -80,7 +80,7 @@ export class TenantProductEntitlementsController {
   }
 
   @Delete('tenant/configurations/:featureKey')
-  @Roles('OWNER', 'MANAGER')
+  @Roles('OWNER')
   resetTenantConfiguration(
     @CurrentUser() user: any,
     @Param('featureKey') featureKey: string,

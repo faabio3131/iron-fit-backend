@@ -59,6 +59,7 @@ export class CreatorOperationsController {
   }
 
   @Get(':scope/analytics')
+  @Roles('SUPER_ADMIN', 'OWNER')
   getAnalytics(
     @Param('scope') scope: string,
     @Query('days') days: string | undefined,
