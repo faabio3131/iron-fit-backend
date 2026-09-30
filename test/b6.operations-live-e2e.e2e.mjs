@@ -176,6 +176,22 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
     },
   })).payload;
   assert.equal(workout.status, 'DRAFT');
+
+  // O8: a professional cannot bypass human review by activating a DRAFT directly.
+  await request(`/workouts/${workout.id}/status`, {
+    method: 'PATCH',
+    token: trainer.access_token,
+    expected: 400,
+    body: { status: 'ACTIVE' },
+  });
+
+  assert.equal((await request(`/workouts/${workout.id}/status`, {
+    method: 'PATCH',
+    token: trainer.access_token,
+    expected: 200,
+    body: { status: 'APPROVED' },
+  })).payload.status, 'APPROVED');
+
   assert.equal((await request(`/workouts/${workout.id}/status`, {
     method: 'PATCH',
     token: trainer.access_token,
