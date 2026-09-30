@@ -11,6 +11,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { StepUpGuard } from '../auth/guards/step-up.guard';
 import {
   BillingWebhookDto,
   CancelSaasBillingDto,
@@ -27,29 +28,29 @@ export class SaasBillingController {
   constructor(private readonly service: SaasBillingService) {}
 
   @Get('prices')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   listPrices() {
     return this.service.listPrices();
   }
 
   @Post('prices')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
   @Roles('SUPER_ADMIN')
   createPrice(@Body() dto: CreateSaasPriceDto, @CurrentUser() user: any) {
     return this.service.createPrice(dto, user?.id);
   }
 
   @Get('current')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('OWNER', 'MANAGER')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   current(@CurrentUser() user: any) {
     return this.service.getCurrent(user?.activeGymId ?? user?.gymId);
   }
 
   @Post('checkout')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('OWNER', 'MANAGER')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   checkout(
     @Body() dto: CreateSaasCheckoutDto,
     @CurrentUser() user: any,
@@ -62,8 +63,8 @@ export class SaasBillingController {
   }
 
   @Post('change-plan')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('OWNER', 'MANAGER')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   changePlan(
     @Body() dto: ChangeSaasPlanDto,
     @CurrentUser() user: any,
@@ -76,8 +77,8 @@ export class SaasBillingController {
   }
 
   @Post('cancel')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('OWNER', 'MANAGER')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   cancel(
     @Body() dto: CancelSaasBillingDto,
     @CurrentUser() user: any,
@@ -90,28 +91,28 @@ export class SaasBillingController {
   }
 
   @Post('refunds')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
   @Roles('SUPER_ADMIN')
   refund(@Body() dto: RefundSaasBillingDto, @CurrentUser() user: any) {
     return this.service.refund(dto, user?.id);
   }
 
   @Post('admin/recurrence/run')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
   @Roles('SUPER_ADMIN')
   runRecurrence(@Body() dto: RunSaasBillingDto, @CurrentUser() user: any) {
     return this.service.runRecurrence(dto, user?.id);
   }
 
   @Post('admin/dunning/run')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
   @Roles('SUPER_ADMIN')
   runDunning(@Body() dto: RunSaasBillingDto, @CurrentUser() user: any) {
     return this.service.runDunning(dto, user?.id);
   }
 
   @Post('admin/reconcile')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
   @Roles('SUPER_ADMIN')
   reconcile(@CurrentUser() user: any) {
     return this.service.reconcile(user?.id);

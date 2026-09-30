@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
 import { ProductEntitlementsController } from './product-entitlements.controller';
 import { ProductCapabilitiesController } from './product-capabilities.controller';
 import { ProductCapabilityCatalogService } from './product-capability-catalog.service';
@@ -11,7 +12,7 @@ import { TenantProductSubscriptionLifecycleController } from './tenant-product-s
 import { TenantProductSubscriptionLifecycleService } from './tenant-product-subscription-lifecycle.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [
     ProductCapabilitiesController,
     ProductEntitlementsController,

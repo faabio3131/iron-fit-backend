@@ -12,6 +12,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { StepUpGuard } from '../auth/guards/step-up.guard';
 import {
   CreateIntegrationCredentialDto,
   RevokeIntegrationCredentialDto,
@@ -27,8 +28,8 @@ function tenantScope(user: any) {
 }
 
 @Controller('integrations/connections')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('OWNER')
+@UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+@Roles('SUPER_ADMIN', 'OWNER')
 export class IntegrationCredentialTenantController {
   constructor(private readonly service: IntegrationCredentialAdminService) {}
 

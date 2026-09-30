@@ -25,6 +25,7 @@ import {
 } from './auth-security';
 import { AuthSecurityService } from './auth-security.service';
 import { resolveActiveTenantContext } from './tenant-context';
+import { StepUpService } from './step-up.service';
 
 const DUMMY_BCRYPT_HASH =
   '$2b$12$C6UzMDM.H6dfI/f/IKcEe.5p8Ao8MZsLz8JqF0EZyNP7Wm1EMKq';
@@ -37,6 +38,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly audit: AuditService,
     private readonly security: AuthSecurityService,
+    private readonly stepUp: StepUpService,
   ) {}
 
   private userInclude() {
@@ -550,6 +552,34 @@ export class AuthService {
       );
       return { verified: true };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async grantAdministrativeStepUp(
+    userId: string,
+    sessionId: string,
+    currentPassword: string,
+    mfaCode?: string,
+    recoveryCode?: string,
+  ) {
+    await this.security.assertStepUp(
+      userId,
+      currentPassword,
+      mfaCode,
+      recoveryCode,
+    );
+    const state = await this.stepUp.grant(userId, sessionId);
+    await this.safeAudit({
+      userId,
+      action: 'AUTH_ADMIN_STEP_UP_GRANTED',
+      entity: 'Session',
+      entityId: sessionId,
+      next: { expiresAt: state.expiresAt },
+    });
+    return state;
+  }
+
+  getAdministrativeStepUpStatus(userId: string, sessionId: string) {
+    return this.stepUp.status(userId, sessionId);
   }
 
   async changePassword(

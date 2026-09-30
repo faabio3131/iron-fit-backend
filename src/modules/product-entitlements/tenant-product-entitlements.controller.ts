@@ -12,6 +12,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { StepUpGuard } from '../auth/guards/step-up.guard';
 import { AssignTenantProductSubscriptionDto } from './dto/assign-tenant-product-subscription.dto';
 import { SetProductConfigurationValueDto } from './dto/set-product-configuration-value.dto';
 import { TenantProductEntitlementsService } from './tenant-product-entitlements.service';
@@ -57,7 +58,8 @@ export class TenantProductEntitlementsController {
   }
 
   @Get('tenant/configurations')
-  @Roles('OWNER', 'MANAGER')
+  @UseGuards(StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   listTenantConfigurations(@CurrentUser() user: any) {
     return this.tenantEntitlements.listTenantConfigurations(
       user.activeGymId ?? user.gymId,
@@ -65,7 +67,8 @@ export class TenantProductEntitlementsController {
   }
 
   @Put('tenant/configurations/:featureKey')
-  @Roles('OWNER', 'MANAGER')
+  @UseGuards(StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   setTenantConfiguration(
     @CurrentUser() user: any,
     @Param('featureKey') featureKey: string,
@@ -80,7 +83,8 @@ export class TenantProductEntitlementsController {
   }
 
   @Delete('tenant/configurations/:featureKey')
-  @Roles('OWNER', 'MANAGER')
+  @UseGuards(StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   resetTenantConfiguration(
     @CurrentUser() user: any,
     @Param('featureKey') featureKey: string,

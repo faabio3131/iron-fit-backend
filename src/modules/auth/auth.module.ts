@@ -10,6 +10,8 @@ import { AuthSecurityService } from './auth-security.service';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { StepUpService } from './step-up.service';
+import { StepUpGuard } from './guards/step-up.guard';
 
 @Module({
   imports: [
@@ -35,8 +37,10 @@ import { LocalStrategy } from './strategies/local.strategy';
     AuthSecurityService,
     JwtStrategy,
     LocalStrategy,
+    StepUpService,
+    StepUpGuard,
     AuditService,
   ],
-  exports: [AuthService, AuthSecurityService],
+  exports: [AuthService, AuthSecurityService, StepUpService, StepUpGuard],
 })
 export class AuthModule {}

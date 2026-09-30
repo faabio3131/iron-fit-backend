@@ -34,6 +34,23 @@ test('B6 live SaaS billing trial-to-paid, plan changes, dunning and reactivation
   const owner = await login(email, ownerPassword);
   const admin = await login('b6-admin@example.com', adminPassword);
 
+  await request('/saas-billing/prices', {
+    token: owner.access_token,
+    expected: 403,
+  });
+  await request('/auth/step-up', {
+    method: 'POST',
+    token: owner.access_token,
+    expected: 200,
+    body: { currentPassword: ownerPassword },
+  });
+  await request('/auth/step-up', {
+    method: 'POST',
+    token: admin.access_token,
+    expected: 200,
+    body: { currentPassword: adminPassword },
+  });
+
   const prices = (await request('/saas-billing/prices', {
     token: owner.access_token,
     expected: 200,

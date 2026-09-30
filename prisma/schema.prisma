@@ -360,6 +360,7 @@ model Session {
   expiresAt                DateTime
   absoluteExpiresAt        DateTime?
   lastUsedAt               DateTime @default(now())
+  stepUpExpiresAt          DateTime?
   revokedAt                DateTime?
   createdAt                DateTime @default(now())
 }

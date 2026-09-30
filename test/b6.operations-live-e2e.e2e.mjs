@@ -258,6 +258,19 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
   assert.equal(replay.allowed, false);
   assert.equal(replay.denialReason, 'Replay detectado');
 
+  await request('/financial/accounts', {
+    method: 'POST',
+    token: a.owner.access_token,
+    expected: 403,
+    body: { name: 'B6 Caixa bloqueado', type: 'CASH', initialBalance: 0 },
+  });
+  await request('/auth/step-up', {
+    method: 'POST',
+    token: a.owner.access_token,
+    expected: 200,
+    body: { currentPassword: a.password },
+  });
+
   const account = (await request('/financial/accounts', {
     method: 'POST',
     token: a.owner.access_token,

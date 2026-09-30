@@ -1,0 +1,2 @@
+ALTER TABLE "Session"
+ADD COLUMN "stepUpExpiresAt" TIMESTAMP(3);
