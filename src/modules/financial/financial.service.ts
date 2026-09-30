@@ -123,7 +123,7 @@ export class FinancialService {
     return this.prisma.subscription.findMany({
       where: { gymId, ...(studentId ? { studentId } : {}) },
       include: { student: { include: { user: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { startedAt: 'desc' },
     });
   }
 
