@@ -914,12 +914,23 @@ export class TenantProductEntitlementsService {
 
     return definitions.map((definition) => {
       const planResolution = this.resolvePlanFromContext(definition, context);
-      return this.applyConfigurationLayer(
+      const effective = this.applyConfigurationLayer(
         definition,
         planResolution,
         byFeature.get(definition.key) ?? null,
         'TENANT_CONFIGURATION',
       );
+      return {
+        ...effective,
+        planValue: planResolution.value,
+        definition: {
+          domain: definition.domain,
+          description: definition.description,
+          allowedPolicyValues: definition.allowedPolicyValues
+            ? [...definition.allowedPolicyValues]
+            : null,
+        },
+      };
     });
   }
 
