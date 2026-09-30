@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AccessService } from './access.service';
 import { CreateCredentialDto } from './dto/create-credential.dto';
 import { ScanDto } from './dto/scan.dto';
@@ -19,13 +19,72 @@ export class AccessController {
     @CurrentUser() user: any,
     @Query('gymId') requestedGymId?: string,
     @Query('studentId') studentId?: string,
+    @Query('deviceId') deviceId?: string,
+    @Query('allowed') allowed?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
   ) {
     const gymId = resolveTenantOperationGymId({
       activeGymId: user.activeGymId ?? user.gymId,
       requestedGymId,
       isSuperAdmin: user.isSuperAdmin === true,
     });
-    return this.accessService.findRecentEvents(gymId, studentId);
+    return this.accessService.findRecentEvents(gymId, {
+      studentId,
+      deviceId,
+      allowed,
+      from,
+      to,
+    });
+  }
+
+  @Get('credentials')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  findCredentials(
+    @CurrentUser() user: any,
+    @Query('studentId') studentId?: string,
+    @Query('active') active?: string,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.accessService.findCredentials(gymId, { studentId, active });
+  }
+
+  @Patch('credentials/:id/revoke')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  revokeCredential(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.accessService.revokeCredential(id, gymId, user.id);
+  }
+
+  @Get('devices')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
+  findDevices(
+    @CurrentUser() user: any,
+    @Query('active') active?: string,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.accessService.findDevices(gymId, { active });
   }
 
   @Post('credentials')
