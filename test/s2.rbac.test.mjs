@@ -13,10 +13,23 @@ test('OWNER cannot assign SUPER_ADMIN', () => {
   assert.equal(canAssignRole(['OWNER'], 'SUPER_ADMIN', false), false);
 });
 
-test('MANAGER cannot assign OWNER but can assign MANAGER or lower', () => {
+test('MANAGER can assign only strictly lower tenant roles', () => {
   assert.equal(canAssignRole(['MANAGER'], 'OWNER', false), false);
-  assert.equal(canAssignRole(['MANAGER'], 'MANAGER', false), true);
+  assert.equal(canAssignRole(['MANAGER'], 'MANAGER', false), false);
   assert.equal(canAssignRole(['MANAGER'], 'TRAINER', false), true);
+  assert.equal(canAssignRole(['MANAGER'], 'RECEPTION', false), true);
+});
+
+test('OWNER cannot delegate OWNER but can assign MANAGER and lower', () => {
+  assert.equal(canAssignRole(['OWNER'], 'OWNER', false), false);
+  assert.equal(canAssignRole(['OWNER'], 'MANAGER', false), true);
+  assert.equal(canAssignRole(['OWNER'], 'TRAINER', false), true);
+});
+
+test('operational roles cannot assign any role', () => {
+  assert.equal(canAssignRole(['RECEPTION'], 'TRAINER', false), false);
+  assert.equal(canAssignRole(['TRAINER'], 'RECEPTION', false), false);
+  assert.equal(canAssignRole(['STUDENT'], 'STUDENT', false), false);
 });
 
 test('global SUPER_ADMIN may assign SUPER_ADMIN only without tenant binding', () => {
