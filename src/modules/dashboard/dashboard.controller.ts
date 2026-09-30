@@ -13,16 +13,16 @@ export class DashboardController {
   @Get('summary')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   getSummary(@CurrentUser() user: any) {
-    const includeRevenue = Array.isArray(user?.roles)
-      && user.roles.some((role: string) => ['SUPER_ADMIN', 'OWNER', 'MANAGER'].includes(role));
+    const includeFinancial = Array.isArray(user?.roles)
+      && user.roles.some((role: string) => ['SUPER_ADMIN', 'OWNER'].includes(role));
     return this.dashboardService.getSummary(
       user.activeGymId ?? user.gymId,
-      { includeRevenue },
+      { includeFinancial },
     );
   }
 
   @Get('revenue')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
+  @Roles('SUPER_ADMIN', 'OWNER')
   getRevenue(@CurrentUser() user: any, @Query('days') days: string = '30') {
     return this.dashboardService.getRevenueByDay(user.gymId, parseInt(days, 10) || 30);
   }
@@ -34,7 +34,7 @@ export class DashboardController {
   }
 
   @Get('overdue')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  @Roles('SUPER_ADMIN', 'OWNER')
   getOverdue(@CurrentUser() user: any) {
     return this.dashboardService.getOverdueCharges(user.gymId);
   }
