@@ -35,20 +35,20 @@ export class FinancialController {
   }
 
   @Post('accounts')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
+  @Roles('SUPER_ADMIN', 'OWNER')
   createAccount(@Body() dto: CreateFinancialAccountDto, @CurrentUser() user: any) {
     const gymId = this.resolveGymId(user, dto.gymId);
     return this.financialService.createAccount(dto, gymId, user.id);
   }
 
   @Get('accounts')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  @Roles('SUPER_ADMIN', 'OWNER')
   findAllAccounts(@CurrentUser() user: any, @Query('gymId') requestedGymId?: string) {
     return this.financialService.findAllAccounts(this.resolveGymId(user, requestedGymId));
   }
 
   @Post('subscriptions')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  @Roles('SUPER_ADMIN', 'OWNER')
   createSubscription(
     @Body() dto: CreateSubscriptionDto,
     @CurrentUser() user: any,
@@ -62,7 +62,7 @@ export class FinancialController {
   }
 
   @Post('charges')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  @Roles('SUPER_ADMIN', 'OWNER')
   createCharge(
     @Body() dto: CreateChargeDto,
     @CurrentUser() user: any,
@@ -76,13 +76,13 @@ export class FinancialController {
   }
 
   @Get('charges')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  @Roles('SUPER_ADMIN', 'OWNER')
   findAllCharges(@CurrentUser() user: any, @Query('gymId') requestedGymId?: string) {
     return this.financialService.findAllCharges(this.resolveGymId(user, requestedGymId));
   }
 
   @Post('charges/:id/payment-session')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  @Roles('SUPER_ADMIN', 'OWNER')
   createPaymentSession(
     @Param('id') id: string,
     @Body() dto: CreateChargePaymentSessionDto,
@@ -139,7 +139,7 @@ export class FinancialController {
   }
 
   @Patch('charges/:id/pay')
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  @Roles('SUPER_ADMIN', 'OWNER')
   payCharge(
     @Param('id') id: string,
     @Body() dto: PayChargeDto,
