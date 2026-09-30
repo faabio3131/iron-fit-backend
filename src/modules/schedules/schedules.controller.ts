@@ -35,6 +35,30 @@ export class SchedulesController {
     return this.schedulesService.findAllSlots(gymId);
   }
 
+
+  @Get('schedules')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION', 'TRAINER')
+  findAllSchedules(
+    @CurrentUser() user: any,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('status') status?: string,
+    @Query('studentId') studentId?: string,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.schedulesService.findAllSchedules(gymId, {
+      from,
+      to,
+      status,
+      studentId,
+    });
+  }
+
   @Get('students/:studentId/schedules')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION', 'TRAINER')
   findByStudent(
