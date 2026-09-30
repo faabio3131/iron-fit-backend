@@ -10,7 +10,8 @@ export class DashboardService {
     return userGymId ? { gymId: userGymId } : {};
   }
 
-  async getSummary(userGymId?: string) {
+  async getSummary(userGymId?: string, options: { includeRevenue?: boolean } = {}) {
+    const includeRevenue = options.includeRevenue !== false;
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -43,10 +44,12 @@ export class DashboardService {
     const activeStudents = await this.prisma.student.count({ where: activeStudentWhere });
     const totalEquipments = await this.prisma.equipment.count({ where: equipmentWhere });
 
-    const revenueThisMonth = await this.prisma.financialTransaction.aggregate({
-      where: revenueWhere,
-      _sum: { amount: true },
-    });
+    const revenueThisMonth = includeRevenue
+      ? await this.prisma.financialTransaction.aggregate({
+          where: revenueWhere,
+          _sum: { amount: true },
+        })
+      : null;
 
     const pendingCharges = await this.prisma.charge.count({ where: chargePendingWhere });
     const overdueCharges = await this.prisma.charge.count({ where: chargeOverdueWhere });
@@ -60,7 +63,9 @@ export class DashboardService {
         inactive: totalStudents - activeStudents,
       },
       equipments: { total: totalEquipments },
-      revenue: { thisMonth: revenueThisMonth._sum.amount || 0 },
+      ...(includeRevenue
+        ? { revenue: { thisMonth: revenueThisMonth?._sum.amount || 0 } }
+        : {}),
       charges: { pending: pendingCharges, overdue: overdueCharges },
       workouts: {
         total: totalWorkouts,
