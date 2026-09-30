@@ -54,7 +54,7 @@ export class SchedulesService {
         slot: { gymId },
       },
       include: { slot: true },
-      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      orderBy: { date: 'desc' },
       take: 100,
     });
   }
