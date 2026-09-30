@@ -15,8 +15,8 @@ test('M3 access history is authenticated, RBAC protected and tenant-scoped', asy
   assert.match(controller, /@Roles\('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION'\)/);
   assert.match(controller, /resolveTenantOperationGymId/);
   assert.match(controller, /activeGymId: user\.activeGymId \?\? user\.gymId/);
-  assert.match(service, /findRecentEvents\\(gymId: string, studentId\\?: string\\)/);
-  assert.match(service, /where: \\{ gymId, \\.\\.\\.\\(studentId \\? \\{ studentId \\} : \\{\\}\\) \\}/);
+  assert.match(service, /findRecentEvents\(gymId: string, studentId\?: string\)/);
+  assert.match(service, /where: \{ gymId, \.\.\.\(studentId \? \{ studentId \} : \{\}\) \}/);
   assert.match(service, /take: ACCESS_EVENT_HISTORY_LIMIT/);
 });
 
