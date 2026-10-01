@@ -54,6 +54,65 @@ export class FiscalReconciliationCancellationService {
     private readonly audit: AuditService,
   ) {}
 
+  async listTenantHandoffs(gymId: string, status?: string) {
+    let normalizedStatus: FiscalHandoffStatus | undefined;
+    if (status?.trim()) {
+      const candidate = status.trim().toUpperCase();
+      if (!Object.values(FiscalHandoffStatus).includes(candidate as FiscalHandoffStatus)) {
+        throw new ConflictException('Status fiscal invalido');
+      }
+      normalizedStatus = candidate as FiscalHandoffStatus;
+    }
+
+    return this.prisma.fiscalHandoff.findMany({
+      where: {
+        gymId,
+        ...(normalizedStatus ? { status: normalizedStatus } : {}),
+      },
+      select: {
+        id: true,
+        chargeId: true,
+        status: true,
+        documentKind: true,
+        operationKind: true,
+        amountMinor: true,
+        currency: true,
+        paymentMethod: true,
+        settledAt: true,
+        providerDocumentId: true,
+        attemptCount: true,
+        nextAttemptAt: true,
+        lastAttemptAt: true,
+        lastErrorCode: true,
+        authorizedAt: true,
+        reconciledAt: true,
+        cancelledAt: true,
+        cancellationRejectionCode: true,
+        cancellationRejectionMessage: true,
+        reconciliationIssueCodes: true,
+        createdAt: true,
+        updatedAt: true,
+        charge: {
+          select: {
+            student: {
+              select: {
+                id: true,
+                user: {
+                  select: {
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+  }
+
   private async scheduleReconciliationRetry(
     row: any,
     leaseOwner: string,
