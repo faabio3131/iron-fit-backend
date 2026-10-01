@@ -217,9 +217,12 @@ test('L source does not invent statutory deadlines, legal bases or subprocessors
     migration,
     /15\s*days|30\s*days|90\s*days|365\s*days/i,
   );
+  // Self-service may read/update consent facts that already exist in the canonical
+  // Student record. What remains forbidden here is inventing a legal-basis label
+  // in application code without HUMAN/LEGAL approval.
   assert.doesNotMatch(
     service,
-    /consentimento|legitimo interesse|obrigacao legal/i,
+    /legitimo interesse|obrigacao legal/i,
   );
   assert.match(docs, /HUMAN\/LEGAL APPROVAL REQUIRED/);
   assert.match(docs, /does \*\*not\*\* hard-code a statutory deadline/);
