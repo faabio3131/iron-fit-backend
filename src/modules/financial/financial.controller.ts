@@ -166,6 +166,19 @@ export class FinancialController {
     );
   }
 
+  @Get('fiscal/handoffs')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  listFiscalHandoffs(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.fiscalLifecycle.listTenantHandoffs(
+      this.resolveGymId(user, requestedGymId),
+      status,
+    );
+  }
+
   @Post('fiscal/handoffs/:id/cancel')
   @Roles('SUPER_ADMIN', 'OWNER')
   cancelFiscalHandoff(
