@@ -3,6 +3,7 @@ import {
   DataSubjectRequestType,
 } from '@prisma/client';
 import {
+  IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
@@ -33,4 +34,19 @@ export class ReviewDataSubjectRequestDto {
   @IsString()
   @MaxLength(128)
   resolutionCode?: string;
+}
+
+
+export class UpdateMyPrivacyConsentsDto {
+  @IsOptional()
+  @IsBoolean()
+  consentHealth?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  consentComm?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  consentBiometry?: boolean;
 }

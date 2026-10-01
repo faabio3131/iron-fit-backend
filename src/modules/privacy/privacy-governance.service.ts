@@ -14,6 +14,7 @@ import {
   AcceptLegalDocumentDto,
   CreateDataSubjectRequestDto,
   ReviewDataSubjectRequestDto,
+  UpdateMyPrivacyConsentsDto,
 } from './dto/privacy-governance.dto';
 
 @Injectable()
@@ -109,6 +110,109 @@ export class PrivacyGovernanceService {
     });
 
     return cancelled;
+  }
+
+  async getMyConsents(userId: string) {
+    const student = await this.prisma.student.findFirst({
+      where: { userId },
+      select: {
+        id: true,
+        consentHealth: true,
+        consentComm: true,
+        consentBiometry: true,
+      },
+    });
+
+    if (!student) {
+      return {
+        available: false,
+        studentId: null,
+        consentHealth: null,
+        consentComm: null,
+        consentBiometry: null,
+      };
+    }
+
+    return {
+      available: true,
+      studentId: student.id,
+      consentHealth: student.consentHealth,
+      consentComm: student.consentComm,
+      consentBiometry: student.consentBiometry,
+    };
+  }
+
+  async updateMyConsents(
+    userId: string,
+    dto: UpdateMyPrivacyConsentsDto,
+  ) {
+    if (
+      dto.consentHealth === undefined &&
+      dto.consentComm === undefined &&
+      dto.consentBiometry === undefined
+    ) {
+      throw new BadRequestException(
+        'Informe ao menos um consentimento para atualizar',
+      );
+    }
+
+    const previous = await this.prisma.student.findFirst({
+      where: { userId },
+      select: {
+        id: true,
+        gymId: true,
+        consentHealth: true,
+        consentComm: true,
+        consentBiometry: true,
+      },
+    });
+    if (!previous) {
+      throw new NotFoundException('Perfil de aluno nao encontrado');
+    }
+
+    const next = {
+      consentHealth: dto.consentHealth ?? previous.consentHealth,
+      consentComm: dto.consentComm ?? previous.consentComm,
+      consentBiometry: dto.consentBiometry ?? previous.consentBiometry,
+    };
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.student.update({
+        where: { id: previous.id },
+        data: next,
+        select: {
+          id: true,
+          consentHealth: true,
+          consentComm: true,
+          consentBiometry: true,
+        },
+      });
+
+      await this.audit.record(
+        {
+          gymId: previous.gymId,
+          userId,
+          action: 'PRIVACY_SELF_CONSENTS_UPDATED',
+          entity: 'Student',
+          entityId: previous.id,
+          previous: {
+            consentHealth: previous.consentHealth,
+            consentComm: previous.consentComm,
+            consentBiometry: previous.consentBiometry,
+          },
+          next: updated,
+        },
+        tx,
+      );
+
+      return {
+        available: true,
+        studentId: updated.id,
+        consentHealth: updated.consentHealth,
+        consentComm: updated.consentComm,
+        consentBiometry: updated.consentBiometry,
+      };
+    });
   }
 
   async listLegalDocuments() {
