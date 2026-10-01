@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
+import { UpdateMyCommunicationPreferencesDto } from './dto/update-my-communication-preferences.dto';
 
 @Injectable()
 export class PortalService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private audit: AuditService) {}
 
   private async getStudentByUserId(userId: string, gymId?: string | null) {
     if (!gymId) {
@@ -90,6 +92,85 @@ export class PortalService {
       take: 30,
       include: { slot: true },
     });
+  }
+
+  async getCommunicationPreferences(userId: string, gymId?: string | null) {
+    const s = await this.getStudentByUserId(userId, gymId);
+    const existing = await this.prisma.communicationPreference.findUnique({
+      where: { studentId: s.id },
+    });
+
+    return {
+      studentId: s.id,
+      consentComm: s.consentComm,
+      configured: existing !== null,
+      pushEnabled: existing?.pushEnabled ?? true,
+      inAppEnabled: existing?.inAppEnabled ?? true,
+      emailEnabled: existing?.emailEnabled ?? false,
+      whatsappEnabled: existing?.whatsappEnabled ?? false,
+      trainingReminders: existing?.trainingReminders ?? true,
+      paymentReminders: existing?.paymentReminders ?? true,
+      marketing: existing?.marketing ?? false,
+    };
+  }
+
+  async updateCommunicationPreferences(
+    userId: string,
+    dto: UpdateMyCommunicationPreferencesDto,
+    gymId?: string | null,
+  ) {
+    const s = await this.getStudentByUserId(userId, gymId);
+    const previous = await this.prisma.communicationPreference.findUnique({
+      where: { studentId: s.id },
+    });
+
+    const nextValues = {
+      pushEnabled: dto.pushEnabled ?? previous?.pushEnabled ?? true,
+      inAppEnabled: dto.inAppEnabled ?? previous?.inAppEnabled ?? true,
+      emailEnabled: dto.emailEnabled ?? previous?.emailEnabled ?? false,
+      whatsappEnabled: dto.whatsappEnabled ?? previous?.whatsappEnabled ?? false,
+      trainingReminders:
+        dto.trainingReminders ?? previous?.trainingReminders ?? true,
+      paymentReminders:
+        dto.paymentReminders ?? previous?.paymentReminders ?? true,
+      marketing: dto.marketing ?? previous?.marketing ?? false,
+    };
+
+    const updated = await this.prisma.communicationPreference.upsert({
+      where: { studentId: s.id },
+      create: {
+        studentId: s.id,
+        ...nextValues,
+      },
+      update: nextValues,
+    });
+
+    await this.audit.record({
+      gymId: s.gymId,
+      userId,
+      action: 'STUDENT_COMMUNICATION_PREFERENCES_UPDATED',
+      entity: 'CommunicationPreference',
+      entityId: updated.id,
+      previous: previous
+        ? {
+            pushEnabled: previous.pushEnabled,
+            inAppEnabled: previous.inAppEnabled,
+            emailEnabled: previous.emailEnabled,
+            whatsappEnabled: previous.whatsappEnabled,
+            trainingReminders: previous.trainingReminders,
+            paymentReminders: previous.paymentReminders,
+            marketing: previous.marketing,
+          }
+        : null,
+      next: nextValues,
+    });
+
+    return {
+      studentId: s.id,
+      consentComm: s.consentComm,
+      configured: true,
+      ...nextValues,
+    };
   }
 
   async getCharges(userId: string, gymId?: string | null) {
