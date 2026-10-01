@@ -1,9 +1,10 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import { PortalService } from './portal.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UpdateMyCommunicationPreferencesDto } from './dto/update-my-communication-preferences.dto';
 
 @Controller('me')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,6 +30,26 @@ export class PortalController {
   @Get('schedules')
   schedules(@CurrentUser() user: any) {
     return this.portalService.getSchedules(user.id, user.activeGymId ?? user.gymId);
+  }
+
+  @Get('preferences')
+  preferences(@CurrentUser() user: any) {
+    return this.portalService.getCommunicationPreferences(
+      user.id,
+      user.activeGymId ?? user.gymId,
+    );
+  }
+
+  @Patch('preferences')
+  updatePreferences(
+    @CurrentUser() user: any,
+    @Body() dto: UpdateMyCommunicationPreferencesDto,
+  ) {
+    return this.portalService.updateCommunicationPreferences(
+      user.id,
+      dto,
+      user.activeGymId ?? user.gymId,
+    );
   }
 
   @Get('charges')
