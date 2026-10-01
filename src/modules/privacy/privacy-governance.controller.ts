@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import {
   CancelDataSubjectRequestDto,
   CreateDataSubjectRequestDto,
   ReviewDataSubjectRequestDto,
+  UpdateMyPrivacyConsentsDto,
 } from './dto/privacy-governance.dto';
 import { PrivacyGovernanceService } from './privacy-governance.service';
 
@@ -44,6 +46,19 @@ export class PrivacyGovernanceController {
     @Body() dto: CancelDataSubjectRequestDto,
   ) {
     return this.privacy.cancelMine(user.id, dto.requestId);
+  }
+
+  @Get('consents')
+  getMyConsents(@CurrentUser() user: any) {
+    return this.privacy.getMyConsents(user.id);
+  }
+
+  @Patch('consents')
+  updateMyConsents(
+    @CurrentUser() user: any,
+    @Body() dto: UpdateMyPrivacyConsentsDto,
+  ) {
+    return this.privacy.updateMyConsents(user.id, dto);
   }
 
   @Get('legal-documents')
