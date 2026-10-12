@@ -45,10 +45,11 @@ test('subscription commands have durable idempotency and reuse canonical plan li
   assert.match(service, /status: 'FAILED'/);
 });
 
-test('gateway webhook is not the FM Command entitlement authority', async () => {
+test('gateway webhook is excluded from IRON while FM Command owns entitlement commands', async () => {
   const controller = await source('src/modules/saas-billing/saas-billing.controller.ts');
   const fmController = await source('src/modules/fm-command/fm-command-control-plane.controller.ts');
-  assert.match(controller, /@Post\('webhooks\/:providerCode'\)/);
+  assert.doesNotMatch(controller, /@Post\('webhooks\/:providerCode'\)/);
+  assert.match(controller, /billingAuthority: 'FM_COMMAND'/);
   assert.match(fmController, /@Post\('subscription\/commands'\)/);
   assert.doesNotMatch(fmController, /providerCode|webhook/);
 });
