@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { BASE, login, request } from '../scripts/b6-e2e-lib.mjs';
 
-test('B6 live resilience: replay-safe signup, authenticated burst and spoofed provider rejection', async () => {
+test('B6 live resilience: replay-safe signup, authenticated burst and retired local billing webhook boundary', async () => {
   const suffix = randomUUID().slice(0, 8);
   const requestId = randomUUID();
   const password = process.env.B6_OWNER_PASSWORD;
@@ -66,7 +66,7 @@ test('B6 live resilience: replay-safe signup, authenticated burst and spoofed pr
 
   const spoof = await request('/saas-billing/webhooks/INTERNAL_SANDBOX', {
     method: 'POST',
-    expected: 401,
+    expected: 404,
     headers: {
       'x-saas-billing-signature': 'sha256=' + '0'.repeat(64),
     },
@@ -77,5 +77,5 @@ test('B6 live resilience: replay-safe signup, authenticated burst and spoofed pr
       data: { providerSessionRef: 'spoofed-provider-session' },
     },
   });
-  assert.equal(spoof.status, 401);
+  assert.equal(spoof.status, 404);
 }, { timeout: 45000 });

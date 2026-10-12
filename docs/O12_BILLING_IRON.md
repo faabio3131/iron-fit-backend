@@ -1,40 +1,81 @@
 # O12 — Billing IRON / Assinatura IRON
 
-Status: **CANDIDATE**
+Status: **RECONCILED — FM COMMAND AUTHORITY**
 
-Escopo: FM Tecnologia → academia. Este domínio permanece separado do Financeiro Academia.
+Escopo: FM Tecnologia → academia. Este domínio permanece separado do Financeiro Academia (academia → aluno).
 
-## CURRENT preservado
+## CURRENT reconciliado
 
-O domínio SaaS Billing já contém:
+O engine histórico de SaaS Billing do IRON permanece no código apenas como implementação legada/compatibilidade e fonte de leitura enquanto a migração para o FM Command é concluída.
+
+Ele contém:
 - preços publicados;
 - checkout idempotente;
-- upgrade com delta proporcional;
-- downgrade no próximo período;
+- upgrade/downgrade;
 - cancelamento;
 - invoices;
 - recorrência;
 - dunning;
-- suspensão após grace period;
-- reativação por pagamento posterior;
-- refund administrativo idempotente;
+- refund;
 - reconciliation;
-- step-up e RBAC.
+- provider boundary interno.
 
-## Acréscimo O12
+Essas capacidades **não são mais expostas como autoridade pública de mutação do IRON**.
 
-`GET /saas-billing/current` passa a fornecer, de forma aditiva:
+## Autoridade atual
 
-- `billingPolicy.invoiceDueDays`;
-- `billingPolicy.dunningGraceDays`;
-- `billingPolicy.gracePeriodEndsAt`.
+A autoridade de billing FM Tecnologia → academia é exclusivamente:
 
-A política vem exclusivamente da Launch Matrix APPROVED. A Web não calcula nem inventa política comercial.
+**FM Command**
 
-## Autoridade
+O IRON não aceita mais localmente:
+- criação de preço;
+- checkout;
+- troca de plano;
+- cancelamento;
+- refund;
+- recurrence;
+- dunning;
+- reconcile;
+- webhook de provider.
 
-- OWNER/SUPER_ADMIN: current, prices, checkout, change-plan, cancel;
-- SUPER_ADMIN: refund, recurrence, dunning e reconcile;
-- tenant derivado da identidade autenticada;
-- Billing IRON nunca reutiliza Financeiro Academia;
-- provider externo continua sem claim de produção quando não homologado.
+Rotas públicas mutantes foram removidas do `SaasBillingController`.
+
+## Superfície de compatibilidade
+
+Permanecem apenas:
+
+- `GET /saas-billing/authority`
+- `GET /saas-billing/prices`
+- `GET /saas-billing/current`
+
+`GET /saas-billing/authority` declara:
+
+- `billingAuthority = FM_COMMAND`;
+- `localMutationsEnabled = false`;
+- `providerWebhooksAccepted = false`;
+- `mode = COMMAND_CENTRALIZED`.
+
+`GET /saas-billing/current` expõe somente projeção legada read-only e inclui:
+
+- `projection = LEGACY_READ_ONLY`;
+- metadados de autoridade FM Command.
+
+Essa projeção não concede autoridade comercial ao IRON e deve ser substituída pela leitura canônica do Command assim que o contrato runtime de billing por produto estiver disponível.
+
+## Segurança
+
+- tenant continua derivado da identidade autenticada;
+- leitura continua protegida por OWNER/SUPER_ADMIN + step-up;
+- Financeiro Academia não é reutilizado;
+- webhook externo não entra mais pelo runtime IRON;
+- gateway/provider FM pertence ao Command;
+- nenhuma credencial de provider deve existir na superfície do tenant IRON.
+
+## Próximo gate
+
+Fechar a jornada canônica no Command:
+
+**plano → subscription → invoice → gateway FM → payment confirmation → Command → entitlement/licença IRON**
+
+Somente então a UI “Assinatura IRON” poderá reativar ações comerciais através de contrato governado do Command.

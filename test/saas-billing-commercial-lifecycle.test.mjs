@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const source = (path) => readFile(path, 'utf8');
 
-test('Block 3 persists a separate FM-to-academy billing domain', async () => {
+test('Block 3 preserves the legacy FM-to-academy billing engine for migration/history', async () => {
   const schema = await source('prisma/schema.prisma');
   const migration = await source('prisma/migrations/20260926021500_saas_billing_lifecycle/migration.sql');
   for (const model of ['SaasPlanPrice','SaasBillingAgreement','SaasCheckoutSession','SaasInvoice','SaasPayment','SaasRefund','SaasWebhookEvent','SaasBillingReconciliation']) {
@@ -30,6 +30,8 @@ test('pricing is PUBLISHED-plan-version based and tenant mutations cannot spoof 
   assert.match(controller, /user\?\.activeGymId \?\? user\?\.gymId/);
   assert.match(controller, /@UseGuards\(JwtAuthGuard, RolesGuard, StepUpGuard\)/);
   assert.match(controller, /@Roles\('SUPER_ADMIN', 'OWNER'\)/);
+  assert.match(controller, /billingAuthority: 'FM_COMMAND'/);
+  assert.doesNotMatch(controller, /@Post\('checkout'\)|@Post\('change-plan'\)|@Post\('cancel'\)/);
   assert.equal(dto.includes('gymId'), false);
 });
 
@@ -58,14 +60,14 @@ test('internal sandbox verifies HMAC and is forbidden in production', async () =
   assert.throws(() => prod.assertAvailable(), /proibido neste ambiente/);
 });
 
-test('webhook/payment replay and checkout have physical idempotency authorities', async () => {
+test('legacy webhook/payment replay invariants remain internal while public provider webhook is removed', async () => {
   const schema = await source('prisma/schema.prisma');
   const controller = await source('src/modules/saas-billing/saas-billing.controller.ts');
   const service = await source('src/modules/saas-billing/saas-billing.service.ts');
   assert.match(schema, /@@unique\(\[providerCode, providerEventId\]\)/);
   assert.match(schema, /@@unique\(\[providerCode, providerPaymentRef\]\)/);
   assert.match(schema, /requestId\s+String\s+@unique/);
-  assert.match(controller, /x-saas-billing-signature/);
+  assert.doesNotMatch(controller, /webhooks\/:providerCode|x-saas-billing-signature/);
   assert.match(service, /verifyWebhook\(dto, signature(?:, provider\.context)?\)/);
   assert.match(service, /Webhook eventId reutilizado com payload diferente/);
 });
@@ -108,8 +110,8 @@ test('documentation and environment make external-homologation boundary explicit
   const doc = await source('docs/SAAS_BILLING_COMMERCIAL_LIFECYCLE.md');
   const env = await source('.env.example');
   const workflow = await source('.github/workflows/iron-s0-quality.yml');
-  assert.match(doc, /não representa gateway externo homologado/);
-  assert.match(doc, /não significa emissão fiscal real/);
+  assert.match(doc, /Providers, contas recebedoras, webhook e credenciais FM pertencem ao FM Command/);
+  assert.match(doc, /fail-closed para novas mutações locais de billing FM→academia/);
   assert.match(env, /SAAS_BILLING_SANDBOX_ENABLED=false/);
   assert.match(env, /dunning grace are governed by the APPROVED Commercial Launch Matrix/);
   assert.doesNotMatch(env, /SAAS_BILLING_DUNNING_GRACE_DAYS=/);
