@@ -1,10 +1,6 @@
 import {
-  Body,
   Controller,
   Get,
-  Headers,
-  Param,
-  Post,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -12,118 +8,41 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { StepUpGuard } from '../auth/guards/step-up.guard';
-import {
-  BillingWebhookDto,
-  CancelSaasBillingDto,
-  ChangeSaasPlanDto,
-  CreateSaasCheckoutDto,
-  CreateSaasPriceDto,
-  RefundSaasBillingDto,
-  RunSaasBillingDto,
-} from './dto/saas-billing.dto';
 import { SaasBillingService } from './saas-billing.service';
 
+const FM_COMMAND_AUTHORITY = {
+  billingAuthority: 'FM_COMMAND',
+  productCode: 'IRON_FIT_CORE',
+  localMutationsEnabled: false,
+  providerWebhooksAccepted: false,
+  mode: 'COMMAND_CENTRALIZED',
+} as const;
+
 @Controller('saas-billing')
+@UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+@Roles('SUPER_ADMIN', 'OWNER')
 export class SaasBillingController {
   constructor(private readonly service: SaasBillingService) {}
 
+  @Get('authority')
+  authority() {
+    return FM_COMMAND_AUTHORITY;
+  }
+
   @Get('prices')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN', 'OWNER')
   listPrices() {
     return this.service.listPrices();
   }
 
-  @Post('prices')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN')
-  createPrice(@Body() dto: CreateSaasPriceDto, @CurrentUser() user: any) {
-    return this.service.createPrice(dto, user?.id);
-  }
-
   @Get('current')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN', 'OWNER')
-  current(@CurrentUser() user: any) {
-    return this.service.getCurrent(user?.activeGymId ?? user?.gymId);
-  }
-
-  @Post('checkout')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN', 'OWNER')
-  checkout(
-    @Body() dto: CreateSaasCheckoutDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.service.createCheckout(
+  async current(@CurrentUser() user: any) {
+    const legacyProjection = await this.service.getCurrent(
       user?.activeGymId ?? user?.gymId,
-      user?.id,
-      dto,
     );
-  }
-
-  @Post('change-plan')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN', 'OWNER')
-  changePlan(
-    @Body() dto: ChangeSaasPlanDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.service.changePlan(
-      user?.activeGymId ?? user?.gymId,
-      user?.id,
-      dto,
-    );
-  }
-
-  @Post('cancel')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN', 'OWNER')
-  cancel(
-    @Body() dto: CancelSaasBillingDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.service.cancel(
-      user?.activeGymId ?? user?.gymId,
-      user?.id,
-      dto,
-    );
-  }
-
-  @Post('refunds')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN')
-  refund(@Body() dto: RefundSaasBillingDto, @CurrentUser() user: any) {
-    return this.service.refund(dto, user?.id);
-  }
-
-  @Post('admin/recurrence/run')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN')
-  runRecurrence(@Body() dto: RunSaasBillingDto, @CurrentUser() user: any) {
-    return this.service.runRecurrence(dto, user?.id);
-  }
-
-  @Post('admin/dunning/run')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN')
-  runDunning(@Body() dto: RunSaasBillingDto, @CurrentUser() user: any) {
-    return this.service.runDunning(dto, user?.id);
-  }
-
-  @Post('admin/reconcile')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN')
-  reconcile(@CurrentUser() user: any) {
-    return this.service.reconcile(user?.id);
-  }
-
-  @Post('webhooks/:providerCode')
-  webhook(
-    @Param('providerCode') providerCode: string,
-    @Headers('x-saas-billing-signature') signature: string | undefined,
-    @Body() dto: BillingWebhookDto,
-  ) {
-    return this.service.processWebhook(providerCode, signature, dto);
+    return {
+      ...legacyProjection,
+      authority: FM_COMMAND_AUTHORITY,
+      projection: 'LEGACY_READ_ONLY',
+    };
   }
 }
