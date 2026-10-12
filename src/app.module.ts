@@ -28,6 +28,7 @@ import { SaasBillingModule } from './modules/saas-billing/saas-billing.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { TransactionalEmailModule } from './modules/transactional-email/transactional-email.module';
 import { PrivacyGovernanceModule } from './modules/privacy/privacy-governance.module';
+import { FmCommandModule } from './modules/fm-command/fm-command.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -61,6 +62,7 @@ import { PrismaModule } from './prisma/prisma.module';
     IntegrationsModule,
     TransactionalEmailModule,
     PrivacyGovernanceModule,
+    FmCommandModule,
   ],
   controllers: [HealthController, MetricsController],
   providers: [RuntimeMetricsService, RequestObservabilityMiddleware],
