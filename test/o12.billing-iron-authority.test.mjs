@@ -4,37 +4,41 @@ import { readFile } from 'node:fs/promises';
 
 const source = (path) => readFile(path, 'utf8');
 
-test('O12 billing owner surface remains step-up protected and tenant-derived', async () => {
+test('O12 billing surface is read-only and declares FM Command authority', async () => {
   const controller = await source('src/modules/saas-billing/saas-billing.controller.ts');
 
   for (const route of [
+    "@Get('authority')",
     "@Get('prices')",
     "@Get('current')",
-    "@Post('checkout')",
-    "@Post('change-plan')",
-    "@Post('cancel')",
   ]) {
     assert.equal(controller.includes(route), true, route);
   }
+
+  for (const forbidden of [
+    "@Post('prices')",
+    "@Post('checkout')",
+    "@Post('change-plan')",
+    "@Post('cancel')",
+    "@Post('refunds')",
+    "@Post('admin/recurrence/run')",
+    "@Post('admin/dunning/run')",
+    "@Post('admin/reconcile')",
+    "@Post('webhooks/:providerCode')",
+  ]) {
+    assert.equal(controller.includes(forbidden), false, forbidden);
+  }
+
+  assert.match(controller, /billingAuthority: 'FM_COMMAND'/);
+  assert.match(controller, /localMutationsEnabled: false/);
+  assert.match(controller, /providerWebhooksAccepted: false/);
+  assert.match(controller, /projection: 'LEGACY_READ_ONLY'/);
   assert.match(controller, /@UseGuards\(JwtAuthGuard, RolesGuard, StepUpGuard\)/);
   assert.match(controller, /@Roles\('SUPER_ADMIN', 'OWNER'\)/);
   assert.match(controller, /user\?\.activeGymId \?\? user\?\.gymId/);
 });
 
-test('O12 refund and operational dunning remain SUPER_ADMIN authority', async () => {
-  const controller = await source('src/modules/saas-billing/saas-billing.controller.ts');
-
-  assert.match(
-    controller,
-    /@Post\('refunds'\)[\s\S]*?@Roles\('SUPER_ADMIN'\)/,
-  );
-  assert.match(
-    controller,
-    /@Post\('admin\/dunning\/run'\)[\s\S]*?@Roles\('SUPER_ADMIN'\)/,
-  );
-});
-
-test('O12 current read model derives grace period only from APPROVED commercial policy', async () => {
+test('O12 legacy read model remains deterministic while no longer owning mutations', async () => {
   const service = await source('src/modules/saas-billing/saas-billing.service.ts');
   const current = service.slice(
     service.indexOf('async getCurrent'),
