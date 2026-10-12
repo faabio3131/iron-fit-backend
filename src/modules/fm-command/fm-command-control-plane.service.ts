@@ -63,8 +63,6 @@ export class FmCommandControlPlaneService {
           slug: true,
           active: true,
           createdAt: true,
-          updatedAt: true,
-          _count: { select: { students: true, userRoles: true } },
         },
       }),
       this.prisma.commercialTrialProvisioning.findMany({
@@ -105,10 +103,7 @@ export class FmCommandControlPlaneService {
       name: gym.name,
       slug: gym.slug,
       active: gym.active,
-      student_count: gym._count.students,
-      team_membership_count: gym._count.userRoles,
       created_at: gym.createdAt.toISOString(),
-      updated_at: gym.updatedAt.toISOString(),
     }));
 
     const trialRows = trials.map((trial) => ({
@@ -158,7 +153,7 @@ export class FmCommandControlPlaneService {
         external_id: 'tenant:' + item.tenant_id,
         fact_type: 'iron.tenant',
         payload: item,
-        source_timestamp: item.updated_at,
+        source_timestamp: item.created_at,
       })),
       ...trialRows.map((item) => ({
         external_id: 'trial:' + item.external_id,
