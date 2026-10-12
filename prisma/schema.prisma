@@ -512,6 +512,25 @@ model CommercialOnboardingCheckpoint {
   @@index([completedByUserId, completedAt])
 }
 
+model FmCommandControlPlaneCommand {
+  id             String   @id @default(uuid())
+  idempotencyKey String   @unique
+  payloadHash    String
+  gymId          String
+  action         String
+  status         String   @default("PROCESSING")
+  correlationId  String
+  result         Json?
+  errorCode      String?
+  createdAt      DateTime @default(now())
+  processedAt    DateTime?
+  gym            Gym      @relation(fields: [gymId], references: [id], onDelete: Restrict)
+
+  @@index([gymId, createdAt])
+  @@index([status, createdAt])
+}
+
+
 model Gym {
   id        String   @id @default(uuid())
   name      String
@@ -548,6 +567,7 @@ model Gym {
   communicationMessages CommunicationMessage[]
   aggregatorConnections AggregatorProviderConnection[]
   commercialOnboardingCheckpoints CommercialOnboardingCheckpoint[]
+  fmCommandControlPlaneCommands FmCommandControlPlaneCommand[]
   @@index([slug])
 }
 
