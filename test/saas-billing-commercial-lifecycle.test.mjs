@@ -110,8 +110,8 @@ test('documentation and environment make external-homologation boundary explicit
   const doc = await source('docs/SAAS_BILLING_COMMERCIAL_LIFECYCLE.md');
   const env = await source('.env.example');
   const workflow = await source('.github/workflows/iron-s0-quality.yml');
-  assert.match(doc, /não representa gateway externo homologado/);
-  assert.match(doc, /não significa emissão fiscal real/);
+  assert.match(doc, /Providers, contas recebedoras, webhook e credenciais FM pertencem ao FM Command/);
+  assert.match(doc, /fail-closed para novas mutações locais de billing FM→academia/);
   assert.match(env, /SAAS_BILLING_SANDBOX_ENABLED=false/);
   assert.match(env, /dunning grace are governed by the APPROVED Commercial Launch Matrix/);
   assert.doesNotMatch(env, /SAAS_BILLING_DUNNING_GRACE_DAYS=/);
