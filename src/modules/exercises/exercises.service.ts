@@ -1,6 +1,7 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
+import { ExerciseQueryDto } from './dto/exercise-query.dto';
 
 @Injectable()
 export class ExercisesService {
@@ -27,8 +28,32 @@ export class ExercisesService {
     });
   }
 
-  async findAll() {
+  async findAll(query: ExerciseQueryDto = {}) {
+    const search = query.search?.trim();
     return this.prisma.exercise.findMany({
+      where: {
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { muscleGroup: { contains: search, mode: 'insensitive' } },
+                { movement: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        ...(query.muscleGroup
+          ? { muscleGroup: { equals: query.muscleGroup.trim(), mode: 'insensitive' } }
+          : {}),
+        ...(query.movement
+          ? { movement: { equals: query.movement.trim(), mode: 'insensitive' } }
+          : {}),
+        ...(query.level
+          ? { level: { equals: query.level.trim(), mode: 'insensitive' } }
+          : {}),
+      },
+      include: {
+        _count: { select: { workoutExercises: true } },
+      },
       orderBy: { name: 'asc' },
     });
   }
