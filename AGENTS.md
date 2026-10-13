@@ -201,6 +201,11 @@ A academia nunca fornece API key de IA.
 
 Credenciais, modelo, endpoint, billing, quotas, fallback e roteamento são administrados centralmente pela FM via Command/Vault/Secret Reference/infraestrutura autorizada.
 
+### API de alimentação e APIs de execução do IRON — autoridade preservada
+
+**O Command é control-plane, não runtime proxy do IRON.** A integração funcional permanece 100% no backend IRON: autenticação → tenant/RBAC/entitlement → execução IRON → provider externo → resposta do IRON. Somente configuração governada, credenciais da FM por Secret Reference, gestão de custo/quotas e coleta de métricas de uso fluem pelo Command. O IRON continua chamando o provider diretamente pelo seu adapter e reportando telemetria por contrato server-to-server com dados mínimos. Não criar endpoint fictício, proxy obrigatório no Command nem trasladar regra de negócio ou PII para lá. A implementação específica deve partir do CURRENT; consultar `docs/D9_D12_IRON_RUNTIME_API_COMMAND_CONTROL_USAGE_BOUNDARY_2026-10-13.md`.
+
+
 ## D8 — Aggregator Hub Web
 
 Criar a superfície Web faltante somente no escopo permitido pelo launch atual.
