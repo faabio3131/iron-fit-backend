@@ -4,6 +4,7 @@ import {
   Get,
   Headers,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -27,6 +28,11 @@ export class FmCommandControlPlaneController {
   @Get('snapshot')
   snapshot() {
     return this.service.snapshot();
+  }
+
+  @Get('usage/ai')
+  aiUsage(@Query('days') days?: string) {
+    return this.service.aiUsage(days);
   }
 
   @Post('subscription/commands')
