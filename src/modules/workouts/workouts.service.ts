@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { findEquipmentExerciseMapping } from '../../common/equipment/equipment-exercise-mapping';
@@ -326,13 +326,43 @@ export class WorkoutsService {
       throw new BadRequestException('Status invalido');
     }
 
-    const data: any = { status };
+    const transitions: Record<string, string[]> = {
+      DRAFT: ['APPROVED', 'EXPIRED'],
+      PENDING_REVIEW: ['APPROVED', 'EXPIRED'],
+      APPROVED: ['ACTIVE', 'EXPIRED'],
+      ACTIVE: ['EXPIRED'],
+      EXPIRED: [],
+    };
+    const nextAllowed = transitions[workout.status] ?? [];
+    if (!nextAllowed.includes(status)) {
+      throw new BadRequestException(
+        `Transicao de treino invalida: ${workout.status} -> ${status}`,
+      );
+    }
 
-    if (status === 'APPROVED' || status === 'ACTIVE') {
+    // Human reviewer provenance is never overwritten by later activation.
+    if (status === 'ACTIVE' && !workout.approvedById) {
+      throw new BadRequestException('Treino sem revisor humano registrado');
+    }
+
+    const data: any = { status };
+    if (status === 'APPROVED') {
       data.approvedById = userId;
     }
 
-    const updated = await this.prisma.workout.update({ where: { id }, data });
+    // Atomic status compare-and-swap prevents concurrent stale transitions.
+    let updated;
+    try {
+      updated = await this.prisma.workout.update({
+        where: { id, status: workout.status },
+        data,
+      });
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+        throw new ConflictException('Treino foi alterado por outra operacao; atualize antes de continuar');
+      }
+      throw error;
+    }
 
     await this.audit.record({
       gymId,

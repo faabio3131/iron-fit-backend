@@ -85,8 +85,12 @@ test('AI0 G6 keeps human approval and activation in the canonical authenticated 
   const workouts = await source('src/modules/workouts/workouts.service.ts');
   assert.match(controller, /@Patch\(':id\/status'\)/);
   assert.match(controller, /@Roles\('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER'\)/);
-  assert.match(workouts, /if \(status === 'APPROVED' \|\| status === 'ACTIVE'\)/);
+  // Human identity is recorded at review, never overwritten at activation.
+  assert.match(workouts, /if \(status === 'APPROVED'\)/);
   assert.match(workouts, /data\.approvedById = userId/);
+  assert.match(workouts, /status === 'ACTIVE' && !workout\.approvedById/);
+  assert.match(workouts, /where: \{ id, status: workout\.status \}/);
+  assert.doesNotMatch(workouts, /if \(status === 'APPROVED' \|\| status === 'ACTIVE'\)/);
 });
 
 test('AI0 G6 is wired without a new schema migration', async () => {
