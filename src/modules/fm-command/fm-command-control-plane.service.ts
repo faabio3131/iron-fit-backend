@@ -52,6 +52,58 @@ export class FmCommandControlPlaneService {
     };
   }
 
+  /**
+   * Read-only operational AI execution counts for the FM control plane.
+   * A trace is NOT a provider token/cost measurement and never authorizes billing.
+   * No actor, student, prompt, request hash or secret leaves the IRON boundary.
+   */
+  async aiUsage(days?: string) {
+    if (days !== undefined && !/^[1-9][0-9]?$/.test(days)) {
+      throw new BadRequestException('Janela de consumo de IA invalida');
+    }
+    const windowDays = days === undefined ? 30 : Number(days);
+    if (!Number.isSafeInteger(windowDays) || windowDays < 1 || windowDays > 90) {
+      throw new BadRequestException('Janela deve ter entre 1 e 90 dias');
+    }
+    const now = new Date();
+    const from = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
+    const aggregates = await this.prisma.aiExecutionTrace.groupBy({
+      by: ['gymId', 'capability', 'providerCode', 'modelCode', 'status'],
+      where: { createdAt: { gte: from, lt: now } },
+      _count: { _all: true },
+      orderBy: [
+        { gymId: 'asc' },
+        { capability: 'asc' },
+        { providerCode: 'asc' },
+        { modelCode: 'asc' },
+        { status: 'asc' },
+      ],
+    });
+
+    return {
+      schema_version: 'iron.fmcc.ai-usage.v1',
+      product_code: 'IRON_FIT_CORE',
+      as_of: now.toISOString(),
+      window_start: from.toISOString(),
+      window_days: windowDays,
+      metric: 'ai_execution_trace_count',
+      usage: aggregates.map((item) => ({
+        tenant_id: item.gymId,
+        capability: item.capability,
+        provider_code: item.providerCode,
+        model_code: item.modelCode,
+        status: item.status,
+        execution_count: item._count._all,
+      })),
+      unavailable_metrics: ['input_tokens', 'output_tokens', 'provider_cost_minor'],
+      provenance: {
+        source: 'IRON_CANONICAL_AI_EXECUTION_TRACE',
+        calculation: 'GROUP_BY_TENANT_CAPABILITY_PROVIDER_MODEL_STATUS',
+        commercial_authority: 'FM_COMMAND',
+      },
+    };
+  }
+
   async snapshot() {
     const now = new Date();
     const [gyms, trials, onboarding, subscriptions] = await Promise.all([
