@@ -1,3 +1,4 @@
+import { publicUserSelect } from '../../common/security/public-user-select';
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -31,7 +32,7 @@ export class WorkoutsService {
       where: { student: { gymId } },
       orderBy: { createdAt: 'desc' },
       include: {
-        student: { include: { user: true } },
+        student: { include: { user: { select: publicUserSelect } } },
         sessions: {
           include: {
             exercises: { include: { exercise: true, equipment: true } },

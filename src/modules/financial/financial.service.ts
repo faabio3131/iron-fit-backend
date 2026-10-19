@@ -1,3 +1,4 @@
+import { publicUserSelect } from '../../common/security/public-user-select';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ChargeStatus, Prisma, SubscriptionStatus, TransactionStatus, TransactionType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -126,7 +127,7 @@ export class FinancialService {
         amount: dto.amount,
         nextBillingAt: dto.nextBillingAt ? new Date(dto.nextBillingAt) : null,
       } as any,
-      include: { student: { include: { user: true } } },
+      include: { student: { include: { user: { select: publicUserSelect } } } },
     });
 
     await this.audit.record({
@@ -166,7 +167,7 @@ export class FinancialService {
         ...(normalized.studentId ? { studentId: normalized.studentId } : {}),
         ...(status ? { status } : {}),
       },
-      include: { student: { include: { user: true } } },
+      include: { student: { include: { user: { select: publicUserSelect } } } },
       orderBy: { startedAt: 'desc' },
     });
   }
