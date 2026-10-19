@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ExercisesService } from './exercises.service';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
+import { ExerciseQueryDto } from './dto/exercise-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -18,7 +19,7 @@ export class ExercisesController {
 
   @Get()
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER', 'RECEPTION')
-  findAll() {
-    return this.exercisesService.findAll();
+  findAll(@Query() query: ExerciseQueryDto) {
+    return this.exercisesService.findAll(query);
   }
 }

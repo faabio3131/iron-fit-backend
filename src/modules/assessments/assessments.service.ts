@@ -84,6 +84,7 @@ export class AssessmentsService {
       measurements: assessment.measurements,
       restrictions: assessment.restrictions,
       notes: assessment.notes,
+      workoutCount: await this.prisma.workout.count({ where: { assessmentId: assessment.id } }),
       createdAt: assessment.createdAt,
     };
   }
@@ -103,6 +104,9 @@ export class AssessmentsService {
 
     const assessments = await this.prisma.assessment.findMany({
       where: { studentId },
+      include: {
+        _count: { select: { workouts: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -115,6 +119,7 @@ export class AssessmentsService {
       measurements: a.measurements,
       restrictions: a.restrictions,
       notes: a.notes,
+      workoutCount: a._count.workouts,
       createdAt: a.createdAt,
     }));
   }
@@ -147,6 +152,7 @@ export class AssessmentsService {
       measurements: assessment.measurements,
       restrictions: assessment.restrictions,
       notes: assessment.notes,
+      workoutCount: await this.prisma.workout.count({ where: { assessmentId: assessment.id } }),
       createdAt: assessment.createdAt,
     };
   }
