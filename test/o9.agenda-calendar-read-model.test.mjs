@@ -38,7 +38,8 @@ test('O9 calendar service is tenant-safe and bounded', async () => {
   );
   assert.match(
     service,
-    /student: \{ include: \{ user: true \} \}/,
+    /student: \{ include: \{ user: \{ select: publicUserSelect \} \} \}/,
   );
   assert.match(service, /slot: true/);
+  assert.doesNotMatch(service, /student: \\{ include: \\{ user: true \\} \\}/);
 });
