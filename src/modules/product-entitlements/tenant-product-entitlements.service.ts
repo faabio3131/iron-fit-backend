@@ -26,6 +26,17 @@ import { SetProductConfigurationValueDto } from './dto/set-product-configuration
 
 const SERIALIZABLE_ATTEMPTS = 3;
 
+// The tenant API only adjusts operational preferences; FM owns commercial
+// grants/quotas and IRON's canonical plan is the entitlement authority.
+const TENANT_OPERATIONAL_FEATURE_KEYS = new Set([
+  'ai.workout_generation',
+  'ai.content_recommendation',
+  'content.external_youtube',
+  'content.iron_managed',
+  'content.tenant_private',
+]);
+const TENANT_OPERATIONAL_POLICY_KEYS = new Set(['content.delivery_mode']);
+
 type ResolvedValue = boolean | number | readonly string[] | null;
 
 type TenantResolutionContext = {
@@ -93,6 +104,18 @@ export class TenantProductEntitlementsService {
     if (definition.kind === 'FEATURE') return ProductEntitlementKind.FEATURE;
     if (definition.kind === 'LIMIT') return ProductEntitlementKind.LIMIT;
     return ProductEntitlementKind.POLICY;
+  }
+
+  private assertTenantOperationalPreference(definition: Readonly<ProductFeatureDefinition>): void {
+    const allowed =
+      (definition.kind === 'FEATURE' && TENANT_OPERATIONAL_FEATURE_KEYS.has(definition.key)) ||
+      (definition.kind === 'POLICY' && TENANT_OPERATIONAL_POLICY_KEYS.has(definition.key));
+    if (!allowed) {
+      throw new ForbiddenException(
+        'Direitos e limites comerciais sao geridos pela FM Tecnologia. ' +
+          'Configure a operacao no modulo proprio ou consulte o plano.',
+      );
+    }
   }
 
   private async serializable<T>(
@@ -696,6 +719,7 @@ export class TenantProductEntitlementsService {
   ) {
     const scopedGymId = this.requireGymId(gymId);
     const definition = await this.capabilities.requireForResolution(featureKey);
+    this.assertTenantOperationalPreference(definition);
     const built = this.buildStoredLayerValue(definition, dto);
 
     return this.serializable(async (tx) => {
@@ -750,7 +774,8 @@ export class TenantProductEntitlementsService {
     actorUserId?: string,
   ) {
     const scopedGymId = this.requireGymId(gymId);
-    await this.capabilities.requireForResolution(featureKey);
+    const definition = await this.capabilities.requireForResolution(featureKey);
+    this.assertTenantOperationalPreference(definition);
 
     return this.serializable(async (tx) => {
       const existing = await tx.tenantProductConfiguration.findUnique({

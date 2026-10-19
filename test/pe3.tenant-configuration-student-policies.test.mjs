@@ -231,13 +231,13 @@ test('PE3 APIs derive tenant and student identity from auth and expose no target
 
 test('PE3 tenant FEATURE configuration can narrow a granted plan and is idempotent with atomic audit', async () => {
   const subscription = subscriptionWith([
-    planEntitlement('equipment.catalog', 'FEATURE', true),
+    planEntitlement('content.external_youtube', 'FEATURE', true),
   ]);
   const { service, audits, tenantStore } = makeService({ subscription });
 
   const first = await service.setTenantConfiguration(
     'gym-a',
-    'equipment.catalog',
+    'content.external_youtube',
     { featureEnabled: false },
     'owner-a',
   );
@@ -250,7 +250,7 @@ test('PE3 tenant FEATURE configuration can narrow a granted plan and is idempote
 
   const repeated = await service.setTenantConfiguration(
     'gym-a',
-    'equipment.catalog',
+    'content.external_youtube',
     { featureEnabled: false },
     'owner-a',
   );
@@ -258,53 +258,73 @@ test('PE3 tenant FEATURE configuration can narrow a granted plan and is idempote
   assert.equal(tenantStore.size, 1);
   assert.equal(audits.length, 1);
 
-  const resolved = await service.resolveFeature('gym-a', 'equipment.catalog');
+  const resolved = await service.resolveFeature('gym-a', 'content.external_youtube');
   assert.equal(resolved.value, false);
   assert.equal(resolved.source, 'TENANT_CONFIGURATION');
   assert.equal(resolved.tenantConfigurationId, first.id);
 });
 
-test('PE3 tenant configuration cannot enable FEATURE denied by the plan or exceed LIMIT/POLICY authority', async () => {
+test('PE3 tenant API rejects FM-owned limits and core grants even if a new value would narrow them', async () => {
   const subscription = subscriptionWith([
-    planEntitlement('equipment.catalog', 'FEATURE', false),
-    planEntitlement('content.private_items_max', 'LIMIT', 10),
+    planEntitlement('equipment.catalog', 'FEATURE', true),
+    planEntitlement('content.private_items_max', 'LIMIT', 50),
+    planEntitlement('content.external_youtube', 'FEATURE', false),
     planEntitlement('content.delivery_mode', 'POLICY', [
-      'IRON_FIRST',
-      'YOUTUBE_EXTERNAL',
+      'IRON_FIRST', 'YOUTUBE_EXTERNAL',
     ]),
   ]);
-  const { service } = makeService({ subscription });
+  const { service, audits, tenantStore } = makeService({ subscription });
+
+  for (const [featureKey, payload] of [
+    ['equipment.catalog', { featureEnabled: false }],
+    ['content.private_items_max', { limitValue: 30 }],
+    ['content.private_items_max', { limitValue: 51 }],
+  ]) {
+    await assert.rejects(
+      () => service.setTenantConfiguration('gym-a', featureKey, payload, 'owner-a'),
+      /Direitos e limites comerciais sao geridos pela FM Tecnologia/,
+    );
+    await assert.rejects(
+      () => service.resetTenantConfiguration('gym-a', featureKey, 'owner-a'),
+      /Direitos e limites comerciais sao geridos pela FM Tecnologia/,
+    );
+  }
 
   await assert.rejects(
-    () =>
-      service.setTenantConfiguration(
-        'gym-a',
-        'equipment.catalog',
-        { featureEnabled: true },
-        'owner-a',
-      ),
+    () => service.setTenantConfiguration('gym-a', 'content.external_youtube', { featureEnabled: true }, 'owner-a'),
     /nao pode ampliar/,
   );
   await assert.rejects(
-    () =>
-      service.setTenantConfiguration(
-        'gym-a',
-        'content.private_items_max',
-        { limitValue: 11 },
-        'owner-a',
-      ),
+    () => service.setTenantConfiguration('gym-a', 'content.delivery_mode', { policyValues: ['IRON_ONLY'] }, 'owner-a'),
     /nao pode ampliar/,
+  );
+  assert.equal(tenantStore.size, 0);
+  assert.equal(audits.length, 0);
+});
+
+test('PE3 historical tenant LIMIT stays readable without granting the academy authority to alter it', async () => {
+  const subscription = subscriptionWith([planEntitlement('content.private_items_max', 'LIMIT', 50)]);
+  const previous = {
+    id: 'legacy-limit-1', gymId: 'gym-a', featureKey: 'content.private_items_max',
+    kind: 'LIMIT', featureEnabled: null, limitValue: 20, policyValues: null,
+  };
+  const { service, tenantStore, audits } = makeService({
+    subscription, tenantConfigurations: [previous],
+  });
+
+  const resolved = await service.resolveFeature('gym-a', 'content.private_items_max');
+  assert.equal(resolved.value, 20);
+  assert.equal(resolved.source, 'TENANT_CONFIGURATION');
+  await assert.rejects(
+    () => service.resetTenantConfiguration('gym-a', 'content.private_items_max', 'owner-a'),
+    /Direitos e limites comerciais sao geridos pela FM Tecnologia/,
   );
   await assert.rejects(
-    () =>
-      service.setTenantConfiguration(
-        'gym-a',
-        'content.delivery_mode',
-        { policyValues: ['IRON_ONLY'] },
-        'owner-a',
-      ),
-    /nao pode ampliar/,
+    () => service.setTenantConfiguration('gym-a', 'content.private_items_max', { limitValue: 50 }, 'owner-a'),
+    /Direitos e limites comerciais sao geridos pela FM Tecnologia/,
   );
+  assert.equal(tenantStore.get('content.private_items_max').limitValue, 20);
+  assert.equal(audits.length, 0);
 });
 
 test('PE3 resolver applies FEATURE, LIMIT and POLICY tenant narrowing deterministically', async () => {
