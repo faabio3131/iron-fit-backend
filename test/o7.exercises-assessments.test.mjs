@@ -70,3 +70,25 @@ test('O7 assessment history stays tenant-scoped and reports linked workout count
     /Aluno nao encontrado/,
   );
 });
+
+test('O7 assessment detail counts workout associations without widening tenant scope', async () => {
+  let counted = null;
+  const prisma = {
+    assessment: {
+      findUnique: async ({ where }) => ({
+        id: where.id, student: { gymId: 'gym-1', user: { name: 'Aluno' } },
+        weight: 70, height: 175, bmi: 22.9, bodyFatPercent: 17,
+        measurements: null, restrictions: null, notes: null,
+        createdAt: new Date('2026-09-30T00:00:00Z'),
+      }),
+    },
+    workout: {
+      count: async ({ where }) => { counted = where; return 3; },
+    },
+  };
+  const service = new AssessmentsService(prisma);
+  const result = await service.findOne('assessment-1', 'gym-1');
+  assert.equal(result.workoutCount, 3);
+  assert.deepEqual(counted, { assessmentId: 'assessment-1' });
+  await assert.rejects(() => service.findOne('assessment-1', 'gym-2'), /Avaliacao nao encontrada/);
+});
