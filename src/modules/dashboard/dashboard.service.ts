@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { publicUserSelect } from '../../common/security/public-user-select';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tenantChargeReadSelect } from '../financial/charge-read-model';
 
@@ -7,7 +8,8 @@ export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   private gymFilter(userGymId?: string) {
-    return userGymId ? { gymId: userGymId } : {};
+    if (!userGymId) throw new ForbiddenException('Selecione uma academia para consultar o painel.');
+    return { gymId: userGymId };
   }
 
   async getSummary(userGymId?: string, options: { includeFinancial?: boolean } = {}) {
@@ -169,7 +171,7 @@ export class DashboardService {
         status: 'ACTIVE',
         ...this.gymFilter(userGymId),
       },
-      include: { user: true },
+      include: { user: { select: publicUserSelect } },
     });
 
     const result: any[] = [];

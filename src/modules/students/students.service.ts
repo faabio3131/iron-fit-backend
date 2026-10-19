@@ -1,3 +1,4 @@
+import { publicUserSelect } from '../../common/security/public-user-select';
 import {
   BadRequestException,
   ConflictException,
@@ -100,7 +101,7 @@ export class StudentsService {
         gymId: userGymId,
         user: { email: dto.email },
       },
-      include: { user: true },
+      include: { user: { select: publicUserSelect } },
     });
 
     if (existingStudent) {
@@ -188,7 +189,7 @@ export class StudentsService {
           consentComm: dto.consentComm ?? false,
           consentBiometry: dto.consentBiometry ?? false,
         },
-        include: { user: true },
+        include: { user: { select: publicUserSelect } },
       });
 
       await this.audit.record({
@@ -277,7 +278,7 @@ export class StudentsService {
         revokedAt: null,
         expiresAt: { gt: now },
       },
-      include: { user: true },
+      include: { user: { select: publicUserSelect } },
     });
 
     if (!invite) {
@@ -309,7 +310,7 @@ export class StudentsService {
   async findAll(gymId: string) {
     const students = await this.prisma.student.findMany({
       where: { gymId },
-      include: { user: true },
+      include: { user: { select: publicUserSelect } },
       orderBy: { enrollmentDate: 'desc' },
     });
 
@@ -326,7 +327,7 @@ export class StudentsService {
   async findOne(id: string, gymId: string) {
     const student = await this.prisma.student.findFirst({
       where: { id, gymId },
-      include: { user: true },
+      include: { user: { select: publicUserSelect } },
     });
 
     if (!student) {

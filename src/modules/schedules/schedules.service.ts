@@ -1,3 +1,4 @@
+import { publicUserSelect } from '../../common/security/public-user-select';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateScheduleSlotDto } from './dto/create-schedule-slot.dto';
@@ -100,7 +101,7 @@ export class SchedulesService {
         ...(date ? { date } : {}),
       },
       include: {
-        student: { include: { user: true } },
+        student: { include: { user: { select: publicUserSelect } } },
         slot: true,
       },
       orderBy: { date: 'asc' },
@@ -191,7 +192,7 @@ export class SchedulesService {
                 date: bookingDate,
               } as any,
               include: {
-                student: { include: { user: true } },
+                student: { include: { user: { select: publicUserSelect } } },
                 slot: true,
               },
             });
@@ -216,7 +217,7 @@ export class SchedulesService {
         student: { gymId },
         slot: { gymId },
       },
-      include: { slot: true, student: { include: { user: true } } },
+      include: { slot: true, student: { include: { user: { select: publicUserSelect } } } },
     });
 
     if (!schedule) {
@@ -230,7 +231,7 @@ export class SchedulesService {
     return this.prisma.studentSchedule.update({
       where: { id },
       data: { status: 'CHECKED_IN', checkedInAt: new Date() } as any,
-      include: { student: { include: { user: true } }, slot: true },
+      include: { student: { include: { user: { select: publicUserSelect } } }, slot: true },
     });
   }
 }

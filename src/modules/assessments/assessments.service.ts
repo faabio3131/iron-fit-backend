@@ -1,3 +1,4 @@
+import { publicUserSelect } from '../../common/security/public-user-select';
 import {
   BadRequestException,
   Injectable,
@@ -29,7 +30,7 @@ export class AssessmentsService {
         id: dto.studentId,
         gymId,
       },
-      include: { user: true },
+      include: { user: { select: publicUserSelect } },
     });
 
     if (!student) {
@@ -124,7 +125,7 @@ export class AssessmentsService {
       where: { id },
       include: {
         student: {
-          include: { user: true },
+          include: { user: { select: publicUserSelect } },
         },
       },
     });
