@@ -151,6 +151,7 @@ export class AssessmentsService {
       measurements: assessment.measurements,
       restrictions: assessment.restrictions,
       notes: assessment.notes,
+      workoutCount: await this.prisma.workout.count({ where: { assessmentId: assessment.id } }),
       createdAt: assessment.createdAt,
     };
   }
