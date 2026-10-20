@@ -3,10 +3,12 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   Prisma,
   TenantProductSubscriptionStatus,
+  ProductPlanVersionStatus,
 } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { AuditService } from '../../common/audit/audit.service';
@@ -101,6 +103,61 @@ export class FmCommandControlPlaneService {
         calculation: 'GROUP_BY_TENANT_CAPABILITY_PROVIDER_MODEL_STATUS',
         commercial_authority: 'FM_COMMAND',
       },
+    };
+  }
+
+
+  /**
+   * FM Command selection catalog: published canonical IRON plan versions only.
+   * Reuses the existing S2S FMCC guard. No billing price, user, tenant or secret.
+   */
+  async publishedPlanVersions() {
+    const asOf = new Date().toISOString();
+    const rows = await this.prisma.productPlanVersion.findMany({
+      where: { status: ProductPlanVersionStatus.PUBLISHED },
+      select: {
+        id: true,
+        version: true,
+        publishedAt: true,
+        productPlan: { select: { code: true, name: true } },
+      },
+      orderBy: [{ publishedAt: 'asc' }, { id: 'asc' }],
+      take: 257,
+    });
+
+    // The FMCC contract requires an explicit published_at timestamp, valid
+    // plan code/name and an immutable positive version. A legacy PUBLISHED row
+    // missing this provenance must fail closed, not silently disappear or be
+    // represented as a null date that breaks the Command consumer.
+    const keys = new Set<string>();
+    for (const row of rows) {
+      const code = row.productPlan.code;
+      const label = row.productPlan.name;
+      const key = code + ':' + row.version;
+      if (
+        !row.publishedAt || !Number.isFinite(row.publishedAt.getTime()) ||
+        !Number.isSafeInteger(row.version) || row.version < 1 ||
+        !/^[A-Z][A-Z0-9_]{1,63}$/.test(code) ||
+        typeof label !== 'string' || label.trim().length < 2 ||
+        label.length > 160 || keys.has(key)
+      ) {
+        throw new ServiceUnavailableException('Catalogo de planos publicados inconsistente');
+      }
+      keys.add(key);
+    }
+
+    return {
+      schema_version: 'iron.fmcc.plan-versions.v1',
+      product_code: 'IRON_FIT_CORE',
+      as_of: asOf,
+      source_authority: 'IRON_PRODUCT_PLAN_VERSION',
+      truncated: rows.length > 256,
+      plans: rows.slice(0, 256).map((row) => ({
+        plan_code: row.productPlan.code,
+        display_name: row.productPlan.name,
+        version: row.version,
+        published_at: row.publishedAt!.toISOString(),
+      })),
     };
   }
 

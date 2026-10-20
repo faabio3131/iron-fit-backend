@@ -25,6 +25,11 @@ export class FmCommandControlPlaneController {
     return this.service.health();
   }
 
+  @Get('plan-versions')
+  publishedPlanVersions() {
+    return this.service.publishedPlanVersions();
+  }
+
   @Get('snapshot')
   snapshot() {
     return this.service.snapshot();
