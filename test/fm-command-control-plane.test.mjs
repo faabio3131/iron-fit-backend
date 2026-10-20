@@ -66,3 +66,21 @@ test('FMCC reads published IRON plan versions through existing S2S guard only', 
   assert.match(service, /truncated: rows\.length > 256/);
   assert.doesNotMatch(service.slice(service.indexOf('async publishedPlanVersions()'), service.indexOf('async snapshot()')), /price|customer|email|password|billing_transaction/i);
 });
+
+
+test('published plan catalog refuses null timestamps, invalid keys and duplicate versions (C01/FMCC)', async () => {
+  const service = await source('src/modules/fm-command/fm-command-control-plane.service.ts');
+  const start = service.indexOf('async publishedPlanVersions()');
+  const end = service.indexOf('async snapshot()', start);
+  assert.ok(start > 0 && end > start, 'published plan S2S contract exists');
+  const catalog = service.slice(start, end);
+  assert.match(catalog, /new ServiceUnavailableException\(/);
+  assert.match(catalog, /!row\.publishedAt/);
+  assert.match(catalog, /Number\.isSafeInteger\(row\.version\)/);
+  assert.match(catalog, /keys\.has\(key\)/);
+  assert.match(catalog, /label\.trim\(\)\.length < 2/);
+  assert.match(catalog, /published_at: row\.publishedAt!\.toISOString\(\)/);
+  assert.doesNotMatch(catalog, /published_at:.*\?\? null/);
+  assert.match(catalog, /ProductPlanVersionStatus\.PUBLISHED/);
+  assert.match(catalog, /truncated: rows\.length > 256/);
+});
