@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   Prisma,
@@ -124,6 +125,27 @@ export class FmCommandControlPlaneService {
       take: 257,
     });
 
+    // The FMCC contract requires an explicit published_at timestamp, valid
+    // plan code/name and an immutable positive version. A legacy PUBLISHED row
+    // missing this provenance must fail closed, not silently disappear or be
+    // represented as a null date that breaks the Command consumer.
+    const keys = new Set<string>();
+    for (const row of rows) {
+      const code = row.productPlan.code;
+      const label = row.productPlan.name;
+      const key = code + ':' + row.version;
+      if (
+        !row.publishedAt || !Number.isFinite(row.publishedAt.getTime()) ||
+        !Number.isSafeInteger(row.version) || row.version < 1 ||
+        !/^[A-Z][A-Z0-9_]{1,63}$/.test(code) ||
+        typeof label !== 'string' || label.trim().length < 2 ||
+        label.length > 160 || keys.has(key)
+      ) {
+        throw new ServiceUnavailableException('Catalogo de planos publicados inconsistente');
+      }
+      keys.add(key);
+    }
+
     return {
       schema_version: 'iron.fmcc.plan-versions.v1',
       product_code: 'IRON_FIT_CORE',
@@ -134,7 +156,7 @@ export class FmCommandControlPlaneService {
         plan_code: row.productPlan.code,
         display_name: row.productPlan.name,
         version: row.version,
-        published_at: row.publishedAt?.toISOString() ?? null,
+        published_at: row.publishedAt!.toISOString(),
       })),
     };
   }
