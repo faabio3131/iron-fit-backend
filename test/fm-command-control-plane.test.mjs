@@ -53,3 +53,16 @@ test('gateway webhook is excluded from IRON while FM Command owns entitlement co
   assert.match(fmController, /@Post\('subscription\/commands'\)/);
   assert.doesNotMatch(fmController, /providerCode|webhook/);
 });
+
+test('FMCC reads published IRON plan versions through existing S2S guard only', async () => {
+  const controller = await source('src/modules/fm-command/fm-command-control-plane.controller.ts');
+  const service = await source('src/modules/fm-command/fm-command-control-plane.service.ts');
+  assert.match(controller, /@Get\('plan-versions'\)/);
+  assert.match(controller, /@UseGuards\(FmCommandControlPlaneGuard\)/);
+  assert.match(service, /productPlanVersion\.findMany\(/);
+  assert.match(service, /ProductPlanVersionStatus\.PUBLISHED/);
+  assert.match(service, /schema_version: 'iron\.fmcc\.plan-versions\.v1'/);
+  assert.match(service, /source_authority: 'IRON_PRODUCT_PLAN_VERSION'/);
+  assert.match(service, /truncated: rows\.length > 256/);
+  assert.doesNotMatch(service.slice(service.indexOf('async publishedPlanVersions()'), service.indexOf('async snapshot()')), /price|customer|email|password|billing_transaction/i);
+});
