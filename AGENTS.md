@@ -595,3 +595,18 @@ Quando todos os deltas estiverem concluídos, executar uma **auditoria final pro
 Objetivo final:
 
 **IRON FIT CORE V1.0.0 — GO-LIVE CERTIFIED**
+
+
+## Ordem vigente pós-auditoria — construção primeiro, Web depois (24/10/2026)
+
+A auditoria funcional de 24/10/2026 é o inventário de referência, sujeito ao CURRENT do código. Trabalhar autonomamente nos dois repositórios: `faabio3131/iron-fit-backend` e `faabio3131/iron-fit-app`.
+
+**Sequência obrigatória:** (1) reconciliar e concluir funcionalidades do backend, domínio, segurança, migrations e contratos, sem duplicar código; (2) executar testes de unidade, integração, autorização e regressões até 100% verde; (3) somente após concluir internamente cada capacidade, integrar o que ainda falta à Web real e ao Mobile apropriado, sem reconstruir o que já está exposto; (4) certificar fluxos reais de UI, RBAC, português, responsividade e builds; (5) seguir pacotes internos restantes; (6) homologar provedores externos posteriormente.
+
+**Ordem de pacotes:** C01 RBAC/tenant/permissions/step-up e integridade; C02 alunos/equipe/equipamentos/exercícios/avaliações/treinos/agenda/acessos/comunicação; C03 Intelligence e Creator Network; C04 FM Command, licenças e entitlements, preservando financeiro academia→aluno separado do billing FM→academia; C05 integrações e contratos de e-mail/Meta/Google/fiscal/agregadores; W01 integração Web/Mobile das capacidades C01–C05 concluídas; W02 QA de todos os clicáveis, seis perfis, visual premium, acessibilidade; I01 E2E comercial e segurança internos; E01 homologações reais posteriormente.
+
+**Autonomia:** AUDITAR → IMPLEMENTAR GAP → TESTAR → CORRIGIR FALHA → RETESTAR → DIFF → PR → CI 100% VERDE → MERGE SE AUTORIZADO → PÓS-MERGE → PRÓXIMO WP. Falhas corrigíveis nunca viram PASS; corrigir e retestar. Sem novas autorizações para correções normais. Registrar SHA, testes, CI, PR, gate e próximo WP no checkpoint existente, evitando documentação redundante.
+
+**Gates:** PR #22/Macro O só recebe merge após aprovação visual explícita do proprietário. Nenhum endpoint, provider ou recurso sem prova deve ser anunciado live. Homologação externa ausente não bloqueia construção interna independente e deve ficar em `IMPLEMENTED/EXTERNAL BLOCKER` ou `DISABLED/OUT OF LAUNCH`. Após software internamente concluído, executar homologações externas exigidas para GO-LIVE.
+
+**Migração:** Claude Code é responsável pela mudança de hospedagem para Contabo. Este executor não altera Render, Railway, Supabase, DNS, containers, banco ou deploy físico durante essa migração.
