@@ -361,11 +361,19 @@ export class AuthService {
         absoluteExpiresAt.getTime(),
       ),
     );
+    // Recheck expiry inside the same conditional write that rotates the token.
+    // The user/tenant lookup may take long enough for an idle or absolute TTL to
+    // elapse after the earlier read. Legacy sessions lack absoluteExpiresAt.
+    const rotationCheckAt = new Date();
     const updated = await this.prisma.session.updateMany({
       where: {
         id: session.id,
         revokedAt: null,
         refreshTokenHash: session.refreshTokenHash,
+        expiresAt: { gt: rotationCheckAt },
+        ...(session.absoluteExpiresAt
+          ? { absoluteExpiresAt: { gt: rotationCheckAt } }
+          : { createdAt: { gt: new Date(rotationCheckAt.getTime() - REFRESH_SESSION_MAX_TTL_MS) } }),
       },
       data: {
         previousRefreshTokenHash: session.refreshTokenHash,
