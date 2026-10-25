@@ -228,10 +228,19 @@ export class SchedulesService {
       throw new BadRequestException('Agendamento nao pode receber check-in');
     }
 
-    return this.prisma.studentSchedule.update({
-      where: { id },
-      data: { status: 'CHECKED_IN', checkedInAt: new Date() } as any,
-      include: { student: { include: { user: { select: publicUserSelect } } }, slot: true },
-    });
+    // Compare the status at write time: concurrent check-ins must not both
+    // succeed or overwrite the original checkedInAt timestamp.
+    try {
+      return await this.prisma.studentSchedule.update({
+        where: { id, status: 'SCHEDULED' },
+        data: { status: 'CHECKED_IN', checkedInAt: new Date() } as any,
+        include: { student: { include: { user: { select: publicUserSelect } } }, slot: true },
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2025') {
+        throw new BadRequestException('Agendamento nao pode receber check-in');
+      }
+      throw error;
+    }
   }
 }
