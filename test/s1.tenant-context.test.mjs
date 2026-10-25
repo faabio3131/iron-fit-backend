@@ -96,3 +96,14 @@ test('inactive gyms are excluded from active tenant choices', () => {
     /TENANT_REQUIRED/,
   );
 });
+
+test('stale membership with missing or mismatched gym never grants tenant access', () => {
+  const missingGym = assignment('gym-a', 'OWNER', ['financial:read']);
+  missingGym.gym = null;
+  const mismatchedGym = assignment('gym-a', 'OWNER', ['financial:read']);
+  mismatchedGym.gym = { id: 'gym-b', name: 'Other tenant', active: true };
+  for (const membership of [missingGym, mismatchedGym]) {
+    assert.throws(() => resolveActiveTenantContext([membership]), /TENANT_REQUIRED/);
+    assert.throws(() => resolveActiveTenantContext([membership], 'gym-a'), /TENANT_NOT_ALLOWED/);
+  }
+});
