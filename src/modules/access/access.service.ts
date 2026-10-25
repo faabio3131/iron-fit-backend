@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -180,23 +180,29 @@ export class AccessService {
     gymId: string,
     actorUserId?: string,
   ) {
-    const credential = await this.prisma.accessCredential.findFirst({
-      where: { id, student: { gymId } },
-      select: {
-        id: true,
-        studentId: true,
-        type: true,
-        active: true,
-        expiresAt: true,
-      },
-    });
-    if (!credential) {
-      throw new NotFoundException('Credencial nao encontrada');
-    }
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const credential = await tx.accessCredential.findFirst({
+          where: { id, student: { gymId } },
+          select: {
+            id: true,
+            studentId: true,
+            type: true,
+            active: true,
+            expiresAt: true,
+          },
+        });
+        if (!credential) {
+          throw new NotFoundException('Credencial nao encontrada');
+        }
 
-    const revoked = credential.active
-      ? await this.prisma.accessCredential.update({
-          where: { id: credential.id },
+        // Revocation is idempotent. A lost race must not generate a false
+        // audit or revoke a credential whose student left this tenant.
+        if (!credential.active) {
+          return { ...credential, status: 'INACTIVE' };
+        }
+        const revoked = await tx.accessCredential.update({
+          where: { id: credential.id, active: true, student: { gymId } },
           data: { active: false },
           select: {
             id: true,
@@ -205,20 +211,29 @@ export class AccessService {
             active: true,
             expiresAt: true,
           },
-        })
-      : credential;
+        });
 
-    await this.audit.record({
-      gymId,
-      userId: actorUserId ?? null,
-      action: 'ACCESS_CREDENTIAL_REVOKED',
-      entity: 'AccessCredential',
-      entityId: credential.id,
-      previous: { active: credential.active },
-      next: { active: false },
-    });
+        await this.audit.record({
+          gymId,
+          userId: actorUserId ?? null,
+          action: 'ACCESS_CREDENTIAL_REVOKED',
+          entity: 'AccessCredential',
+          entityId: credential.id,
+          previous: { active: true },
+          next: { active: false },
+        }, tx);
 
-    return { ...revoked, status: 'INACTIVE' };
+        return { ...revoked, status: 'INACTIVE' };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2025' || error.code === 'P2034')
+      ) {
+        throw new ConflictException('Credencial alterada por outra operacao; atualize e tente novamente');
+      }
+      throw error;
+    }
   }
 
   async findDevices(
@@ -298,35 +313,50 @@ export class AccessService {
     gymId: string,
     actorUserId?: string,
   ) {
-    const device = await this.prisma.accessDevice.findFirst({
-      where: { id: deviceId, gymId, active: true },
-    });
-
-    if (!device) {
-      throw new NotFoundException('Dispositivo nao encontrado');
-    }
-
     const rawToken = randomBytes(32).toString('base64url');
     const tokenRotatedAt = new Date();
-    await this.prisma.accessDevice.update({
-      where: { id: device.id },
-      data: {
-        deviceTokenHash: this.hash(rawToken),
-        tokenRotatedAt,
-      },
-    });
 
-    await this.audit.record({
-      gymId,
-      userId: actorUserId ?? null,
-      action: 'ACCESS_DEVICE_TOKEN_ROTATED',
-      entity: 'AccessDevice',
-      entityId: device.id,
-      next: { tokenRotatedAt },
-    });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const device = await tx.accessDevice.findFirst({
+          where: { id: deviceId, gymId, active: true },
+          select: { id: true },
+        });
+        if (!device) {
+          throw new NotFoundException('Dispositivo nao encontrado');
+        }
+
+        // Do not provision secrets for a device that changed tenant/status
+        // after the read; rotate token and audit in one DB transaction.
+        await tx.accessDevice.update({
+          where: { id: device.id, gymId, active: true },
+          data: {
+            deviceTokenHash: this.hash(rawToken),
+            tokenRotatedAt,
+          },
+        });
+
+        await this.audit.record({
+          gymId,
+          userId: actorUserId ?? null,
+          action: 'ACCESS_DEVICE_TOKEN_ROTATED',
+          entity: 'AccessDevice',
+          entityId: device.id,
+          next: { tokenRotatedAt },
+        }, tx);
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2025' || error.code === 'P2034')
+      ) {
+        throw new ConflictException('Dispositivo alterado por outra operacao; atualize e tente novamente');
+      }
+      throw error;
+    }
 
     return {
-      deviceId: device.id,
+      deviceId,
       deviceToken: rawToken,
       aviso: 'Guarde o deviceToken: ele nao sera exibido novamente',
     };
