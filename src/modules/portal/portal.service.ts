@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -120,40 +120,57 @@ export class PortalService {
     dto: UpdateMyCommunicationPreferencesDto,
     gymId?: string | null,
   ) {
-    const s = await this.getStudentByUserId(userId, gymId);
-    const previous = await this.prisma.communicationPreference.findUnique({
-      where: { studentId: s.id },
-    });
+    if (!gymId) {
+      throw new NotFoundException('Perfil de aluno nao encontrado para este usuario');
+    }
 
-    const nextValues = {
-      pushEnabled: dto.pushEnabled ?? previous?.pushEnabled ?? true,
-      inAppEnabled: dto.inAppEnabled ?? previous?.inAppEnabled ?? true,
-      emailEnabled: dto.emailEnabled ?? previous?.emailEnabled ?? false,
-      whatsappEnabled: dto.whatsappEnabled ?? previous?.whatsappEnabled ?? false,
-      trainingReminders:
-        dto.trainingReminders ?? previous?.trainingReminders ?? true,
-      paymentReminders:
-        dto.paymentReminders ?? previous?.paymentReminders ?? true,
-      marketing: dto.marketing ?? previous?.marketing ?? false,
-    };
+    // Only user-supplied fields are mutable. Reconstructing all seven values
+    // from a stale read would undo concurrent student preference changes.
+    const fields: (keyof UpdateMyCommunicationPreferencesDto)[] = [
+      'pushEnabled', 'inAppEnabled', 'emailEnabled', 'whatsappEnabled',
+      'trainingReminders', 'paymentReminders', 'marketing',
+    ];
+    const changes: Partial<UpdateMyCommunicationPreferencesDto> = {};
+    for (const key of fields) {
+      if (typeof dto[key] === 'boolean') {
+        changes[key] = dto[key];
+      }
+    }
+    if (Object.keys(changes).length === 0) {
+      throw new BadRequestException('Informe ao menos uma preferencia para atualizar');
+    }
 
-    const updated = await this.prisma.communicationPreference.upsert({
-      where: { studentId: s.id },
-      create: {
-        studentId: s.id,
-        ...nextValues,
-      },
-      update: nextValues,
-    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const s = await tx.student.findFirst({
+            where: { userId, gymId },
+            select: { id: true, gymId: true, consentComm: true },
+          });
+          if (!s) {
+            throw new NotFoundException('Perfil de aluno nao encontrado para este usuario');
+          }
+          const previous = await tx.communicationPreference.findUnique({
+            where: { studentId: s.id },
+          });
 
-    await this.audit.record({
-      gymId: s.gymId,
-      userId,
-      action: 'STUDENT_COMMUNICATION_PREFERENCES_UPDATED',
-      entity: 'CommunicationPreference',
-      entityId: updated.id,
-      previous: previous
-        ? {
+          const updated = await tx.communicationPreference.upsert({
+            where: { studentId: s.id },
+            create: {
+              studentId: s.id,
+              pushEnabled: true,
+              inAppEnabled: true,
+              emailEnabled: false,
+              whatsappEnabled: false,
+              trainingReminders: true,
+              paymentReminders: true,
+              marketing: false,
+              ...changes,
+            },
+            update: changes,
+          });
+
+          const previousValues = previous ? {
             pushEnabled: previous.pushEnabled,
             inAppEnabled: previous.inAppEnabled,
             emailEnabled: previous.emailEnabled,
@@ -161,17 +178,50 @@ export class PortalService {
             trainingReminders: previous.trainingReminders,
             paymentReminders: previous.paymentReminders,
             marketing: previous.marketing,
-          }
-        : null,
-      next: nextValues,
-    });
+          } : null;
 
-    return {
-      studentId: s.id,
-      consentComm: s.consentComm,
-      configured: true,
-      ...nextValues,
-    };
+          await this.audit.record({
+            gymId: s.gymId,
+            userId,
+            action: 'STUDENT_COMMUNICATION_PREFERENCES_UPDATED',
+            entity: 'CommunicationPreference',
+            entityId: updated.id,
+            previous: previousValues,
+            next: {
+              pushEnabled: updated.pushEnabled,
+              inAppEnabled: updated.inAppEnabled,
+              emailEnabled: updated.emailEnabled,
+              whatsappEnabled: updated.whatsappEnabled,
+              trainingReminders: updated.trainingReminders,
+              paymentReminders: updated.paymentReminders,
+              marketing: updated.marketing,
+            },
+          }, tx);
+
+          return {
+            studentId: s.id,
+            consentComm: s.consentComm,
+            configured: true,
+            pushEnabled: updated.pushEnabled,
+            inAppEnabled: updated.inAppEnabled,
+            emailEnabled: updated.emailEnabled,
+            whatsappEnabled: updated.whatsappEnabled,
+            trainingReminders: updated.trainingReminders,
+            paymentReminders: updated.paymentReminders,
+            marketing: updated.marketing,
+          };
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (error: any) {
+        // A concurrent insert or Serializable conflict may be retried; never
+        // confirm a preference until the transaction and audit commit.
+        if (error?.code === 'P2034' || error?.code === 'P2002') {
+          if (attempt < 2) continue;
+          throw new ConflictException('Preferencias alteradas em outra operacao; tente novamente');
+        }
+        throw error;
+      }
+    }
+    throw new ConflictException('Preferencias alteradas em outra operacao; tente novamente');
   }
 
   async getCharges(userId: string, gymId?: string | null) {
