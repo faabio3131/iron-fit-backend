@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUUID, IsNumber, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsNumber, IsObject, IsPositive, Min, Max } from 'class-validator';
 
 export class CreateAssessmentDto {
   @IsUUID()
@@ -6,18 +6,23 @@ export class CreateAssessmentDto {
   studentId?: string;
 
   @IsNumber()
+  @IsPositive()
   @IsOptional()
   weight?: number;
 
   @IsNumber()
+  @IsPositive()
   @IsOptional()
   height?: number;
 
   @IsNumber()
+  @IsPositive()
   @IsOptional()
   bmi?: number;
 
   @IsNumber()
+  @Min(0)
+  @Max(100)
   @IsOptional()
   bodyFatPercent?: number;
 
