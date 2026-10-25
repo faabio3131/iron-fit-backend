@@ -10,7 +10,7 @@ export class StepUpService {
   async grant(userId: string, sessionId: string) {
     const expiresAt = new Date(Date.now() + ADMIN_STEP_UP_TTL_MS);
     const result = await this.prisma.session.updateMany({
-      where: { id: sessionId, userId, revokedAt: null },
+      where: { id: sessionId, userId, revokedAt: null, expiresAt: { gt: new Date() } },
       data: { stepUpExpiresAt: expiresAt },
     });
     if (result.count !== 1) {
@@ -21,7 +21,7 @@ export class StepUpService {
 
   async status(userId: string, sessionId: string) {
     const session = await this.prisma.session.findFirst({
-      where: { id: sessionId, userId, revokedAt: null },
+      where: { id: sessionId, userId, revokedAt: null, expiresAt: { gt: new Date() } },
       select: { stepUpExpiresAt: true },
     });
     const expiresAt = session?.stepUpExpiresAt ?? null;
