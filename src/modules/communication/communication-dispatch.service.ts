@@ -252,6 +252,11 @@ export class CommunicationDispatchService
     }
 
     try {
+      // Status may change between queue admission and provider dispatch.
+      // Revalidate the canonical enrollment at the external boundary.
+      if (message.student.status !== 'ACTIVE') {
+        throw new CommunicationDispatchFailure('STUDENT_INACTIVE');
+      }
       if (!message.student.consentComm) {
         throw new CommunicationDispatchFailure(
           'COMMUNICATION_CONSENT_REQUIRED',
