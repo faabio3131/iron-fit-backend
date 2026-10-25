@@ -390,16 +390,21 @@ export class AuthSecurityService {
 
     const rawCodes = Array.from({ length: 8 }, () => newRecoveryCode());
     await this.prisma.$transaction(async (tx) => {
+      // Claim this exact enrollment before replacing recovery codes. Competing
+      // confirmations (or a restarted enrollment) must fail without side effects.
+      const claimed = await tx.user.updateMany({
+        where: { id: userId, mfaEnabled: false, mfaSecret: user.mfaSecret },
+        data: { mfaEnabled: true },
+      });
+      if (claimed.count !== 1) {
+        throw new ConflictException('Enrollment MFA indisponivel');
+      }
       await tx.authRecoveryCode.deleteMany({ where: { userId } });
       await tx.authRecoveryCode.createMany({
         data: rawCodes.map((raw) => ({
           userId,
           codeHash: hashOpaqueToken(raw),
         })),
-      });
-      await tx.user.update({
-        where: { id: userId },
-        data: { mfaEnabled: true },
       });
       await tx.session.updateMany({
         where: { userId, revokedAt: null },
