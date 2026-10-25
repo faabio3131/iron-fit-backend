@@ -276,3 +276,29 @@ test('paid/non-trial tenant does not receive the trial-only student cap', async 
   );
   assert.equal(result.id, 'student-paid');
 });
+
+
+test('student invite is atomically claimed before activation; replay cannot overwrite password', async () => {
+  let claimCount = 0;
+  let passwordUpdates = 0;
+  const invite = { id: 'inv-a', userId: 'student-a', refreshTokenHash: 'opaque' };
+  const prisma = {
+    session: { findFirst: async () => invite },
+    $transaction: async (fn) => fn({
+      session: { updateMany: async ({ where }) => {
+        assert.equal(where.id, invite.id);
+        assert.equal(where.userId, invite.userId);
+        assert.equal(where.revokedAt, null);
+        claimCount += 1;
+        return { count: claimCount === 1 ? 1 : 0 };
+      } },
+      user: { update: async () => { passwordUpdates += 1; } },
+    }),
+  };
+  const service = new StudentsService(prisma, auditMock(), entitlementsMock());
+  const body = { token: 'a'.repeat(43), password: 'SenhaNova123!' };
+  assert.deepEqual(await service.acceptInvite(body), { activated: true, userId: 'student-a' });
+  await assert.rejects(() => service.acceptInvite(body), /Convite invalido ou expirado/);
+  assert.equal(claimCount, 2);
+  assert.equal(passwordUpdates, 1);
+});

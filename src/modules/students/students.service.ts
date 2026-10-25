@@ -287,19 +287,26 @@ export class StudentsService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: invite.userId },
-        data: {
-          passwordHash,
-          active: true,
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.session.updateMany({
+        where: {
+          id: invite.id,
+          userId: invite.userId,
+          refreshTokenHash: tokenHash,
+          deviceName: STUDENT_ONBOARDING_SESSION,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
         },
-      }),
-      this.prisma.session.update({
-        where: { id: invite.id },
-        data: { revokedAt: now },
-      }),
-    ]);
+        data: { revokedAt: new Date() },
+      });
+      if (claimed.count !== 1) {
+        throw new UnauthorizedException('Convite invalido ou expirado');
+      }
+      await tx.user.update({
+        where: { id: invite.userId },
+        data: { passwordHash, active: true },
+      });
+    });
 
     return {
       activated: true,
