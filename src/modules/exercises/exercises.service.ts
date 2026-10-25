@@ -1,4 +1,5 @@
 import { Injectable, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { ExerciseQueryDto } from './dto/exercise-query.dto';
@@ -16,16 +17,25 @@ export class ExercisesService {
       throw new ConflictException('Exercicio ja existe no catalogo');
     }
 
-    return this.prisma.exercise.create({
-      data: {
-        name: dto.name,
-        muscleGroup: dto.muscleGroup,
-        movement: dto.movement,
-        level: dto.level,
-        videoUrl: dto.videoUrl,
-        contraindications: dto.contraindications,
-      } as any,
-    });
+    try {
+      return await this.prisma.exercise.create({
+        data: {
+          name: dto.name,
+          muscleGroup: dto.muscleGroup,
+          movement: dto.movement,
+          level: dto.level,
+          videoUrl: dto.videoUrl,
+          contraindications: dto.contraindications,
+        } as any,
+      });
+    } catch (error) {
+      // The unique DB index remains authoritative when concurrent creators
+      // both pass the friendly preliminary existence check.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Exercicio ja existe no catalogo');
+      }
+      throw error;
+    }
   }
 
   async findAll(query: ExerciseQueryDto = {}) {
