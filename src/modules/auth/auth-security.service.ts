@@ -352,14 +352,15 @@ export class AuthSecurityService {
 
     const secret = newTotpSecret();
     await this.prisma.$transaction(async (tx) => {
-      await tx.authRecoveryCode.deleteMany({ where: { userId } });
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          mfaEnabled: false,
-          mfaSecret: encryptMfaSecret(this.config, secret),
-        },
+      // Enrollment must never disable MFA that was confirmed concurrently.
+      const claimed = await tx.user.updateMany({
+        where: { id: userId, mfaEnabled: false, mfaSecret: user.mfaSecret },
+        data: { mfaSecret: encryptMfaSecret(this.config, secret) },
       });
+      if (claimed.count !== 1) {
+        throw new ConflictException('Enrollment MFA indisponivel');
+      }
+      await tx.authRecoveryCode.deleteMany({ where: { userId } });
       await this.audit.record(
         {
           userId,
