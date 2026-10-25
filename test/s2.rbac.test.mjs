@@ -122,3 +122,19 @@ test('SUPER_ADMIN global path can read an explicit gym', async () => {
 
   assert.equal(result.id, 'gym-b');
 });
+
+test('SUPER_ADMIN bound to Gym A cannot override selected tenant via query', () => {
+  const { resolveTenantOperationGymId } = require('../dist/src/common/security/tenant-operation-scope.js');
+  assert.equal(resolveTenantOperationGymId({
+    activeGymId: 'gym-a', isSuperAdmin: true,
+  }), 'gym-a');
+  assert.throws(() => resolveTenantOperationGymId({
+    activeGymId: 'gym-a', requestedGymId: 'gym-b', isSuperAdmin: true,
+  }), /Academia nao encontrada/);
+  assert.equal(resolveTenantOperationGymId({
+    activeGymId: null, requestedGymId: 'gym-b', isSuperAdmin: true,
+  }), 'gym-b');
+  assert.throws(() => resolveTenantOperationGymId({
+    activeGymId: null, isSuperAdmin: true,
+  }), /Academia obrigatoria/);
+});
