@@ -1,5 +1,5 @@
 import { publicUserSelect } from '../../common/security/public-user-select';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
@@ -45,6 +45,13 @@ export class CommunicationService {
 
     if (!student) {
       throw new NotFoundException('Aluno nao encontrado');
+    }
+    // A queue entry is itself a persisted communication request. Enforce
+    // enrollment and the student's express communication consent at intake,
+    // not solely in the later dispatch worker or browser. The dispatcher
+    // must keep rechecking consent because it can be revoked after intake.
+    if (student.status !== 'ACTIVE' || student.consentComm !== true) {
+      throw new BadRequestException('Aluno sem matricula ativa ou consentimento para comunicacao');
     }
 
     if (dto.templateId) {
