@@ -1,3 +1,4 @@
+import { publicUserSelect } from '../../common/security/public-user-select';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -74,7 +75,7 @@ export class CommunicationService {
     return this.prisma.communicationMessage.findMany({
       where: { gymId },
       include: {
-        student: { include: { user: true } },
+        student: { include: { user: { select: publicUserSelect } } },
         template: true,
       },
       orderBy: { createdAt: 'desc' },
