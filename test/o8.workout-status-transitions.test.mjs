@@ -7,7 +7,7 @@ function prismaWithWorkout(status, { approver, gymId = 'gym-1', conflict = false
   const updates = [], audits = [];
   let currentStatus = status;
   let approvedById = approver === undefined ? (status === 'APPROVED' || status === 'ACTIVE' ? 'reviewer-1' : null) : approver;
-  return {
+  const fixture = {
     updates, audits,
     prisma: {
       workout: {
@@ -27,6 +27,11 @@ function prismaWithWorkout(status, { approver, gymId = 'gym-1', conflict = false
       auditLog: { create: async ({ data }) => { audits.push(data); return { id: 'audit-1', ...data }; } },
     },
   };
+  fixture.prisma.$transaction = async (operation, options) => {
+    assert.equal(options.isolationLevel, 'Serializable');
+    return operation(fixture.prisma);
+  };
+  return fixture;
 }
 
 test('O8 blocks direct activation of an AI candidate or draft', async () => {
