@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { UpdateMyCommunicationPreferencesDto } from './dto/update-my-communication-preferences.dto';
@@ -189,29 +190,63 @@ export class PortalService {
 
   async checkIn(userId: string, gymId?: string | null) {
     const s = await this.getStudentByUserId(userId, gymId);
+    if (s.status !== 'ACTIVE') {
+      throw new BadRequestException('Matricula inativa nao permite check-in');
+    }
+
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-    const booking = await this.prisma.studentSchedule.findFirst({
-      where: {
-        studentId: s.id,
-        student: { gymId: s.gymId, userId },
-        slot: { gymId: s.gymId },
-        status: 'SCHEDULED',
-        date: { gte: startOfDay, lte: endOfDay },
-      },
-      include: { slot: true },
-    });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const booking = await tx.studentSchedule.findFirst({
+          where: {
+            studentId: s.id,
+            student: { gymId: s.gymId, userId, status: 'ACTIVE' },
+            slot: { gymId: s.gymId },
+            status: 'SCHEDULED',
+            date: { gte: startOfDay, lte: endOfDay },
+          },
+          include: { slot: true },
+        });
 
-    if (!booking) {
-      throw new BadRequestException('Nenhum agendamento para hoje');
+        if (!booking) {
+          throw new BadRequestException('Nenhum agendamento para hoje');
+        }
+
+        // The canonical booking status and tenant membership are rechecked
+        // on the write: concurrent requests cannot register twice.
+        const updated = await tx.studentSchedule.update({
+          where: {
+            id: booking.id,
+            studentId: s.id,
+            status: 'SCHEDULED',
+            student: { gymId: s.gymId, userId, status: 'ACTIVE' },
+            slot: { gymId: s.gymId },
+          },
+          data: { status: 'CHECKED_IN', checkedInAt: new Date() },
+          include: { slot: true },
+        });
+
+        await this.audit.record({
+          gymId: s.gymId,
+          userId,
+          action: 'STUDENT_SELF_CHECK_IN',
+          entity: 'StudentSchedule',
+          entityId: updated.id,
+          previous: { status: 'SCHEDULED' },
+          next: { status: updated.status, checkedInAt: updated.checkedInAt },
+        }, tx);
+
+        return updated;
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error: any) {
+      if (error?.code === 'P2025' || error?.code === 'P2034') {
+        throw new BadRequestException('Agendamento nao pode receber check-in; atualize sua agenda');
+      }
+      throw error;
     }
-
-    return this.prisma.studentSchedule.update({
-      where: { id: booking.id },
-      data: { status: 'CHECKED_IN', checkedInAt: new Date() } as any,
-      include: { slot: true },
-    });
   }
+
 }
