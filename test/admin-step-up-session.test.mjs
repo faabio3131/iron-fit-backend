@@ -100,3 +100,25 @@ test('WP03 six-role denial matrix protects finance, SaaS billing, integrations a
     assert.ok(guards.some(g=>g.name==='StepUpGuard'),method);
   }
 });
+
+test('administrative step-up never grants or reports active for an expired session', async () => {
+  let sessionExpired = true;
+  let grantMutations = 0;
+  const prisma = { session: {
+    updateMany: async ({ where }) => {
+      assert.ok(where.expiresAt.gt instanceof Date);
+      grantMutations += 1;
+      return { count: sessionExpired ? 0 : 1 };
+    },
+    findFirst: async ({ where }) => {
+      assert.ok(where.expiresAt.gt instanceof Date);
+      return sessionExpired ? null : { stepUpExpiresAt: new Date(Date.now() + 60_000) };
+    },
+  } };
+  const service = new StepUpService(prisma);
+  await assert.rejects(() => service.grant('user-1', 'session-1'), /Sessao invalida/);
+  assert.equal(grantMutations, 1);
+  assert.equal((await service.status('user-1', 'session-1')).active, false);
+  sessionExpired = false;
+  assert.equal((await service.status('user-1', 'session-1')).active, true);
+});
