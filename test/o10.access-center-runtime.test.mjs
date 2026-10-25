@@ -70,6 +70,10 @@ function makePrisma() {
         return { id: 'audit-a' };
       },
     },
+    $transaction: async (fn, options) => {
+      assert.equal(options.isolationLevel, 'Serializable');
+      return fn(prisma);
+    },
   };
   return { prisma, calls };
 }
