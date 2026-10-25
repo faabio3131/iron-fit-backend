@@ -37,8 +37,21 @@ export class AssessmentsService {
       throw new NotFoundException('Aluno nao encontrado');
     }
 
+    if (
+      (dto.weight !== undefined && (!Number.isFinite(dto.weight) || dto.weight <= 0)) ||
+      (dto.height !== undefined && (!Number.isFinite(dto.height) || dto.height <= 0)) ||
+      (dto.bmi !== undefined && (!Number.isFinite(dto.bmi) || dto.bmi <= 0)) ||
+      (dto.bodyFatPercent !== undefined && (
+        !Number.isFinite(dto.bodyFatPercent) ||
+        dto.bodyFatPercent < 0 ||
+        dto.bodyFatPercent > 100
+      ))
+    ) {
+      throw new BadRequestException('Medidas da avaliacao invalidas');
+    }
+
     let calculatedBmi = dto.bmi;
-    if (!calculatedBmi && dto.weight && dto.height) {
+    if (calculatedBmi === undefined && dto.weight !== undefined && dto.height !== undefined) {
       const heightInMeters = dto.height / 100;
       calculatedBmi = Math.round((dto.weight / (heightInMeters * heightInMeters)) * 10) / 10;
     }

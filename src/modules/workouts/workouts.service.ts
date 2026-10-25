@@ -1,4 +1,5 @@
 import { publicUserSelect } from '../../common/security/public-user-select';
+import { Prisma } from '@prisma/client';
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -351,36 +352,41 @@ export class WorkoutsService {
       data.approvedById = userId;
     }
 
-    // Atomic status compare-and-swap prevents concurrent stale transitions.
-    let updated;
+    // Keep the human-approval transition and its audit record in one
+    // transaction: an audit failure must never leave an untracked approval.
     try {
-      updated = await this.prisma.workout.update({
-        where: { id, status: workout.status },
-        data,
-      });
+      return await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.workout.update({
+          where: { id, status: workout.status },
+          data,
+        });
+
+        await this.audit.record({
+          gymId,
+          userId,
+          action: 'WORKOUT_STATUS_UPDATED',
+          entity: 'Workout',
+          entityId: id,
+          previous: {
+            status: workout.status,
+            approvedById: workout.approvedById,
+          },
+          next: {
+            status: updated.status,
+            approvedById: updated.approvedById,
+          },
+        }, tx);
+
+        return updated;
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      if (
+        error && typeof error === 'object' && 'code' in error &&
+        (error.code === 'P2025' || error.code === 'P2034')
+      ) {
         throw new ConflictException('Treino foi alterado por outra operacao; atualize antes de continuar');
       }
       throw error;
     }
-
-    await this.audit.record({
-      gymId,
-      userId,
-      action: 'WORKOUT_STATUS_UPDATED',
-      entity: 'Workout',
-      entityId: id,
-      previous: {
-        status: workout.status,
-        approvedById: workout.approvedById,
-      },
-      next: {
-        status: updated.status,
-        approvedById: updated.approvedById,
-      },
-    });
-
-    return updated;
   }
 }
