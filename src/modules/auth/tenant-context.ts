@@ -34,7 +34,7 @@ function listAvailableTenants(assignments: TenantRoleAssignment[]): AvailableTen
   const tenants = new Map<string, AvailableTenant>();
 
   for (const assignment of assignments) {
-    if (!assignment.gymId || assignment.gym?.active === false) continue;
+    if (!assignment.gymId || assignment.gym?.id !== assignment.gymId || assignment.gym.active !== true) continue;
 
     tenants.set(assignment.gymId, {
       id: assignment.gymId,
@@ -70,7 +70,7 @@ export function resolveActiveTenantContext(
   if (requestedGymId) {
     const tenantAssignments = assignments.filter(
       (assignment) =>
-        assignment.gymId === requestedGymId && assignment.gym?.active !== false,
+        assignment.gymId === requestedGymId && assignment.gym?.id === requestedGymId && assignment.gym.active === true,
     );
 
     if (tenantAssignments.length === 0) {
@@ -126,7 +126,7 @@ export function resolveActiveTenantContext(
   const activeGymId = availableTenants[0].id;
   const tenantAssignments = assignments.filter(
     (assignment) =>
-      assignment.gymId === activeGymId && assignment.gym?.active !== false,
+      assignment.gymId === activeGymId && assignment.gym?.id === activeGymId && assignment.gym.active === true,
   );
   const authorization = collectAuthorization(tenantAssignments);
 
