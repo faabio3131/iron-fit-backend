@@ -6,6 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
@@ -211,31 +212,50 @@ export class UsersService {
       return { userId, active, roleName: membership.role.name };
     }
 
-    await this.prisma.userRole.update({
-      where: { id: membership.id },
-      data: { active },
-    });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // An authorized actor must not mutate a role that changed after the
+        // policy check (for example, a manager just promoted to OWNER).
+        await tx.userRole.update({
+          where: {
+            id: membership.id,
+            gymId,
+            roleId: membership.roleId,
+            active: membership.active,
+          },
+          data: { active },
+        });
 
-    if (!active) {
-      await this.prisma.session.updateMany({
-        where: {
-          userId,
-          deviceName: refreshSessionName(gymId),
-          revokedAt: null,
-        },
-        data: { revokedAt: new Date() },
-      });
+        if (!active) {
+          await tx.session.updateMany({
+            where: {
+              userId,
+              deviceName: refreshSessionName(gymId),
+              revokedAt: null,
+            },
+            data: { revokedAt: new Date() },
+          });
+        }
+
+        await this.audit.record({
+          gymId,
+          userId: actor.id ?? null,
+          action: active ? 'USER_MEMBERSHIP_ENABLED' : 'USER_MEMBERSHIP_DISABLED',
+          entity: 'UserRole',
+          entityId: membership.id,
+          previous: { active: membership.active, role: membership.role.name },
+          next: { active, role: membership.role.name, targetUserId: userId },
+        }, tx);
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2025' || error.code === 'P2034')
+      ) {
+        throw new ConflictException('Vinculo foi alterado; atualize a equipe e tente novamente');
+      }
+      throw error;
     }
-
-    await this.audit.record({
-      gymId,
-      userId: actor.id ?? null,
-      action: active ? 'USER_MEMBERSHIP_ENABLED' : 'USER_MEMBERSHIP_DISABLED',
-      entity: 'UserRole',
-      entityId: membership.id,
-      previous: { active: membership.active, role: membership.role.name },
-      next: { active, role: membership.role.name, targetUserId: userId },
-    });
 
     return { userId, active, roleName: membership.role.name };
   }
@@ -253,20 +273,37 @@ export class UsersService {
     }
 
     if (membership.roleId !== role.id) {
-      await this.prisma.userRole.update({
-        where: { id: membership.id },
-        data: { roleId: role.id, assignedBy: actor.id },
-      });
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          await tx.userRole.update({
+            where: {
+              id: membership.id,
+              gymId,
+              roleId: membership.roleId,
+              active: membership.active,
+            },
+            data: { roleId: role.id, assignedBy: actor.id },
+          });
 
-      await this.audit.record({
-        gymId,
-        userId: actor.id ?? null,
-        action: 'USER_ROLE_CHANGED',
-        entity: 'UserRole',
-        entityId: membership.id,
-        previous: { role: membership.role.name },
-        next: { role: role.name, targetUserId: userId },
-      });
+          await this.audit.record({
+            gymId,
+            userId: actor.id ?? null,
+            action: 'USER_ROLE_CHANGED',
+            entity: 'UserRole',
+            entityId: membership.id,
+            previous: { role: membership.role.name },
+            next: { role: role.name, targetUserId: userId },
+          }, tx);
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === 'P2025' || error.code === 'P2034')
+        ) {
+          throw new ConflictException('Vinculo foi alterado; atualize a equipe e tente novamente');
+        }
+        throw error;
+      }
     }
 
     return {
