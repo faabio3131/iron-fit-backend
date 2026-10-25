@@ -497,38 +497,48 @@ export class EquipmentsService {
   async deselectCatalog(catalogItemId: string, gymId: string, actorUserId?: string) {
     await this.ensureActiveGym(gymId);
 
-    const existing = await this.prisma.equipment.findFirst({
-      where: { gymId, catalogItemId },
-      include: { catalogItem: true },
-    });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.equipment.findFirst({
+          where: { gymId, catalogItemId },
+          include: { catalogItem: true },
+        });
+        if (!existing) {
+          throw new NotFoundException('Equipamento do catalogo nao selecionado por esta academia');
+        }
+        if (!existing.active) {
+          return existing;
+        }
 
-    if (!existing) {
-      throw new NotFoundException('Equipamento do catalogo nao selecionado por esta academia');
+        // Compare-and-swap guards tenant, catalog identity and active state
+        // against concurrent selection/deselection and prevents false audits.
+        const updated = await tx.equipment.update({
+          where: { id: existing.id, gymId, catalogItemId, active: true },
+          data: { active: false },
+          include: { catalogItem: true },
+        });
+
+        await this.audit.record({
+          gymId,
+          userId: actorUserId ?? null,
+          action: 'GYM_EQUIPMENT_CATALOG_DESELECTED',
+          entity: 'Equipment',
+          entityId: updated.id,
+          previous: { catalogItemId, active: true },
+          next: { catalogItemId, active: false },
+        }, tx);
+
+        return updated;
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2025' || error.code === 'P2034')
+      ) {
+        throw new BadRequestException('Inventario alterado por outra operacao; atualize e tente novamente');
+      }
+      throw error;
     }
-
-    if (!existing.active) {
-      return existing;
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.equipment.update({
-        where: { id: existing.id },
-        data: { active: false },
-        include: { catalogItem: true },
-      });
-
-      await this.audit.record({
-        gymId,
-        userId: actorUserId ?? null,
-        action: 'GYM_EQUIPMENT_CATALOG_DESELECTED',
-        entity: 'Equipment',
-        entityId: updated.id,
-        previous: { catalogItemId, active: true },
-        next: { catalogItemId, active: false },
-      }, tx);
-
-      return updated;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   async findAll(gymId: string) {
