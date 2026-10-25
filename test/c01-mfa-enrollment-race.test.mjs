@@ -107,3 +107,40 @@ test('C01 stale MFA confirmation cannot overwrite a newer enrollment', async () 
   assert.equal(fixture.state.revocations, 0);
   assert.equal(fixture.state.audits, 0);
 });
+
+test('C01 stale MFA setup cannot disable an already confirmed second factor', async () => {
+  const bcrypt = require('bcrypt');
+  const password = 'CorrectPassword1!';
+  const passwordHash = await bcrypt.hash(password, 4);
+  const config = { get: (name) =>
+    name === 'MFA_ENCRYPTION_KEY' ? '12'.repeat(32) : undefined };
+  let writes = 0;
+  let deletedCodes = 0;
+  let audits = 0;
+  const prisma = {
+    // Stale read: another confirmation enables MFA before this setup writes.
+    user: { findUnique: async () => ({
+      id: 'user-1', active: true, email: 'member@example.com',
+      passwordHash, mfaEnabled: false, mfaSecret: null,
+    }) },
+    $transaction: async (operation) => operation({
+      user: { updateMany: async ({ where, data }) => {
+        assert.deepEqual(where, { id: 'user-1', mfaEnabled: false, mfaSecret: null });
+        assert.equal('mfaEnabled' in data, false);
+        writes += 1;
+        return { count: 0 };
+      } },
+      authRecoveryCode: { deleteMany: async () => { deletedCodes += 1; } },
+    }),
+  };
+  const security = new AuthSecurityService(prisma, config, {
+    record: async () => { audits += 1; },
+  });
+  await assert.rejects(
+    () => security.beginMfaEnrollment('user-1', password),
+    (error) => error?.getStatus?.() === 409,
+  );
+  assert.equal(writes, 1);
+  assert.equal(deletedCodes, 0);
+  assert.equal(audits, 0);
+});
