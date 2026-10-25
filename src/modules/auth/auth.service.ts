@@ -409,10 +409,17 @@ export class AuthService {
     }
 
     const revokedAt = new Date();
-    await this.prisma.session.updateMany({
-      where: { id: session.id, revokedAt: null },
+    const revoked = await this.prisma.session.updateMany({
+      where: {
+        id: session.id,
+        revokedAt: null,
+        refreshTokenHash: session.refreshTokenHash,
+      },
       data: { revokedAt },
     });
+    if (revoked.count !== 1) {
+      return { revoked: true };
+    }
 
     await this.safeAudit({
       gymId: gymIdFromRefreshSessionName(session.deviceName),
