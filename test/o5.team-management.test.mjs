@@ -87,6 +87,10 @@ test('O5 tenant membership disable revokes only the active tenant session', asyn
     auditLog: {
       create: async ({ data }) => ({ id: 'audit-2', ...data }),
     },
+    $transaction: async (operation, options) => {
+      assert.equal(options.isolationLevel, 'Serializable');
+      return operation(prisma);
+    },
   };
   const service = new UsersService(prisma, { requestPasswordReset: async () => ({ accepted: true }) });
 
