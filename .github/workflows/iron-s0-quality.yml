@@ -86,6 +86,7 @@ jobs:
           mask_and_export B6_STUDENT_PASSWORD "Cc3!$(openssl rand -hex 16)"
           mask_and_export B6_RESET_PASSWORD "Dd4!$(openssl rand -hex 16)"
           mask_and_export B6_ADMIN_PASSWORD "Ee5!$(openssl rand -hex 16)"
+          mask_and_export FMCC_IRON_CONTROL_PLANE_TOKEN "$(openssl rand -hex 40)"
 
       - name: Dependency audit
         run: npm audit --audit-level=high
@@ -178,6 +179,30 @@ jobs:
       - name: Integrated live E2E
         run: node --test --test-concurrency=1 test/b6.*.e2e.mjs
 
+      - name: Reset disposable CI signup IP bucket between independent test suites
+        run: |
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const u = new URL(process.env.DATABASE_URL || '');
+          if (process.env.NODE_ENV !== 'test' ||
+              process.env.IRON_RUNTIME_ENV !== 'HOMOLOG' ||
+              !['localhost', '127.0.0.1'].includes(u.hostname) ||
+              u.pathname !== '/iron_ci') {
+            throw new Error('Refusing to change non-disposable signup throttle state');
+          }
+          const db = new PrismaClient();
+          (async () => {
+            const result = await db.authRateLimitBucket.deleteMany({
+              where: { scope: 'AUTH_SIGNUP_IP' },
+            });
+            console.log(JSON.stringify({
+              event: 'isolated_ci_signup_ip_bucket_reset',
+              scope: 'AUTH_SIGNUP_IP', rows: result.count,
+            }));
+          })().finally(async () => { await db.$disconnect(); })
+            .catch((error) => { console.error(error.message); process.exitCode = 1; });
+          NODE
+
       - name: Checkout certified IRON app surface
         uses: actions/checkout@v4
         with:
@@ -244,6 +269,31 @@ jobs:
             kill "$(cat /tmp/iron-browser-web.pid)" 2>/dev/null || true
           fi
           tail -n 100 /tmp/iron-browser-web.log 2>/dev/null || true
+
+      - name: Checkout FM Command canonical commercial consumer
+        uses: actions/checkout@v4
+        with:
+          repository: faabio3131/FM-CONTROL-CENTER
+          ref: f1728cffc351cd4ae870c5f752628b476c18ce06
+          path: fm-command-commercial-ci
+
+      - name: Setup FM Command Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install actual FM Command commercial consumer
+        working-directory: fm-command-commercial-ci
+        run: npm ci
+
+      - name: Live Command connector-to-IRON backend interop
+        working-directory: fm-command-commercial-ci
+        env:
+          NODE_ENV: test
+        run: |
+          cp ../test/iron-command-consumer-contract-live.fixture tests/iron-command-consumer-contract-live.test.ts
+          npx vitest run tests/iron-command-consumer-contract-live.test.ts
+          npx vitest run tests/iron-commercial-connector.integration.test.ts tests/iron-entitlement-outbox.unit.test.ts tests/iron-paid-license-reconciliation.unit.test.ts tests/iron-plan-version-binding.unit.test.ts tests/iron-commercial-plan-activation.unit.test.ts
 
       - name: Stop live backend
         if: always()

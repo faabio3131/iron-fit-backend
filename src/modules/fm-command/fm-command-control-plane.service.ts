@@ -339,6 +339,18 @@ export class FmCommandControlPlaneService {
       throw new ConflictException('Comando FM Command ja recebido e nao pode ser reexecutado automaticamente');
     }
 
+    // Fail closed before the command ledger's Gym foreign key is written.
+    // Otherwise an invalid/foreign tenant escapes as an unhandled P2003 (500).
+    // The scope check is performed against the canonical subscription, not
+    // against a caller-provided tenant identifier alone.
+    const scopedSubscription = await this.prisma.tenantProductSubscription.findFirst({
+      where: { id: dto.expectedSubscriptionId, gymId: dto.gymId },
+      select: { id: true },
+    });
+    if (!scopedSubscription) {
+      throw new NotFoundException('Assinatura IRON nao encontrada');
+    }
+
     try {
       await this.prisma.fmCommandControlPlaneCommand.create({
         data: {
