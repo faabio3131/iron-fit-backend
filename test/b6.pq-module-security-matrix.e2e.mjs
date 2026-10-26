@@ -38,7 +38,6 @@ const moduleReadRoutes = Object.freeze({
   integrationProviders: '/integrations/providers',
   integrationConnections: '/integrations/connections',
   securitySessions: '/auth/sessions',
-  fiscalScope: '/financial/fiscal/scope-binding',
 });
 
 test('P/Q live module matrix: all canonically exposed read surfaces, role denial and tenant boundaries', async () => {
@@ -63,6 +62,13 @@ test('P/Q live module matrix: all canonically exposed read surfaces, role denial
     assert.ok(result.payload !== undefined, `Missing canonical payload at ${capability}`);
     covered.push(capability);
   }
+
+  // A tenant with no fiscal integration must fail closed rather than fabricate
+  // an issuer/provider binding or imply that NFS-e is homologated.
+  const fiscal = await request('/financial/fiscal/scope-binding', {
+    token: owner.access_token, expected: 404,
+  });
+  assert.match(String(fiscal.payload?.message), /nao configurado/i);
 
   const employees = [];
   for (const roleName of ['MANAGER', 'RECEPTION', 'TRAINER']) {
