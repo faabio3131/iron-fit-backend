@@ -206,6 +206,28 @@ jobs:
       - name: Targeted adversarial authentication and bounded PostgreSQL load
         run: node --test --test-concurrency=1 test/iron-q2-adversarial-load.e2e.mjs
 
+      - name: Isolate persisted login-IP throttle before browser journeys
+        run: |
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const url = new URL(process.env.DATABASE_URL || '');
+          if (process.env.NODE_ENV !== 'test' ||
+              process.env.IRON_RUNTIME_ENV !== 'HOMOLOG' ||
+              !['localhost','127.0.0.1'].includes(url.hostname) ||
+              url.pathname !== '/iron_ci') {
+            throw new Error('Refusing anti-abuse CI reset outside disposable DB');
+          }
+          const db = new PrismaClient();
+          (async () => {
+            const reset = await db.authRateLimitBucket.deleteMany({
+              where: { scope: { in: ['AUTH_LOGIN_REQUEST_IP', 'AUTH_LOGIN_FAILURE_IP'] } },
+            });
+            console.log(JSON.stringify({ event: 'isolated_ci_login_ip_bucket_reset',
+              rows: reset.count }));
+          })().finally(() => db.$disconnect())
+            .catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
+
       - name: Checkout certified IRON app surface
         uses: actions/checkout@v4
         with:
