@@ -66,6 +66,25 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
       await page.getByText(employee.email, { exact: false }).first().waitFor({ timeout: 20000 });
     }
 
+    // Real student creation and invitation activation through the canonical API.
+    const studentEmail = `student-ui-${id}@example.com`;
+    await page.getByTestId('nav-students').click();
+    await page.getByRole('textbox', { name: 'Nome', exact: true }).fill('QA Student');
+    await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill(studentEmail);
+    const createdResponse = page.waitForResponse((response) =>
+      response.url().endsWith('/api/v1/students') && response.request().method() === 'POST');
+    await page.getByTestId('student-create').click();
+    const studentCreated = await (await createdResponse).json();
+    assert.ok(studentCreated.onboarding?.token);
+    const studentPassword = process.env.B6_STUDENT_PASSWORD;
+    assert.ok(studentPassword);
+    const activation = await fetch(`${process.env.B6_API_URL}/student-onboarding/accept-invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: studentCreated.onboarding.token, password: studentPassword }),
+    });
+    assert.equal(activation.status, 201);
+
     await page.getByTestId('nav-financial').click();
     await page.getByTestId('admin-password-input').waitFor({ timeout: 15000 });
     assert.equal(await page.getByTestId('admin-step-up-submit').isEnabled(), false);
@@ -104,7 +123,21 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
       await page.getByTestId('commercial-logout').click();
       await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
     }
-    console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, staffRoles: employees.map(e => e.role), financialNavigationDenied: true, stepUp: true, logout: true }));
+    // STUDENT uses the six self-service tabs; it never receives the administrative Web workspace.
+    await page.getByTestId('login-email').fill(studentEmail);
+    await page.getByTestId('login-password').fill(studentPassword);
+    await page.getByTestId('login-submit').click();
+    await page.getByRole('button', { name: 'Perfil', exact: true }).waitFor({ timeout: 20000 });
+    assert.equal(await page.getByTestId('commercial-web-app').count(), 0);
+    for (const tab of ['Treino', 'Intelligence', 'Agenda', 'Evolução', 'Plano', 'Perfil']) {
+      assert.equal(await page.getByRole('button', { name: tab, exact: true }).count(), 1, `Missing student tab ${tab}`);
+    }
+    await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+    await page.getByRole('button', { name: 'Perfil', exact: true }).click();
+    await page.getByTestId('logout-submit').click();
+    await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
+
+    console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, staffRoles: employees.map(e => e.role), financialNavigationDenied: true, studentSelfService: true, stepUp: true, logout: true }));
   } finally {
     await browser.close();
   }
