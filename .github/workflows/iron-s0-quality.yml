@@ -294,6 +294,61 @@ jobs:
       - name: Browser functional journey against real API and PostgreSQL
         run: node --test test/iron-web-browser-live.e2e.mjs
 
+      - name: Start real production Web server for controlled ZAP scan
+        run: |
+          set -euo pipefail
+          cd iron-fit-app-macro-o-candidate
+          test -s dist-browser/index.html
+          ln -s dist-browser dist-web
+          PORT=18083 node scripts/serve-web.mjs > /tmp/iron-zap-web.log 2>&1 &
+          echo $! > /tmp/iron-zap-web.pid
+          for n in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18083/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18083/health >/dev/null
+          curl --fail --silent http://127.0.0.1:18083/ | grep -qi '<!DOCTYPE html'
+
+      - name: OWASP ZAP controlled passive DAST on real IRON Web runtime
+        timeout-minutes: 9
+        run: |
+          set -euo pipefail
+          mkdir -p iron-zap-artifacts
+          chmod 777 iron-zap-artifacts
+          docker run --rm --network host \
+            -v "$PWD/iron-zap-artifacts:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://127.0.0.1:18083 \
+            -m 1 -T 5 -J iron-web-zap.json -I
+          node <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('iron-zap-artifacts/iron-web-zap.json', 'utf8'));
+          const sites = report.site ?? [];
+          if (!sites.length) throw Error('ZAP did not inspect any real Web site');
+          const alerts = sites.flatMap(site => site.alerts ?? []);
+          const elevated = alerts.filter(x => Number(x.riskcode) >= 3);
+          const result = {
+            event: 'iron_real_web_zap_passive_dast',
+            isolatedWebRuntime: true,
+            inspectedSites: sites.length,
+            alerts: alerts.length,
+            highCritical: elevated.map(x => ({ id: x.pluginid, risk: x.riskdesc, name: x.alert })),
+            scope: 'UNAUTHENTICATED_PASSIVE_BASELINE',
+          };
+          console.log(JSON.stringify(result));
+          if (elevated.length) throw Error('Stop-ship: ZAP reported high/critical findings');
+          NODE
+
+      - name: Stop isolated production Web server
+        if: always()
+        run: |
+          if test -f /tmp/iron-zap-web.pid; then
+            kill "$(cat /tmp/iron-zap-web.pid)" 2>/dev/null || true
+          fi
+          tail -n 35 /tmp/iron-zap-web.log 2>/dev/null || true
+
       - name: Stop real IRON Web server
         if: always()
         run: |
