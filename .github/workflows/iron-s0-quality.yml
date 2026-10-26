@@ -33,6 +33,7 @@ jobs:
       TRUST_PROXY_HOPS: '0'
       PORT: '3333'
       B6_API_URL: http://127.0.0.1:3333/api/v1
+      CORS_ORIGINS: http://127.0.0.1:18081
 
     services:
       postgres:
@@ -212,6 +213,37 @@ jobs:
           IRON_LIVE_E2E: 'true'
           EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
         run: npx jest test/live-system-contract.test.ts --runInBand --ci
+
+      - name: Export current IRON Web for real browser E2E
+        working-directory: iron-fit-app-macro-o-candidate
+        env:
+          NODE_ENV: production
+          EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
+        run: npx expo export --platform web --output-dir dist-browser
+
+      - name: Start real IRON Web and install isolated browser driver
+        run: |
+          python3 -m http.server 18081 --bind 127.0.0.1 --directory iron-fit-app-macro-o-candidate/dist-browser >/tmp/iron-browser-web.log 2>&1 &
+          echo $! > /tmp/iron-browser-web.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18081/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18081/ >/dev/null
+          npm install --prefix /tmp/iron-browser-qa --no-save --no-audit --no-fund playwright-core@1.57.0
+
+      - name: Browser functional journey against real API and PostgreSQL
+        run: node --test test/b6.web-browser-live.e2e.mjs
+
+      - name: Stop real IRON Web server
+        if: always()
+        run: |
+          if test -f /tmp/iron-browser-web.pid; then
+            kill "$(cat /tmp/iron-browser-web.pid)" 2>/dev/null || true
+          fi
+          tail -n 100 /tmp/iron-browser-web.log 2>/dev/null || true
 
       - name: Stop live backend
         if: always()
