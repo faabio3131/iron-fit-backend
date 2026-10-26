@@ -29,6 +29,16 @@ const moduleReadRoutes = Object.freeze({
   creatorContent: '/creator-network/content/tenant/items',
   creatorOverview: '/creator-network/operations/tenant/overview',
   creatorAnalytics: '/creator-network/operations/tenant/analytics?days=30',
+  communicationTemplates: '/communication/templates',
+  communicationMessages: '/communication/messages',
+  communicationAutomations: '/communication/automations',
+  privacyRequests: '/privacy/dsr',
+  privacyDocuments: '/privacy/legal-documents',
+  privacyAcceptances: '/privacy/legal-acceptances',
+  integrationProviders: '/integrations/providers',
+  integrationConnections: '/integrations/connections',
+  securitySessions: '/auth/sessions',
+  fiscalScope: '/financial/fiscal/scope-binding',
 });
 
 test('P/Q live module matrix: all canonically exposed read surfaces, role denial and tenant boundaries', async () => {
@@ -67,6 +77,8 @@ test('P/Q live module matrix: all canonically exposed read surfaces, role denial
     '/financial/accounts', '/financial/charges', '/financial/subscriptions',
     '/financial/transactions', '/saas-billing/prices', '/saas-billing/current',
     '/product-entitlements/tenant/configurations',
+    '/integrations/providers', '/integrations/connections',
+    '/financial/fiscal/scope-binding',
   ];
   for (const employee of employees) {
     for (const path of administrative) {
@@ -80,6 +92,10 @@ test('P/Q live module matrix: all canonically exposed read surfaces, role denial
         password: staffPassword, roleName: 'OWNER',
       } });
   }
+  // Tenant owners cannot reach FM-only privacy operations merely by crafting URLs.
+  await request('/privacy/operations/governance', { token: owner.access_token, expected: 403 });
+  await request('/privacy/operations/dsr', { token: owner.access_token, expected: 403 });
+
   // Forged tenant selector cannot expand the JWT's gym context.
   const otherEmail = `other-owner-${uid}@example.com`;
   const otherGym = (await request('/commercial/trial/start', { method: 'POST', expected: 201,
