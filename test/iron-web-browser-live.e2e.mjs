@@ -98,6 +98,21 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     });
     assert.equal(activation.status, 201);
 
+    // Verify a real previously nonfunctional-looking inventory CTA through
+    // actual browser clicks, persistent API mutation and reverted state.
+    await page.getByTestId('nav-equipment').click();
+    const catalogAction = page.locator('[data-testid^="equipment-catalog-select-"]').first();
+    await catalogAction.waitFor({ timeout: 20000 });
+    const beforeLabel = await catalogAction.innerText();
+    await catalogAction.click();
+    const expectedAfter = beforeLabel.includes('Adicionar')
+      ? 'Remover do inventário' : 'Adicionar ao inventário';
+    await page.locator('[data-testid^="equipment-catalog-select-"]').first()
+      .getByText(expectedAfter, { exact: true }).waitFor({ timeout: 20000 });
+    await page.locator('[data-testid^="equipment-catalog-select-"]').first().click();
+    await page.locator('[data-testid^="equipment-catalog-select-"]').first()
+      .getByText(beforeLabel.trim(), { exact: true }).waitFor({ timeout: 20000 });
+
     await page.getByTestId('nav-financial').click();
     await page.getByTestId('admin-password-input').waitFor({ timeout: 15000 });
     assert.equal(await page.getByTestId('admin-step-up-submit').isEnabled(), false);
@@ -150,7 +165,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByTestId('logout-submit').click();
     await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
 
-    console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, staffRoles: employees.map(e => e.role), financialNavigationDenied: true, studentSelfService: true, stepUp: true, logout: true }));
+    console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, staffRoles: employees.map(e => e.role), financialNavigationDenied: true, studentSelfService: true, inventoryCtaRoundtrip: true, stepUp: true, logout: true }));
   } finally {
     await browser.close();
   }
