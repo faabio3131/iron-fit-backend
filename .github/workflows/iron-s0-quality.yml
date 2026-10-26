@@ -235,7 +235,7 @@ jobs:
           npm install --prefix /tmp/iron-browser-qa --no-save --no-audit --no-fund playwright-core@1.57.0
 
       - name: Browser functional journey against real API and PostgreSQL
-        run: node --test test/b6.web-browser-live.e2e.mjs
+        run: node --test test/iron-web-browser-live.e2e.mjs
 
       - name: Stop real IRON Web server
         if: always()
