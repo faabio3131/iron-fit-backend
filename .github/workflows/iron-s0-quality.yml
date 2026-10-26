@@ -203,6 +203,9 @@ jobs:
             .catch((error) => { console.error(error.message); process.exitCode = 1; });
           NODE
 
+      - name: Targeted adversarial authentication and bounded PostgreSQL load
+        run: node --test --test-concurrency=1 test/iron-q2-adversarial-load.e2e.mjs
+
       - name: Checkout certified IRON app surface
         uses: actions/checkout@v4
         with:
@@ -301,6 +304,33 @@ jobs:
           cp ../test/iron-command-consumer-contract-live.fixture tests/iron-command-consumer-contract-live.test.ts
           npx vitest run tests/iron-command-consumer-contract-live.test.ts
           npx vitest run tests/iron-commercial-connector.integration.test.ts tests/iron-entitlement-outbox.unit.test.ts tests/iron-paid-license-reconciliation.unit.test.ts tests/iron-plan-version-binding.unit.test.ts tests/iron-commercial-plan-activation.unit.test.ts
+
+      - name: Prepare disposable process-restart recovery proof
+        run: node test/iron-q-disposable-restart-drill.mjs prepare
+
+      - name: Reboot disposable IRON API process without resetting PostgreSQL
+        run: |
+          set -euo pipefail
+          kill "$(cat /tmp/iron-b6-backend.pid)"
+          for attempt in $(seq 1 30); do
+            if ! kill -0 "$(cat /tmp/iron-b6-backend.pid)" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          node dist/src/main.js >> /tmp/iron-b6-backend.log 2>&1 &
+          echo $! > /tmp/iron-b6-backend.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3333/api/v1/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'IRON did not recover after disposable API process restart'
+          exit 1
+
+      - name: Verify session, step-up, data and writes survived API restart
+        run: node test/iron-q-disposable-restart-drill.mjs verify
 
       - name: Stop live backend
         if: always()
