@@ -354,6 +354,29 @@ jobs:
       - name: Verify session, step-up, data and writes survived API restart
         run: node test/iron-q-disposable-restart-drill.mjs verify
 
+      - name: Reset isolated auth windows for last independent mutation journey
+        run: |
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const url = new URL(process.env.DATABASE_URL || '');
+          if (process.env.NODE_ENV !== 'test' ||
+              process.env.IRON_RUNTIME_ENV !== 'HOMOLOG' ||
+              !['127.0.0.1', 'localhost'].includes(url.hostname) ||
+              url.pathname !== '/iron_ci') {
+            throw new Error('Refusing disposable CI auth reset outside iron_ci');
+          }
+          const prisma = new PrismaClient();
+          prisma.authRateLimitBucket.deleteMany({
+            where: { scope: { in: ['AUTH_SIGNUP_IP', 'AUTH_LOGIN_REQUEST_IP', 'AUTH_LOGIN_FAILURE_IP'] } },
+          }).then(({ count }) => console.log(JSON.stringify({
+            event: 'ci_disposable_mutation_suite_isolated', bucketCount: count,
+          }))).finally(() => prisma.$disconnect())
+            .catch(e => { console.error(e.message); process.exitCode = 1; });
+          NODE
+
+      - name: Real communication, consent, automation and privacy mutation E2E
+        run: node --test test/iron-p-module-mutation-flows.e2e.mjs
+
       - name: Stop live backend
         if: always()
         run: |
