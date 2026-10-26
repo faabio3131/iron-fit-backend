@@ -246,6 +246,31 @@ jobs:
           fi
           tail -n 100 /tmp/iron-browser-web.log 2>/dev/null || true
 
+      - name: Checkout FM Command canonical commercial consumer
+        uses: actions/checkout@v4
+        with:
+          repository: faabio3131/FM-CONTROL-CENTER
+          ref: f1728cffc351cd4ae870c5f752628b476c18ce06
+          path: fm-command-commercial-ci
+
+      - name: Setup FM Command Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install actual FM Command commercial consumer
+        working-directory: fm-command-commercial-ci
+        run: npm ci
+
+      - name: Live Command connector-to-IRON backend interop
+        working-directory: fm-command-commercial-ci
+        env:
+          NODE_ENV: test
+        run: |
+          cp ../test/iron-command-consumer-contract-live.test.ts tests/iron-command-consumer-contract-live.test.ts
+          npx vitest run tests/iron-command-consumer-contract-live.test.ts
+          npx vitest run tests/iron-commercial-connector.integration.test.ts tests/iron-entitlement-outbox.unit.test.ts tests/iron-paid-license-reconciliation.unit.test.ts tests/iron-plan-version-binding.unit.test.ts tests/iron-commercial-plan-activation.unit.test.ts
+
       - name: Stop live backend
         if: always()
         run: |
