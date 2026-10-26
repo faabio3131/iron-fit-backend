@@ -10,7 +10,6 @@ const moduleReadRoutes = Object.freeze({
   inventory: '/equipments',
   catalog: '/equipments/catalog',
   exercises: '/exercises',
-  assessments: '/assessments',
   workouts: '/workouts',
   agendaSlots: '/schedule-slots',
   agendaBookings: '/schedules',
@@ -94,6 +93,7 @@ test('P/Q live module matrix: all canonically exposed read surfaces, role denial
       name: 'Module QA Student', email: `module-student-${uid}@example.com`,
       goal: 'CONDICIONAMENTO', level: 'INICIANTE',
     } })).payload;
+  await request(`/students/${student.id}/assessments`, { token: owner.access_token, expected: 200 });
   await request('/student-onboarding/accept-invite', { method: 'POST', expected: 201,
     body: { token: student.onboarding.token, password: studentPassword } });
   const studentSession = await login(`module-student-${uid}@example.com`, studentPassword);
