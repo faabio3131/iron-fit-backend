@@ -267,7 +267,7 @@ jobs:
         env:
           NODE_ENV: test
         run: |
-          cp ../test/iron-command-consumer-contract-live.test.ts tests/iron-command-consumer-contract-live.test.ts
+          cp ../test/iron-command-consumer-contract-live.fixture tests/iron-command-consumer-contract-live.test.ts
           npx vitest run tests/iron-command-consumer-contract-live.test.ts
           npx vitest run tests/iron-commercial-connector.integration.test.ts tests/iron-entitlement-outbox.unit.test.ts tests/iron-paid-license-reconciliation.unit.test.ts tests/iron-plan-version-binding.unit.test.ts tests/iron-commercial-plan-activation.unit.test.ts
 
