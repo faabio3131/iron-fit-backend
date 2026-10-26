@@ -50,6 +50,22 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByTestId('team-invite').click();
     await page.getByText(teamEmail, { exact: false }).first().waitFor({ timeout: 20000 });
 
+    // Exercise the actual team creation UI for every employee role, not only API authorization.
+    const employees = [
+      { role: 'MANAGER', label: 'Gerente', email: `manager-ui-${id}@example.com` },
+      { role: 'RECEPTION', label: 'Recepção', email: `reception-ui-${id}@example.com` },
+      { role: 'TRAINER', label: 'Professor', email: `trainer-ui-${id}@example.com` },
+    ];
+    for (const employee of employees) {
+      await page.getByRole('textbox', { name: 'Nome', exact: true }).fill(`QA ${employee.role}`);
+      await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill(employee.email);
+      await page.getByLabel('Senha inicial (opcional)').fill(password);
+      await page.getByText(employee.label, { exact: true }).first().click();
+      assert.equal(await page.getByTestId('team-add').isEnabled(), true);
+      await page.getByTestId('team-add').click();
+      await page.getByText(employee.email, { exact: false }).first().waitFor({ timeout: 20000 });
+    }
+
     await page.getByTestId('nav-financial').click();
     await page.getByTestId('admin-password-input').waitFor({ timeout: 15000 });
     assert.equal(await page.getByTestId('admin-step-up-submit').isEnabled(), false);
@@ -71,7 +87,24 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     assert.deepEqual(pageErrors, [], 'No uncaught browser runtime errors');
     await page.getByTestId('commercial-logout').click();
     await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
-    console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, stepUp: true, logout: true }));
+
+    // The browser itself must not expose owner-only modules to employee profiles.
+    for (const employee of employees) {
+      await page.getByTestId('login-email').fill(employee.email);
+      await page.getByTestId('login-password').fill(password);
+      await page.getByTestId('login-submit').click();
+      await page.getByTestId('nav-students').waitFor({ timeout: 20000 });
+      for (const restricted of ['financial', 'fiscal', 'saasBilling', 'entitlements', 'integrations']) {
+        assert.equal(await page.getByTestId(`nav-${restricted}`).count(), 0,
+          `${employee.role} must not receive ${restricted} navigation`);
+      }
+      assert.equal(await page.getByTestId('nav-team').count(), employee.role === 'MANAGER' ? 1 : 0);
+      assert.equal(await page.getByTestId('nav-workouts').count(), employee.role === 'TRAINER' ? 1 : (employee.role === 'MANAGER' ? 1 : 0));
+      assert.equal(await page.getByTestId('nav-security').count(), 1);
+      await page.getByTestId('commercial-logout').click();
+      await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
+    }
+    console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, staffRoles: employees.map(e => e.role), financialNavigationDenied: true, stepUp: true, logout: true }));
   } finally {
     await browser.close();
   }
