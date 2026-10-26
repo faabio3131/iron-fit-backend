@@ -179,27 +179,29 @@ jobs:
       - name: Integrated live E2E
         run: node --test --test-concurrency=1 test/b6.*.e2e.mjs
 
-      - name: Reset isolated runtime rate-limit state before client journeys
+      - name: Reset disposable CI signup IP bucket between independent test suites
         run: |
-          # Deliberately preserve the PostgreSQL canonical state, but isolate
-          # application-level anti-abuse windows across independent CI suites.
-          kill "$(cat /tmp/iron-b6-backend.pid)"
-          for attempt in $(seq 1 20); do
-            if ! kill -0 "$(cat /tmp/iron-b6-backend.pid)" 2>/dev/null; then
-              break
-            fi
-            sleep 1
-          done
-          node dist/src/main.js >> /tmp/iron-b6-backend.log 2>&1 &
-          echo $! > /tmp/iron-b6-backend.pid
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:3333/api/v1/health/ready >/dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          echo 'Isolated backend did not become ready after stress-suite reset'
-          exit 1
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const u = new URL(process.env.DATABASE_URL || '');
+          if (process.env.NODE_ENV !== 'test' ||
+              process.env.IRON_RUNTIME_ENV !== 'HOMOLOG' ||
+              !['localhost', '127.0.0.1'].includes(u.hostname) ||
+              u.pathname !== '/iron_ci') {
+            throw new Error('Refusing to change non-disposable signup throttle state');
+          }
+          const db = new PrismaClient();
+          (async () => {
+            const result = await db.authRateLimitBucket.deleteMany({
+              where: { scope: 'AUTH_SIGNUP_IP' },
+            });
+            console.log(JSON.stringify({
+              event: 'isolated_ci_signup_ip_bucket_reset',
+              scope: 'AUTH_SIGNUP_IP', rows: result.count,
+            }));
+          })().finally(async () => { await db.$disconnect(); })
+            .catch((error) => { console.error(error.message); process.exitCode = 1; });
+          NODE
 
       - name: Checkout certified IRON app surface
         uses: actions/checkout@v4
