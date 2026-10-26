@@ -89,6 +89,81 @@ test('P/Q Command-to-IRON live S2S: guard, snapshot, license status, idempotency
   assert.equal(resumed.status, 201);
   assert.equal(resumed.body.result.entitlementStatus, 'ACTIVE');
 
+  // A real FM Command commercial journey: trial -> Basic -> Pro -> Basic
+  // is executed only through the canonical S2S endpoint, not IRON local
+  // checkout or forged UI authority.
+  const transition = async (subscriptionId, planCode, status, kind) => {
+    const command = {
+      action: 'subscription.plan.transition',
+      gymId: provision.gymId,
+      expectedSubscriptionId: subscriptionId,
+      commercialStatus: status,
+      planCode,
+      planVersion: 1,
+      transitionKind: kind,
+      reason: 'CI linked commercial plan lifecycle',
+    };
+    const key = 'iron-s2s-plan-' + randomUUID();
+    const response = await fmcc('/subscription/commands', {
+      secret: token, method: 'POST', key, body: command,
+    });
+    assert.equal(response.status, 201, JSON.stringify({ planCode, response }));
+    assert.equal(response.body.result.changed, true);
+    assert.equal(response.body.result.subscription.status, 'ACTIVE');
+    assert.equal(response.body.result.previousSubscription.id, subscriptionId);
+    assert.equal(response.body.result.previousSubscription.status, 'CANCELED');
+    const replay = await fmcc('/subscription/commands', {
+      secret: token, method: 'POST', key, body: command,
+    });
+    assert.equal(replay.status, 201);
+    assert.equal(replay.body.idempotent, true);
+    return response.body.result.subscription.id;
+  };
+
+  const basic1 = await transition(provision.subscriptionId, 'IRON_B6_BASIC', 'upgrade', 'UPGRADE');
+  const pro = await transition(basic1, 'IRON_B6_PRO', 'upgrade', 'UPGRADE');
+  const basic2 = await transition(pro, 'IRON_B6_BASIC', 'downgrade', 'DOWNGRADE');
+
+  const cancelCommand = {
+    ...baseCommand,
+    expectedSubscriptionId: basic2,
+    commercialStatus: 'cancelled',
+    entitlementStatus: 'CANCELED',
+    reason: 'CI canonical customer cancellation',
+  };
+  const cancelKey = 'iron-s2s-cancel-' + randomUUID();
+  const cancelled = await fmcc('/subscription/commands', {
+    secret: token, method: 'POST', key: cancelKey, body: cancelCommand,
+  });
+  assert.equal(cancelled.status, 201);
+  assert.equal(cancelled.body.result.entitlementStatus, 'CANCELED');
+  const cancelledReplay = await fmcc('/subscription/commands', {
+    secret: token, method: 'POST', key: cancelKey, body: cancelCommand,
+  });
+  assert.equal(cancelledReplay.status, 201);
+  assert.equal(cancelledReplay.body.idempotent, true);
+
+  // Returning after cancellation requires a new commercial contracting
+  // authority, never resurrects the terminated subscription by status.sync.
+  const forbiddenRevival = await fmcc('/subscription/commands', {
+    secret: token, method: 'POST', key: 'iron-s2s-revival-' + randomUUID(),
+    body: {
+      ...cancelCommand, commercialStatus: 'active',
+      entitlementStatus: 'ACTIVE',
+      reason: 'CI forbidden cancelled subscription resurrection',
+    },
+  });
+  assert.equal(forbiddenRevival.status, 409);
+  const history = await fmcc('/snapshot', { secret: token });
+  const subscriptions = history.body.subscriptions.filter(row => row.tenant_id === provision.gymId);
+  assert.ok(subscriptions.length >= 4);
+  assert.equal(subscriptions.filter(row => row.status === 'ACTIVE').length, 0);
+  assert.equal(subscriptions.filter(row => row.status === 'CANCELED').length, subscriptions.length);
+  console.log(JSON.stringify({ event: 'iron_fm_command_complete_plan_lifecycle',
+    trialToBasic: true, basicToPro: true, proToBasic: true,
+    cancellation: true, replaySafe: true, cancelledCannotReactivate: true,
+    tenantSubscriptionRows: subscriptions.length }));
+
   console.log(JSON.stringify({ event: 'iron_fm_command_real_s2s_certified',
     routeCount: 5, tenantIsolation: true, serviceCredentialGuard: true,
     idempotentReplay: true, conflictingReplayDenied: true,
