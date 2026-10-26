@@ -239,6 +239,13 @@ jobs:
           EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
         run: npx jest test/live-system-contract.test.ts --runInBand --ci
 
+      - name: Certify current Macro O Web and native-screen automated suites
+        working-directory: iron-fit-app-macro-o-candidate
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test -- --runInBand --ci
+
       - name: Export current IRON Web for real browser E2E
         working-directory: iron-fit-app-macro-o-candidate
         env:
