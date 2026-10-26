@@ -78,7 +78,28 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
   );
   assert.equal(managerTeam.some((member) => member.email === a.email), false);
   assert.equal(managerTeam.some((member) => member.email === roles.manager), false);
-  await request('/financial/accounts', { token: trainer.access_token, expected: 403 });
+  // Security regression: a MANAGER must not escalate to an OWNER membership.
+  await request('/users', {
+    method: 'POST',
+    token: manager.access_token,
+    expected: 403,
+    body: {
+      email: `unauthorized-owner-${a.suffix}@example.com`,
+      password: staffPassword,
+      name: 'Unauthorized Owner',
+      roleName: 'OWNER',
+    },
+  });
+
+  // No employee role may read the owner's financial ledger, even by direct API call.
+  for (const [roleName, token] of [
+    ['MANAGER', manager.access_token],
+    ['RECEPTION', reception.access_token],
+    ['TRAINER', trainer.access_token],
+  ]) {
+    await request('/financial/accounts', { token, expected: 403 });
+    await request('/financial/charges', { token, expected: 403 });
+  }
 
   const studentEmail = `student-${a.suffix}@example.com`;
   const created = (await request('/students', {
@@ -361,6 +382,21 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
     expected: 200,
     body: { accountId: account.id, paymentMethod: 'PIX' },
   });
+
+  // Tenant B can access its own ledger, but never see tenant A's settled charge.
+  await request('/auth/step-up', {
+    method: 'POST',
+    token: b.owner.access_token,
+    expected: 200,
+    body: { currentPassword: b.password },
+  });
+  const otherTenantCharges = (await request('/financial/charges', {
+    token: b.owner.access_token,
+    expected: 200,
+  })).payload;
+  assert.ok(Array.isArray(otherTenantCharges));
+  assert.equal(otherTenantCharges.some((entry) => entry.id === charge.id), false);
+
 
   assert.equal((await request('/me/profile', {
     token: student.access_token,
