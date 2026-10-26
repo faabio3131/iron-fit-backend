@@ -195,6 +195,24 @@ jobs:
           EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
         run: npx jest test/live-system-contract.test.ts --runInBand --ci
 
+      - name: Checkout current Macro O application candidate
+        uses: actions/checkout@v4
+        with:
+          repository: faabio3131/iron-fit-app
+          ref: 0f3951391712da59d7939e9e4a7aceaf4ed9cd20
+          path: iron-fit-app-macro-o-candidate
+
+      - name: Install current Macro O candidate dependencies
+        working-directory: iron-fit-app-macro-o-candidate
+        run: npm ci
+
+      - name: Cross-surface live Macro O candidate against current backend
+        working-directory: iron-fit-app-macro-o-candidate
+        env:
+          IRON_LIVE_E2E: 'true'
+          EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
+        run: npx jest test/live-system-contract.test.ts --runInBand --ci
+
       - name: Stop live backend
         if: always()
         run: |
