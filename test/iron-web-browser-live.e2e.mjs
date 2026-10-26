@@ -37,8 +37,21 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
 
     await page.getByTestId('commercial-web-app').waitFor({ timeout: 30000 });
     await page.getByTestId('nav-team').waitFor({ timeout: 30000 });
-    const width = await page.evaluate(() => ({ document: document.documentElement.scrollWidth, viewport: window.innerWidth }));
-    assert.ok(width.document <= width.viewport + 2, 'Desktop page must not overflow horizontally');
+    // Responsive validation uses the real authenticated product DOM, not screenshots or mocks.
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+      { width: 1366, height: 768 },
+      { width: 1920, height: 1080 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const layout = await page.evaluate(() => ({
+        document: document.documentElement.scrollWidth, viewport: window.innerWidth,
+      }));
+      assert.ok(layout.document <= layout.viewport + 2,
+        `Horizontal overflow at ${viewport.width}: ${JSON.stringify(layout)}`);
+    }
+    await page.setViewportSize({ width: 1366, height: 768 });
 
     await page.getByTestId('nav-team').click();
     await page.getByTestId('team-invite').waitFor({ timeout: 20000 });
