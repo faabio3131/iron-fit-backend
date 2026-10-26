@@ -86,6 +86,7 @@ jobs:
           mask_and_export B6_STUDENT_PASSWORD "Cc3!$(openssl rand -hex 16)"
           mask_and_export B6_RESET_PASSWORD "Dd4!$(openssl rand -hex 16)"
           mask_and_export B6_ADMIN_PASSWORD "Ee5!$(openssl rand -hex 16)"
+          mask_and_export FMCC_IRON_CONTROL_PLANE_TOKEN "$(openssl rand -hex 40)"
 
       - name: Dependency audit
         run: npm audit --audit-level=high
