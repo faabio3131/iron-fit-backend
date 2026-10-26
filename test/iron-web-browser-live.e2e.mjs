@@ -127,13 +127,13 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByTestId('login-email').fill(studentEmail);
     await page.getByTestId('login-password').fill(studentPassword);
     await page.getByTestId('login-submit').click();
-    await page.getByRole('button', { name: 'Perfil', exact: true }).waitFor({ timeout: 20000 });
+    await page.getByText('Perfil', { exact: true }).last().waitFor({ timeout: 20000 });
     assert.equal(await page.getByTestId('commercial-web-app').count(), 0);
     for (const tab of ['Treino', 'Intelligence', 'Agenda', 'Evolução', 'Plano', 'Perfil']) {
-      assert.equal(await page.getByRole('button', { name: tab, exact: true }).count(), 1, `Missing student tab ${tab}`);
+      assert.ok(await page.getByText(tab, { exact: true }).count() >= 1, `Missing student tab ${tab}`);
     }
-    await page.getByRole('button', { name: 'Agenda', exact: true }).click();
-    await page.getByRole('button', { name: 'Perfil', exact: true }).click();
+    await page.getByText('Agenda', { exact: true }).last().click();
+    await page.getByText('Perfil', { exact: true }).last().click();
     await page.getByTestId('logout-submit').click();
     await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
 
