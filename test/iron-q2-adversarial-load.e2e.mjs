@@ -53,9 +53,14 @@ test('Q adversarial live API: invalid tokens, direct-object access, tenant spoof
     assert.ok(list.some((entry) => entry.id === student.id));
     assert.ok(list.every((entry) => entry.gymId === undefined || entry.gymId === a.provision.gymId));
   }
-  await request(`/students?gymId=${b.provision.gymId}`, {
-    token: a.session.access_token, expected: [400, 403, 404],
-  });
+  // The students listing intentionally ignores untrusted gymId rather than
+  // returning 4xx; the security invariant is zero visibility of gym B data.
+  const tamperedTenantList = (await request(`/students?gymId=${b.provision.gymId}`, {
+    token: a.session.access_token, expected: 200,
+  })).payload;
+  assert.ok(tamperedTenantList.some((entry) => entry.id === student.id));
+  assert.ok(tamperedTenantList.every((entry) =>
+    entry.gymId === undefined || entry.gymId === a.provision.gymId));
   const ownerFinancial = await request('/financial/accounts', {
     token: a.session.access_token, expected: 403,
   });
