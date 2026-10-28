@@ -142,3 +142,27 @@ test('FM-managed tenant-selected profile resolves only central Vault reference',
   assert.match(controller, /@Roles\('SUPER_ADMIN'\)/);
   assert.match(controller, /JwtAuthGuard/);
 });
+
+test('governed timeout aborts the in-flight provider request and classifies TIMEOUT', async () => {
+  const { AiProviderExecutionService } = require('../dist/src/modules/ai/runtime/ai-provider-execution.service.js');
+  let aborted = false;
+  const execution = new AiProviderExecutionService(
+    { resolve: async () => ({ available: true, configuration: {
+      ...base, providerCode: 'openai_compatible', budgetUnits: 1,
+      timeoutMs: 20, secretReference: 'isv_' + 'b'.repeat(43),
+    } }) },
+    { resolve: () => ({ providerCode: 'openai_compatible', requiresCredential: true,
+      execute: (_req, _config, context) => new Promise((_resolve, reject) => {
+        context.signal.addEventListener('abort', () => {
+          aborted = true;
+          reject(new Error('request aborted'));
+        }, { once: true });
+      }),
+    }) },
+    { resolveForExecution: async () => ({ available: true, connectionId: 'FM', credential: secret.credential }) },
+  );
+  const result = await execution.execute(req);
+  assert.equal(result.status, 'FAILED');
+  assert.equal(result.failureCategory, 'TIMEOUT');
+  assert.equal(aborted, true);
+});
