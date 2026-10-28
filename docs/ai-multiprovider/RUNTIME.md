@@ -6,6 +6,15 @@ Evolução do motor canônico, baseada na PR #178. Mantém endpoints de advisory
 
 Transportes: `openai_compatible` (OpenAI e endpoint NVIDIA autorizado) e `gemini_native` (Gemini GenerateContent). Os nomes de modelos são configurados pela FM, sem defaults de modelo nem chaves em código. O catálogo de integrações permanece a autoridade de credenciais e capacidades.
 
+Na infraestrutura self-hosted/Contabo, `INTEGRATION_SECRET_VAULT_BACKEND=LOCAL_ENCRYPTED`
+usa registros AES-256-GCM fora do banco. A chave mestra de 32 bytes deve ser montada como
+Docker Secret somente-leitura em `LOCAL_ENCRYPTED_VAULT_MASTER_KEY_FILE`, modo `0400` ou
+`0600`, e nunca pode compartilhar o volume de `LOCAL_ENCRYPTED_VAULT_DIRECTORY`. O diretório
+de registros deve ser persistente, modo `0700`, ter backup cifrado separado e restauração
+testada. A chave mestra não pertence a `.env`, imagem, Git, PostgreSQL ou backup do banco.
+OCI Vault continua suportado por `INTEGRATION_SECRET_VAULT_BACKEND=OCI`; `DISABLED` permanece
+fail-closed e recusa cadastro/rotação de credenciais.
+
 Referências de protocolo consultadas em 28/10/2026:
 - https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create
 - https://developers.openai.com/api/docs/guides/structured-outputs

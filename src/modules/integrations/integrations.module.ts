@@ -36,6 +36,8 @@ import { OciIntegrationSecretVaultAdapter } from './secrets/oci/oci-integration-
 import { OciVaultClientFactory } from './secrets/oci/oci-vault-client.factory';
 import { OciVaultConfigurationService } from './secrets/oci/oci-vault-configuration.service';
 import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-integration-secret-vault.adapter';
+import { LocalEncryptedVaultConfigurationService } from './secrets/local/local-encrypted-vault-configuration.service';
+import { LocalEncryptedIntegrationSecretVaultAdapter } from './secrets/local/local-encrypted-integration-secret-vault.adapter';
 
 @Module({
   imports: [PrismaModule, AuthModule, ProductEntitlementsModule],
@@ -71,6 +73,8 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     OciVaultClientFactory,
     OciIntegrationSecretVaultAdapter,
     UnavailableIntegrationSecretVaultAdapter,
+    LocalEncryptedVaultConfigurationService,
+    LocalEncryptedIntegrationSecretVaultAdapter,
     {
       provide: INTEGRATION_SECRET_VAULT,
       inject: [
@@ -78,12 +82,16 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
         OciVaultConfigurationService,
         OciIntegrationSecretVaultAdapter,
         UnavailableIntegrationSecretVaultAdapter,
+        LocalEncryptedVaultConfigurationService,
+        LocalEncryptedIntegrationSecretVaultAdapter,
       ],
       useFactory: (
         config: ConfigService,
         ociConfiguration: OciVaultConfigurationService,
         ociAdapter: OciIntegrationSecretVaultAdapter,
         unavailable: UnavailableIntegrationSecretVaultAdapter,
+        localConfiguration: LocalEncryptedVaultConfigurationService,
+        localEncrypted: LocalEncryptedIntegrationSecretVaultAdapter,
       ) => {
         const backend = config
           .get<string>('INTEGRATION_SECRET_VAULT_BACKEND')
@@ -94,10 +102,14 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
           ociConfiguration.requireSettings();
           return ociAdapter;
         }
+        if (backend === 'LOCAL_ENCRYPTED') {
+          localConfiguration.requireSettings();
+          return localEncrypted;
+        }
         if (!backend || backend === 'DISABLED') return unavailable;
 
         throw new Error(
-          'INTEGRATION_SECRET_VAULT_BACKEND deve ser OCI ou DISABLED',
+          'INTEGRATION_SECRET_VAULT_BACKEND deve ser OCI, LOCAL_ENCRYPTED ou DISABLED',
         );
       },
     },

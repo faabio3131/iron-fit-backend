@@ -104,10 +104,12 @@ export function assertRuntimeStartupConfiguration(
 
   if (identity.runtimeEnvironment === 'PROD') {
     if (
-      env.INTEGRATION_SECRET_VAULT_BACKEND?.trim().toUpperCase() !== 'OCI'
+      !['OCI', 'LOCAL_ENCRYPTED'].includes(
+        env.INTEGRATION_SECRET_VAULT_BACKEND?.trim().toUpperCase() ?? '',
+      )
     ) {
       throw new Error(
-        'PROD exige INTEGRATION_SECRET_VAULT_BACKEND=OCI',
+        'PROD exige INTEGRATION_SECRET_VAULT_BACKEND=OCI ou LOCAL_ENCRYPTED',
       );
     }
 
