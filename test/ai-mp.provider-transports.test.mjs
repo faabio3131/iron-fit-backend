@@ -97,3 +97,48 @@ test('FM provider credential probes use fixed trusted endpoints and never expose
     assert.equal(seen.length, 2);
   } finally { globalThis.fetch = before; }
 });
+
+test('FM-only profile administration enforces step-up, verified global Vault and tenant isolation', async () => {
+  const { AiConfigurationAdminService } = require('../dist/src/modules/ai/configuration/ai-configuration-admin.service.js');
+  const ref = 'isv_' + 'a'.repeat(43);
+  const connection = { capabilities: ['ai.advisory_chat'] };
+  let saved = 0, authorized = 0, checked = 0;
+  const service = new AiConfigurationAdminService(
+    { integrationConnection: { findFirst: async (query) => {
+      checked++;
+      assert.equal(query.where.scope, 'GLOBAL');
+      assert.equal(query.where.gymId, null);
+      assert.equal(query.where.secretReference, ref);
+      return connection;
+    } } },
+    { assertStepUp: async () => { authorized++; } },
+    { current: () => 'HOMOLOG' },
+    { has: (code) => code === 'openai_compatible' },
+    { createConfigurationProfile: async (config) => { saved++; return { ...config, id: 'profile' }; } },
+  );
+  const cfg = {
+    scope: 'TENANT', tenantId: 'gym-a', capability: 'ADVISORY_CHAT',
+    providerCode: 'openai_compatible', modelCode: 'test-model',
+    timeoutMs: 1000, budgetUnits: 50, enabled: true,
+    fallbackBehavior: 'FAIL_CLOSED', status: 'ACTIVE', version: 1,
+    secretReference: ref, currentPassword: 'only-used-for-stepup',
+  };
+  const ok = await service.create('fm-admin', cfg);
+  assert.equal(ok.id, 'profile');
+  assert.equal(ok.tenantId, 'gym-a');
+  assert.equal(saved, 1);
+  assert.equal(checked, 1);
+  assert.equal(authorized, 1);
+  await assert.rejects(() => service.create('fm-admin', { ...cfg, providerCode: 'unauthorized' }));
+  await assert.rejects(() => service.create('fm-admin', { ...cfg, secretReference: undefined }));
+  assert.equal(saved, 1);
+});
+test('FM-managed tenant-selected profile resolves only central Vault reference', async () => {
+  const { readFileSync } = await import('node:fs');
+  const source = readFileSync('src/modules/ai/secrets/ai-secret-reference.service.ts', 'utf8');
+  assert.match(source, /fmManaged/);
+  assert.match(source, /!fmManaged && configuration\.scope === 'TENANT'/);
+  const controller = readFileSync('src/modules/ai/configuration/ai-configuration-admin.controller.ts', 'utf8');
+  assert.match(controller, /@Roles\('SUPER_ADMIN'\)/);
+  assert.match(controller, /JwtAuthGuard/);
+});
