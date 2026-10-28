@@ -63,8 +63,11 @@ export class AiSecretReferenceService {
     const expectedCapability =
       AI_INTEGRATION_CAPABILITY[configuration.capability];
 
+    // FM-owned providers always resolve a GLOBAL Vault connection, even when
+    // the model/profile is selected per tenant. Academy users never own AI keys.
+    const fmManaged = ['openai_compatible', 'gemini_native'].includes(configuration.providerCode);
     const scope =
-      configuration.scope === 'TENANT'
+      !fmManaged && configuration.scope === 'TENANT'
         ? {
             scope: IntegrationScope.TENANT,
             gymId: tenantId,
@@ -133,7 +136,7 @@ export class AiSecretReferenceService {
     const credential =
       await this.secrets.resolveForExternalBoundary(
         connection.id,
-        configuration.scope === 'TENANT'
+        !fmManaged && configuration.scope === 'TENANT'
           ? { scope: 'TENANT', gymId: tenantId }
           : { scope: 'GLOBAL' },
       );
