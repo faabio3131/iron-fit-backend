@@ -4,15 +4,14 @@ import { AiProviderAdapter, AiNormalizedRequest, AiNormalizedResponse, AiExterna
 // FM-managed credentials only. Never accept tenant-supplied endpoints or emit credentials to logs.
 const TRUSTED_HOSTS = new Set([
   'api.openai.com',
-  'api.anthropic.com',
   'generativelanguage.googleapis.com',
   'integrate.api.nvidia.com',
 ]);
 const MAX_BODY_BYTES = 128_000;
 
-function resolveEndpoint(config: Readonly<AiExternalConfigurationContract>, fallback: string): URL {
+function resolveEndpoint(config: Readonly<AiExternalConfigurationContract>, fallback: string, providerHosts: ReadonlySet<string>): URL {
   const url = new URL(config.endpoint || fallback);
-  if (url.protocol !== 'https:' || url.username || url.password || url.port || !TRUSTED_HOSTS.has(url.hostname)) {
+  if (url.protocol !== 'https:' || url.username || url.password || url.port || (!TRUSTED_HOSTS.has(url.hostname) || !providerHosts.has(url.hostname))) {
     throw new Error('AI endpoint not in FM allowlist');
   }
   return url;
@@ -50,7 +49,7 @@ export class OpenAiCompatibleProviderAdapter implements AiProviderAdapter {
 
   async execute<TInput = unknown, TOutput = unknown>(request: AiNormalizedRequest<TInput>, config: Readonly<AiExternalConfigurationContract>, runtime?: Readonly<AiProviderRuntimeContext>): Promise<AiNormalizedResponse<TOutput>> {
     if (!runtime?.credential) return unavailable<TOutput>();
-    const endpoint = resolveEndpoint(config, 'https://api.openai.com/v1/chat/completions');
+    const endpoint = resolveEndpoint(config, 'https://api.openai.com/v1/chat/completions', new Set(['api.openai.com', 'integrate.api.nvidia.com']));
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + runtime.credential.reveal() },
@@ -72,7 +71,7 @@ export class GeminiNativeProviderAdapter implements AiProviderAdapter {
   async execute<TInput = unknown, TOutput = unknown>(request: AiNormalizedRequest<TInput>, config: Readonly<AiExternalConfigurationContract>, runtime?: Readonly<AiProviderRuntimeContext>): Promise<AiNormalizedResponse<TOutput>> {
     if (!runtime?.credential) return unavailable<TOutput>();
     // Gemini model is configuration-owned; endpoint is fixed to official host to prevent SSRF.
-    const endpoint = resolveEndpoint(config, 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(config.modelCode) + ':generateContent');
+    const endpoint = resolveEndpoint(config, 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(config.modelCode) + ':generateContent', new Set(['generativelanguage.googleapis.com']));
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': runtime.credential.reveal() },
