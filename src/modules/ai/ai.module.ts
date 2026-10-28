@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
+import { OpenAiCompatibleProviderAdapter, GeminiNativeProviderAdapter } from './providers/external-ai-provider.adapters';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { CreatorNetworkModule } from '../creator-network/creator-network.module';
@@ -40,6 +41,8 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     AiOutputValidatorService,
     AiConfigurationResolverService,
     NullAiProviderAdapter,
+    OpenAiCompatibleProviderAdapter,
+    GeminiNativeProviderAdapter,
     AiProviderRegistryService,
     AiSecretReferenceService,
     AiProviderExecutionService,
@@ -58,4 +61,15 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     AiProviderExecutionService,
   ],
 })
-export class AiModule {}
+export class AiModule implements OnModuleInit {
+  constructor(
+    private readonly registry: AiProviderRegistryService,
+    private readonly openaiCompatible: OpenAiCompatibleProviderAdapter,
+    private readonly gemini: GeminiNativeProviderAdapter,
+  ) {}
+
+  onModuleInit(): void {
+    this.registry.register(this.openaiCompatible);
+    this.registry.register(this.gemini);
+  }
+}
