@@ -12,6 +12,7 @@ const {
 );
 const {
   CommunicationDispatchFailure,
+  EvolutionWhatsAppCommunicationAdapter,
   MetaWhatsAppCommunicationAdapter,
 } = require(
   '../dist/src/modules/communication/communication-dispatch-adapter.js',
@@ -130,7 +131,7 @@ test('I6 dispatch claims QUEUED message, resolves canonical tenant connection an
   assert.equal(result.status, 'SENT');
   assert.equal(connectionWhere.gymId, 'gym-a');
   assert.equal(connectionWhere.scope, 'TENANT');
-  assert.equal(connectionWhere.providerCode, 'meta');
+  assert.deepEqual(connectionWhere.providerCode, { in: ['meta', 'evolution'] });
   assert.equal(connectionWhere.environment, 'HOMOLOG');
   assert.equal(dispatchInput.dispatchKey, 'dispatch-key-a');
   assert.equal(dispatchInput.recipient, '+55 11 99999-9999');
@@ -296,8 +297,8 @@ test('I6 ambiguous Meta tenant connections fail closed instead of selecting a te
       },
       integrationConnection: {
         findMany: async () => [
-          { id: 'a', capabilities: ['meta.whatsapp'] },
-          { id: 'b', capabilities: ['meta.whatsapp'] },
+          { id: 'a', providerCode: 'meta', authModel: 'OAUTH2', capabilities: ['meta.whatsapp'] },
+          { id: 'b', providerCode: 'meta', authModel: 'OAUTH2', capabilities: ['meta.whatsapp'] },
         ],
       },
     },
@@ -369,6 +370,41 @@ test('I6 Meta WhatsApp adapter sends only bearer credential at external boundary
       error instanceof CommunicationDispatchFailure &&
       error.code === 'RECIPIENT_PHONE_INVALID',
   );
+});
+
+test('I6 Evolution adapter reuses the canonical queue with tenant-scoped instance and Vault API key', async () => {
+  const originalFetch = globalThis.fetch;
+  const observed = [];
+  globalThis.fetch = async (url, init) => {
+    observed.push({ url: String(url), init });
+    return new Response(JSON.stringify({ key: { id: 'evolution-message-a' } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  try {
+    const result = await new EvolutionWhatsAppCommunicationAdapter().dispatch({
+      dispatchKey: 'dispatch-evolution-a',
+      recipient: '+55 (11) 99999-9999',
+      title: null,
+      body: 'Treino confirmado',
+      publicConfiguration: {
+        baseUrl: 'https://evolution.example.com',
+        instanceName: 'iron-gym-a',
+      },
+      credential: new IntegrationSecretValue('evolution-api-key'),
+    });
+    assert.equal(result.providerMessageRef, 'evolution-message-a');
+    assert.equal(observed[0].url, 'https://evolution.example.com/message/sendText/iron-gym-a');
+    assert.equal(observed[0].init.headers.apikey, 'evolution-api-key');
+    assert.equal(observed[0].init.headers['x-idempotency-key'], 'dispatch-evolution-a');
+    assert.deepEqual(JSON.parse(observed[0].init.body), {
+      number: '5511999999999',
+      text: 'Treino confirmado',
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('I6 persistence has durable idempotency/lease/provider binding without credential columns', async () => {

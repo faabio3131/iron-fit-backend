@@ -6,6 +6,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import {
   ExternalCommunicationAdapterRegistry,
+  EvolutionWhatsAppCommunicationAdapter,
   MetaWhatsAppCommunicationAdapter,
 } from './communication-dispatch-adapter';
 import { CommunicationDispatchService } from './communication-dispatch.service';
@@ -18,6 +19,7 @@ import { CommunicationDispatchService } from './communication-dispatch.service';
     CommunicationDispatchService,
     ExternalCommunicationAdapterRegistry,
     MetaWhatsAppCommunicationAdapter,
+    EvolutionWhatsAppCommunicationAdapter,
     AuditService,
   ],
   exports: [CommunicationService, CommunicationDispatchService],

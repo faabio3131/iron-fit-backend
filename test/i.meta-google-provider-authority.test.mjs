@@ -37,7 +37,7 @@ test('I bootstraps Meta as one umbrella provider and Google as a separate OAuth 
 
   // Meta, Google and fiscal providers remain unchanged; FM-only AI providers
   // extend the catalog without granting academy control of API credentials.
-  assert.equal(registry.list().length, 5);
+  assert.equal(registry.list().length, 6);
   for (const code of ['openai_compatible', 'gemini_native']) {
     const ai = registry.require(code);
     assert.deepEqual(ai.authModels, ['API_KEY']);
@@ -48,6 +48,11 @@ test('I bootstraps Meta as one umbrella provider and Google as a separate OAuth 
   assert.deepEqual(fiscal.capabilities, ['fiscal.bridge']);
   assert.deepEqual(fiscal.authModels, ['ACCESS_TOKEN']);
   assert.equal(fiscal.supportsOAuth, false);
+  const evolution = registry.require('evolution');
+  assert.deepEqual(evolution.capabilities, ['evolution.whatsapp']);
+  assert.deepEqual(evolution.authModels, ['API_KEY']);
+  assert.equal(evolution.supportsWebhook, true);
+  assert.equal(evolution.tenantEntitlementFeatureKey, 'integration.meta');
   assert.equal(registry.list().some((p) => p.providerCode === 'facebook'), false);
   assert.equal(registry.list().some((p) => p.providerCode === 'instagram'), false);
   assert.equal(registry.list().some((p) => p.providerCode === 'whatsapp'), false);
