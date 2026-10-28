@@ -124,6 +124,7 @@ export interface AiExternalConfigurationContract {
 export interface AiProviderRuntimeContext {
   connectionId: string | null;
   credential: IntegrationSecretValue | null;
+  signal?: AbortSignal;
 }
 
 export interface AiProviderAdapter {
