@@ -48,3 +48,9 @@ O proprietário autorizou explicitamente publicar a branch, código, migration, 
 - Limite identificado no workflow herdado: candidato Web era PR #22 `2ba90ee5`, com 189 testes PASS e 1 live separado ignorado na suíte comum. O teste live foi executado em passo próprio. Não chamar isso de certificação da PR #56.
 - Atualizada referência imutável do consumidor para PR #56 `36f2756301fa363696d22489c50e0321ad701106`, preservando `IRON_LIVE_E2E=true` somente no passo dedicado. Nenhum arquivo/branch do app modificado.
 - Nova CI necessária para comprovar interoperabilidade com essa candidata. Merge ainda não realizado.
+
+## Jornada atualizada do consumidor — 28/10/2026 UTC
+
+- CI #40631054274 confirmou backend, PostgreSQL, testes e exportação do app #56, mas falhou na jornada browser que ainda esperava o antigo formulário de equipe. Falha não tratada como PASS.
+- Adaptado somente o teste backend ao convite atual, definição de senha pela API canônica (token da entrega isolada, mesmo procedimento do E2E de identidade), três funções e inventário com confirmação. Preservados login real por função, negativas RBAC e roundtrip persistente. Nenhum arquivo do app alterado.
+- Reteste remoto obrigatório antes do merge; homologação externa e deploy continuam pendentes.
