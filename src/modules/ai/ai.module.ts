@@ -7,6 +7,9 @@ import { EquipmentsModule } from '../equipments/equipments.module';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
 import { WorkoutsModule } from '../workouts/workouts.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
+import { AuthModule } from '../auth/auth.module';
+import { AiConfigurationAdminController } from './configuration/ai-configuration-admin.controller';
+import { AiConfigurationAdminService } from './configuration/ai-configuration-admin.service';
 import { AiController } from './ai.controller';
 import { AiMobileAdvisoryService } from './ai-mobile-advisory.service';
 import { AiPersistenceService } from './ai-persistence.service';
@@ -25,13 +28,14 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     ProductEntitlementsModule,
     EquipmentsModule,
     CreatorNetworkModule,
     WorkoutsModule,
     IntegrationsModule,
   ],
-  controllers: [AiController, AiWorkoutCandidateController],
+  controllers: [AiController, AiWorkoutCandidateController, AiConfigurationAdminController],
   providers: [
     AuditService,
     AiPersistenceService,
@@ -40,6 +44,7 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     AiPolicyGuardService,
     AiOutputValidatorService,
     AiConfigurationResolverService,
+    AiConfigurationAdminService,
     NullAiProviderAdapter,
     OpenAiCompatibleProviderAdapter,
     GeminiNativeProviderAdapter,
