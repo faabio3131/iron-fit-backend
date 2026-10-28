@@ -64,3 +64,14 @@ test('upstream auth and throttling errors are normalized', async () => {
     }
   } finally { globalThis.fetch = before; }
 });
+
+test('FM-only AI provider catalog uses global credential authority', async () => {
+  const { readFileSync } = await import('node:fs');
+  const bootstrap = readFileSync('src/modules/integrations/integration-provider-bootstrap.service.ts', 'utf8');
+  const management = readFileSync('src/modules/integrations/integration-credential-admin.service.ts', 'utf8');
+  for (const provider of ['openai_compatible', 'gemini_native']) assert.ok(bootstrap.includes(provider));
+  for (const capability of ['ai.workout_insights', 'ai.advisory_chat', 'ai.workout_generation', 'ai.content_recommendation']) assert.ok(bootstrap.includes(capability));
+  assert.match(bootstrap, /authModels: \['API_KEY'\]/);
+  assert.match(management, /if \(!featureKey\)/);
+  assert.match(management, /Provider nao possui entitlement comercial configurado para tenant/);
+});
