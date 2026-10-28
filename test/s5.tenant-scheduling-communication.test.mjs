@@ -126,7 +126,7 @@ test('communication message cannot use a template from another gym', async () =>
   let messageCreated = false;
   const prisma = {
     student: {
-      findFirst: async () => ({ id: 'student-a', gymId: 'gym-a' }),
+      findFirst: async () => ({ id: 'student-a', gymId: 'gym-a', status: 'ACTIVE', consentComm: true }),
     },
     communicationTemplate: {
       findFirst: async ({ where }) => {

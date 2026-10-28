@@ -33,6 +33,7 @@ jobs:
       TRUST_PROXY_HOPS: '0'
       PORT: '3333'
       B6_API_URL: http://127.0.0.1:3333/api/v1
+      CORS_ORIGINS: http://127.0.0.1:18081
 
     services:
       postgres:
@@ -85,6 +86,7 @@ jobs:
           mask_and_export B6_STUDENT_PASSWORD "Cc3!$(openssl rand -hex 16)"
           mask_and_export B6_RESET_PASSWORD "Dd4!$(openssl rand -hex 16)"
           mask_and_export B6_ADMIN_PASSWORD "Ee5!$(openssl rand -hex 16)"
+          mask_and_export FMCC_IRON_CONTROL_PLANE_TOKEN "$(openssl rand -hex 40)"
 
       - name: Dependency audit
         run: npm audit --audit-level=high
@@ -102,6 +104,11 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: AI multi-provider disposable PostgreSQL concurrency and budget certification
+        env:
+          IRON_AI_MP_DB_CERTIFY: 'true'
+        run: node scripts/ai-mp-db-certify.mjs
 
       - name: C11 seed DB-only secret-reference DR canary
         run: node scripts/c11-dr-seed.mjs
@@ -177,6 +184,55 @@ jobs:
       - name: Integrated live E2E
         run: node --test --test-concurrency=1 test/b6.*.e2e.mjs
 
+      - name: Reset disposable CI signup IP bucket between independent test suites
+        run: |
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const u = new URL(process.env.DATABASE_URL || '');
+          if (process.env.NODE_ENV !== 'test' ||
+              process.env.IRON_RUNTIME_ENV !== 'HOMOLOG' ||
+              !['localhost', '127.0.0.1'].includes(u.hostname) ||
+              u.pathname !== '/iron_ci') {
+            throw new Error('Refusing to change non-disposable signup throttle state');
+          }
+          const db = new PrismaClient();
+          (async () => {
+            const result = await db.authRateLimitBucket.deleteMany({
+              where: { scope: 'AUTH_SIGNUP_IP' },
+            });
+            console.log(JSON.stringify({
+              event: 'isolated_ci_signup_ip_bucket_reset',
+              scope: 'AUTH_SIGNUP_IP', rows: result.count,
+            }));
+          })().finally(async () => { await db.$disconnect(); })
+            .catch((error) => { console.error(error.message); process.exitCode = 1; });
+          NODE
+
+      - name: Targeted adversarial authentication and bounded PostgreSQL load
+        run: node --test --test-concurrency=1 test/iron-q2-adversarial-load.e2e.mjs
+
+      - name: Isolate persisted login-IP throttle before browser journeys
+        run: |
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const url = new URL(process.env.DATABASE_URL || '');
+          if (process.env.NODE_ENV !== 'test' ||
+              process.env.IRON_RUNTIME_ENV !== 'HOMOLOG' ||
+              !['localhost','127.0.0.1'].includes(url.hostname) ||
+              url.pathname !== '/iron_ci') {
+            throw new Error('Refusing anti-abuse CI reset outside disposable DB');
+          }
+          const db = new PrismaClient();
+          (async () => {
+            const reset = await db.authRateLimitBucket.deleteMany({
+              where: { scope: { in: ['AUTH_LOGIN_REQUEST_IP', 'AUTH_LOGIN_FAILURE_IP'] } },
+            });
+            console.log(JSON.stringify({ event: 'isolated_ci_login_ip_bucket_reset',
+              rows: reset.count }));
+          })().finally(() => db.$disconnect())
+            .catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
+
       - name: Checkout certified IRON app surface
         uses: actions/checkout@v4
         with:
@@ -194,6 +250,192 @@ jobs:
           IRON_LIVE_E2E: 'true'
           EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
         run: npx jest test/live-system-contract.test.ts --runInBand --ci
+
+      - name: Checkout current Macro O application candidate
+        uses: actions/checkout@v4
+        with:
+          repository: faabio3131/iron-fit-app
+          ref: 36f2756301fa363696d22489c50e0321ad701106
+          path: iron-fit-app-macro-o-candidate
+
+      - name: Install current Macro O candidate dependencies
+        working-directory: iron-fit-app-macro-o-candidate
+        run: npm ci
+
+      - name: Cross-surface live Macro O candidate against current backend
+        working-directory: iron-fit-app-macro-o-candidate
+        env:
+          IRON_LIVE_E2E: 'true'
+          EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
+        run: npx jest test/live-system-contract.test.ts --runInBand --ci
+
+      - name: Certify current Macro O Web and native-screen automated suites
+        working-directory: iron-fit-app-macro-o-candidate
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test -- --runInBand --ci
+
+      - name: Export current IRON Web for real browser E2E
+        working-directory: iron-fit-app-macro-o-candidate
+        env:
+          NODE_ENV: production
+          EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
+        run: npx expo export --platform web --output-dir dist-browser
+
+      - name: Start real IRON Web and install isolated browser driver
+        run: |
+          python3 -m http.server 18081 --bind 127.0.0.1 --directory iron-fit-app-macro-o-candidate/dist-browser >/tmp/iron-browser-web.log 2>&1 &
+          echo $! > /tmp/iron-browser-web.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18081/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18081/ >/dev/null
+          npm install --prefix /tmp/iron-browser-qa --no-save --no-audit --no-fund playwright-core@1.57.0
+
+      - name: Browser functional journey against real API and PostgreSQL
+        run: node --test test/iron-web-browser-live.e2e.mjs
+
+      - name: Start real production Web server for controlled ZAP scan
+        run: |
+          set -euo pipefail
+          cd iron-fit-app-macro-o-candidate
+          test -s dist-browser/index.html
+          ln -s dist-browser dist-web
+          PORT=18083 node scripts/serve-web.mjs > /tmp/iron-zap-web.log 2>&1 &
+          echo $! > /tmp/iron-zap-web.pid
+          for n in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18083/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18083/health >/dev/null
+          curl --fail --silent http://127.0.0.1:18083/ | grep -qi '<!DOCTYPE html'
+
+      - name: OWASP ZAP controlled passive DAST on real IRON Web runtime
+        timeout-minutes: 9
+        run: |
+          set -euo pipefail
+          mkdir -p iron-zap-artifacts
+          chmod 777 iron-zap-artifacts
+          docker run --rm --network host \
+            -v "$PWD/iron-zap-artifacts:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://127.0.0.1:18083 \
+            -m 1 -T 5 -J iron-web-zap.json -I
+          node <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('iron-zap-artifacts/iron-web-zap.json', 'utf8'));
+          const sites = report.site ?? [];
+          if (!sites.length) throw Error('ZAP did not inspect any real Web site');
+          const alerts = sites.flatMap(site => site.alerts ?? []);
+          const elevated = alerts.filter(x => Number(x.riskcode) >= 3);
+          const result = {
+            event: 'iron_real_web_zap_passive_dast',
+            isolatedWebRuntime: true,
+            inspectedSites: sites.length,
+            alerts: alerts.length,
+            highCritical: elevated.map(x => ({ id: x.pluginid, risk: x.riskdesc, name: x.alert })),
+            scope: 'UNAUTHENTICATED_PASSIVE_BASELINE',
+          };
+          console.log(JSON.stringify(result));
+          if (elevated.length) throw Error('Stop-ship: ZAP reported high/critical findings');
+          NODE
+
+      - name: Stop isolated production Web server
+        if: always()
+        run: |
+          if test -f /tmp/iron-zap-web.pid; then
+            kill "$(cat /tmp/iron-zap-web.pid)" 2>/dev/null || true
+          fi
+          tail -n 35 /tmp/iron-zap-web.log 2>/dev/null || true
+
+      - name: Stop real IRON Web server
+        if: always()
+        run: |
+          if test -f /tmp/iron-browser-web.pid; then
+            kill "$(cat /tmp/iron-browser-web.pid)" 2>/dev/null || true
+          fi
+          tail -n 100 /tmp/iron-browser-web.log 2>/dev/null || true
+
+      - name: Checkout FM Command canonical commercial consumer
+        uses: actions/checkout@v4
+        with:
+          repository: faabio3131/FM-CONTROL-CENTER
+          ref: f1728cffc351cd4ae870c5f752628b476c18ce06
+          path: fm-command-commercial-ci
+
+      - name: Setup FM Command Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install actual FM Command commercial consumer
+        working-directory: fm-command-commercial-ci
+        run: npm ci
+
+      - name: Live Command connector-to-IRON backend interop
+        working-directory: fm-command-commercial-ci
+        env:
+          NODE_ENV: test
+        run: |
+          cp ../test/iron-command-consumer-contract-live.fixture tests/iron-command-consumer-contract-live.test.ts
+          npx vitest run tests/iron-command-consumer-contract-live.test.ts
+          npx vitest run tests/iron-commercial-connector.integration.test.ts tests/iron-entitlement-outbox.unit.test.ts tests/iron-paid-license-reconciliation.unit.test.ts tests/iron-plan-version-binding.unit.test.ts tests/iron-commercial-plan-activation.unit.test.ts
+
+      - name: Prepare disposable process-restart recovery proof
+        run: node test/iron-q-disposable-restart-drill.mjs prepare
+
+      - name: Reboot disposable IRON API process without resetting PostgreSQL
+        run: |
+          set -euo pipefail
+          kill "$(cat /tmp/iron-b6-backend.pid)"
+          for attempt in $(seq 1 30); do
+            if ! kill -0 "$(cat /tmp/iron-b6-backend.pid)" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          node dist/src/main.js >> /tmp/iron-b6-backend.log 2>&1 &
+          echo $! > /tmp/iron-b6-backend.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3333/api/v1/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'IRON did not recover after disposable API process restart'
+          exit 1
+
+      - name: Verify session, step-up, data and writes survived API restart
+        run: node test/iron-q-disposable-restart-drill.mjs verify
+
+      - name: Reset isolated auth windows for last independent mutation journey
+        run: |
+          node <<'NODE'
+          const { PrismaClient } = require('@prisma/client');
+          const url = new URL(process.env.DATABASE_URL || '');
+          if (process.env.NODE_ENV !== 'test' ||
+              process.env.IRON_RUNTIME_ENV !== 'HOMOLOG' ||
+              !['127.0.0.1', 'localhost'].includes(url.hostname) ||
+              url.pathname !== '/iron_ci') {
+            throw new Error('Refusing disposable CI auth reset outside iron_ci');
+          }
+          const prisma = new PrismaClient();
+          prisma.authRateLimitBucket.deleteMany({
+            where: { scope: { in: ['AUTH_SIGNUP_IP', 'AUTH_LOGIN_REQUEST_IP', 'AUTH_LOGIN_FAILURE_IP'] } },
+          }).then(({ count }) => console.log(JSON.stringify({
+            event: 'ci_disposable_mutation_suite_isolated', bucketCount: count,
+          }))).finally(() => prisma.$disconnect())
+            .catch(e => { console.error(e.message); process.exitCode = 1; });
+          NODE
+
+      - name: Real communication, consent, automation and privacy mutation E2E
+        run: node --test test/iron-p-module-mutation-flows.e2e.mjs
 
       - name: Stop live backend
         if: always()

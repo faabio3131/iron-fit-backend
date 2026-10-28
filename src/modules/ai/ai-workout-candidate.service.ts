@@ -106,13 +106,13 @@ export class AiWorkoutCandidateService {
         actorId,
         studentId: dto.studentId,
         capability: 'WORKOUT_GENERATION',
-        providerCode: resolution.configuration.providerCode,
-        modelCode: resolution.configuration.modelCode,
+        providerCode: response.execution?.providerCode ?? resolution.configuration.providerCode,
+        modelCode: response.execution?.modelCode ?? resolution.configuration.modelCode,
         promptKey: 'workout.candidate_generation',
         promptVersion: 1,
-        configurationProfileId: resolution.profileId,
-        configurationScope: resolution.configuration.scope,
-        configurationVersion: resolution.configuration.version,
+        configurationProfileId: response.execution?.profileId ?? resolution.profileId,
+        configurationScope: response.execution?.scope ?? resolution.configuration.scope,
+        configurationVersion: response.execution?.version ?? resolution.configuration.version,
         inputHash: this.hash(input),
         flags: response.flags,
         status: response.status,
@@ -139,13 +139,13 @@ export class AiWorkoutCandidateService {
         actorId,
         studentId: dto.studentId,
         capability: 'WORKOUT_GENERATION',
-        providerCode: resolution.configuration.providerCode,
-        modelCode: resolution.configuration.modelCode,
+        providerCode: response.execution?.providerCode ?? resolution.configuration.providerCode,
+        modelCode: response.execution?.modelCode ?? resolution.configuration.modelCode,
         promptKey: 'workout.candidate_generation',
         promptVersion: 1,
-        configurationProfileId: resolution.profileId,
-        configurationScope: resolution.configuration.scope,
-        configurationVersion: resolution.configuration.version,
+        configurationProfileId: response.execution?.profileId ?? resolution.profileId,
+        configurationScope: response.execution?.scope ?? resolution.configuration.scope,
+        configurationVersion: response.execution?.version ?? resolution.configuration.version,
         inputHash: this.hash(input),
         outputHash: this.hash(response.output),
         confidence: response.confidence,
@@ -162,18 +162,53 @@ export class AiWorkoutCandidateService {
       });
     }
 
+    // Validate the structured domain candidate before recording a successful AI trace.
+    // A model response can pass advisory checks but still contain unusable sessions.
+    let workoutDto: CreateWorkoutDto;
+    try {
+      workoutDto = this.normalizeCandidate(dto, validation.output as WorkoutCandidateOutput);
+    } catch (error) {
+      if (!(error instanceof BadGatewayException)) throw error;
+      await this.persistence.recordExecution({
+        tenantId: gymId,
+        actorId,
+        studentId: dto.studentId,
+        capability: 'WORKOUT_GENERATION',
+        providerCode: response.execution?.providerCode ?? resolution.configuration.providerCode,
+        modelCode: response.execution?.modelCode ?? resolution.configuration.modelCode,
+        promptKey: 'workout.candidate_generation',
+        promptVersion: 1,
+        configurationProfileId: response.execution?.profileId ?? resolution.profileId,
+        configurationScope: response.execution?.scope ?? resolution.configuration.scope,
+        configurationVersion: response.execution?.version ?? resolution.configuration.version,
+        inputHash: this.hash(input),
+        outputHash: this.hash(response.output),
+        confidence: response.confidence,
+        flags: [...response.flags, ...validation.flags],
+        status: 'REJECTED',
+        failureCategory: 'INVALID_RESPONSE',
+        latencyMs,
+        requestId,
+      });
+      throw new BadGatewayException({
+        code: 'AI_WORKOUT_GENERATION_INVALID_RESPONSE',
+        failureCategory: 'INVALID_RESPONSE',
+        flags: validation.flags,
+      });
+    }
+
     const trace = await this.persistence.recordExecution({
       tenantId: gymId,
       actorId,
       studentId: dto.studentId,
       capability: 'WORKOUT_GENERATION',
-      providerCode: resolution.configuration.providerCode,
-      modelCode: resolution.configuration.modelCode,
+      providerCode: response.execution?.providerCode ?? resolution.configuration.providerCode,
+      modelCode: response.execution?.modelCode ?? resolution.configuration.modelCode,
       promptKey: 'workout.candidate_generation',
       promptVersion: 1,
-      configurationProfileId: resolution.profileId,
-      configurationScope: resolution.configuration.scope,
-      configurationVersion: resolution.configuration.version,
+      configurationProfileId: response.execution?.profileId ?? resolution.profileId,
+      configurationScope: response.execution?.scope ?? resolution.configuration.scope,
+      configurationVersion: response.execution?.version ?? resolution.configuration.version,
       inputHash: this.hash(input),
       outputHash: this.hash(response.output),
       confidence: response.confidence,
@@ -183,7 +218,6 @@ export class AiWorkoutCandidateService {
       requestId,
     });
 
-    const workoutDto = this.normalizeCandidate(dto, validation.output as WorkoutCandidateOutput);
     const workout = await this.workouts.createAiCandidate(
       workoutDto,
       gymId,

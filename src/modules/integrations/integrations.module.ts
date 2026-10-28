@@ -1,4 +1,6 @@
+import { AiHttpTransport } from '../ai/providers/ai-http-transport';
 import { Module } from '@nestjs/common';
+import { AiCredentialProbeBootstrapService } from './ai-credential-probe-bootstrap.service';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaModule } from '../../prisma/prisma.module';
@@ -47,9 +49,11 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationBreakGlassController,
   ],
   providers: [
+    AiHttpTransport,
     AuditService,
     IntegrationProviderRegistry,
     IntegrationProviderBootstrapService,
+    AiCredentialProbeBootstrapService,
     IntegrationOAuthCoreService,
     IntegrationOAuthHttpTransport,
     IntegrationOAuthProviderAdapterRegistry,

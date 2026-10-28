@@ -72,6 +72,8 @@ export interface AiNormalizedResponse<TOutput = unknown> {
   status: AiExecutionStatus;
   output?: TOutput;
   confidence?: number;
+  usage?: { inputTokens?: number; outputTokens?: number };
+  execution?: { providerCode: string; modelCode: string; profileId?: string; scope: AiConfigurationScope; version: number };
   flags: readonly string[];
   failureCategory?: AiFailureCategory;
 }
@@ -113,6 +115,9 @@ export interface AiExternalConfigurationContract {
   endpoint?: string;
   region?: string;
   timeoutMs: number;
+  maxOutputTokens?: number;
+  pricing?: { inputNanoUsdPerToken: number; outputNanoUsdPerToken: number };
+  fallbackTargets?: readonly AiFallbackTarget[];
   budgetUnits?: number;
   enabled: boolean;
   fallbackBehavior: AiFallbackBehavior;
@@ -121,9 +126,17 @@ export interface AiExternalConfigurationContract {
   version: number;
 }
 
+export interface AiFallbackTarget {
+  providerCode: string;
+  modelCode: string;
+  endpoint?: string;
+  secretReference: string;
+}
+
 export interface AiProviderRuntimeContext {
   connectionId: string | null;
   credential: IntegrationSecretValue | null;
+  signal?: AbortSignal;
 }
 
 export interface AiProviderAdapter {
@@ -154,6 +167,13 @@ export function assertSecretReference(secretReference: string): string {
 export function defineAiExternalConfiguration(
   configuration: AiExternalConfigurationContract,
 ): Readonly<AiExternalConfigurationContract> {
+  if (!AI_CONFIGURATION_SCOPES.includes(configuration.scope) || !AI_CONFIGURATION_STATUSES.includes(configuration.status)
+    || !AI_FALLBACK_BEHAVIORS.includes(configuration.fallbackBehavior) || typeof configuration.enabled !== 'boolean') {
+    throw new Error('AI configuration enums invalid');
+  }
+  if (configuration.pricing && Object.values(configuration.pricing).some((value) => !Number.isSafeInteger(value) || value < 0 || value > 1_000_000_000)) throw new Error('AI pricing invalid');
+  if (configuration.pricing && (configuration.pricing.inputNanoUsdPerToken === undefined || configuration.pricing.outputNanoUsdPerToken === undefined)) throw new Error('AI pricing incomplete');
+  if (configuration.maxOutputTokens !== undefined && (!Number.isInteger(configuration.maxOutputTokens) || configuration.maxOutputTokens < 1 || configuration.maxOutputTokens > 8192)) throw new Error('maxOutputTokens invalido');
   if (!AI_CAPABILITIES.includes(configuration.capability)) {
     throw new Error('capability de IA invalida');
   }
@@ -166,12 +186,12 @@ export function defineAiExternalConfiguration(
   if (!Number.isInteger(configuration.version) || configuration.version < 1) {
     throw new Error('version deve ser inteiro positivo');
   }
-  if (!Number.isInteger(configuration.timeoutMs) || configuration.timeoutMs < 100) {
+  if (!Number.isInteger(configuration.timeoutMs) || configuration.timeoutMs < 100 || configuration.timeoutMs > 120000) {
     throw new Error('timeoutMs invalido');
   }
   if (
     configuration.budgetUnits !== undefined &&
-    (!Number.isFinite(configuration.budgetUnits) || configuration.budgetUnits < 0)
+    (!Number.isSafeInteger(configuration.budgetUnits) || configuration.budgetUnits < 0)
   ) {
     throw new Error('budgetUnits invalido');
   }
@@ -188,7 +208,17 @@ export function defineAiExternalConfiguration(
     assertSecretReference(configuration.secretReference);
   }
 
-  return Object.freeze({ ...configuration });
+  if (configuration.fallbackTargets !== undefined) {
+    if (!Array.isArray(configuration.fallbackTargets) || configuration.fallbackTargets.length > 2) throw new Error('fallbackTargets invalid');
+    if (configuration.fallbackTargets.length && configuration.fallbackBehavior !== 'ADVISORY_FALLBACK') throw new Error('fallback policy required');
+    for (const target of configuration.fallbackTargets) {
+      if (!target || !PROVIDER_CODE_PATTERN.test(target.providerCode) || !MODEL_CODE_PATTERN.test(target.modelCode)) throw new Error('fallback target invalid');
+      if (Object.keys(target).some((key) => !['providerCode', 'modelCode', 'endpoint', 'secretReference'].includes(key))) throw new Error('fallback authority override denied');
+      assertSecretReference(target.secretReference);
+      if (target.endpoint && !target.endpoint.startsWith('https://')) throw new Error('fallback HTTPS required');
+    }
+  }
+  return Object.freeze({ ...configuration, ...(configuration.fallbackTargets ? { fallbackTargets: Object.freeze(configuration.fallbackTargets.map((target) => Object.freeze({ ...target }))) } : {}) });
 }
 
 export function defineAiPromptIdentity(

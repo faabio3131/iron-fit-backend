@@ -58,9 +58,16 @@ test('O19B preference update is canonical, whitelisted and audited', async () =>
         return { id: 'pref-a', studentId: 'student-a', ...args.create };
       },
     },
+    $transaction: async (fn, options) => {
+      assert.equal(options.isolationLevel, 'Serializable');
+      return fn(prisma);
+    },
   };
   const service = new PortalService(prisma, {
-    record: async (entry) => { audits.push(entry); },
+    record: async (entry, tx) => {
+      assert.equal(tx, prisma);
+      audits.push(entry);
+    },
   });
 
   const result = await service.updateCommunicationPreferences(
@@ -77,6 +84,7 @@ test('O19B preference update is canonical, whitelisted and audited', async () =>
   assert.equal(writes[0].create.studentId, 'student-a');
   assert.equal(writes[0].create.whatsappEnabled, true);
   assert.equal(writes[0].create.trainingReminders, false);
+  assert.deepEqual(writes[0].update, { whatsappEnabled: true, trainingReminders: false });
   assert.equal(result.consentComm, true);
   assert.equal(result.whatsappEnabled, true);
   assert.equal(audits.length, 1);

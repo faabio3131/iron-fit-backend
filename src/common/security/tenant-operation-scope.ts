@@ -7,7 +7,7 @@ export function resolveTenantOperationGymId(params: {
 }): string {
   const { activeGymId, requestedGymId, isSuperAdmin = false } = params;
 
-  if (isSuperAdmin) {
+  if (isSuperAdmin && !activeGymId) {
     if (!requestedGymId) {
       throw new BadRequestException('Academia obrigatoria para operacao global');
     }

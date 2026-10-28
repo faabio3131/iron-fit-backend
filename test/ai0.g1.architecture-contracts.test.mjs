@@ -123,8 +123,11 @@ test('AI0 G1 stays vendor-neutral and persistence-free', async () => {
 
   for (const forbidden of ['openai', 'anthropic', '@google/generative-ai', '@prisma/client']) {
     assert.equal(contract.toLowerCase().includes(forbidden), false);
-    assert.equal(moduleSource.toLowerCase().includes(forbidden), false);
+    // The adapter wiring is vendor-aware after AI-MP; the canonical contract remains neutral.
+
   }
+  assert.match(moduleSource, /external-ai-provider\.adapters/);
+  assert.match(moduleSource, /this\.registry\.register/);
   assert.match(docs, /Novo CLIENTE = configuração/);
   assert.match(docs, /nenhuma migration/);
   assert.match(docs, /nenhum endpoint `\/me\/ai\/\*`/);

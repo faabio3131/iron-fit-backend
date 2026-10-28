@@ -287,19 +287,26 @@ export class StudentsService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: invite.userId },
-        data: {
-          passwordHash,
-          active: true,
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.session.updateMany({
+        where: {
+          id: invite.id,
+          userId: invite.userId,
+          refreshTokenHash: tokenHash,
+          deviceName: STUDENT_ONBOARDING_SESSION,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
         },
-      }),
-      this.prisma.session.update({
-        where: { id: invite.id },
-        data: { revokedAt: now },
-      }),
-    ]);
+        data: { revokedAt: new Date() },
+      });
+      if (claimed.count !== 1) {
+        throw new UnauthorizedException('Convite invalido ou expirado');
+      }
+      await tx.user.update({
+        where: { id: invite.userId },
+        data: { passwordHash, active: true },
+      });
+    });
 
     return {
       activated: true,
@@ -361,53 +368,70 @@ export class StudentsService {
       throw new BadRequestException('Tenant ativo obrigatorio');
     }
 
-    const previous = await this.prisma.student.findFirst({
-      where: { id, gymId },
-      select: {
-        id: true,
-        consentHealth: true,
-        consentComm: true,
-        consentBiometry: true,
-      },
-    });
-
-    if (!previous) {
-      throw new NotFoundException('Aluno nao encontrado');
+    // Only write explicitly supplied consents. Rewriting stale values of
+    // unrelated fields could silently revoke or restore another preference.
+    const changes = {
+      ...(typeof dto.consentHealth === 'boolean' ? { consentHealth: dto.consentHealth } : {}),
+      ...(typeof dto.consentComm === 'boolean' ? { consentComm: dto.consentComm } : {}),
+      ...(typeof dto.consentBiometry === 'boolean' ? { consentBiometry: dto.consentBiometry } : {}),
+    };
+    if (Object.keys(changes).length === 0) {
+      throw new BadRequestException('Informe um consentimento para atualizar');
     }
 
-    const nextValues = {
-      consentHealth: dto.consentHealth ?? previous.consentHealth,
-      consentComm: dto.consentComm ?? previous.consentComm,
-      consentBiometry: dto.consentBiometry ?? previous.consentBiometry,
-    };
+    for (let attempt = 1; attempt <= SERIALIZABLE_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const previous = await tx.student.findFirst({
+            where: { id, gymId },
+            select: {
+              id: true,
+              consentHealth: true,
+              consentComm: true,
+              consentBiometry: true,
+            },
+          });
+          if (!previous) {
+            throw new NotFoundException('Aluno nao encontrado');
+          }
 
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.student.update({
-        where: { id },
-        data: nextValues,
-        select: {
-          id: true,
-          consentHealth: true,
-          consentComm: true,
-          consentBiometry: true,
-        },
-      });
+          // Tenant authority is checked at write-time too. Atomic with audit.
+          const updated = await tx.student.update({
+            where: { id, gymId },
+            data: changes,
+            select: {
+              id: true,
+              consentHealth: true,
+              consentComm: true,
+              consentBiometry: true,
+            },
+          });
 
-      await this.audit.record({
-        gymId,
-        userId: actorUserId ?? null,
-        action: 'STUDENT_CONSENTS_UPDATED',
-        entity: 'Student',
-        entityId: id,
-        previous: {
-          consentHealth: previous.consentHealth,
-          consentComm: previous.consentComm,
-          consentBiometry: previous.consentBiometry,
-        },
-        next: updated,
-      }, tx);
+          await this.audit.record({
+            gymId,
+            userId: actorUserId ?? null,
+            action: 'STUDENT_CONSENTS_UPDATED',
+            entity: 'Student',
+            entityId: id,
+            previous: {
+              consentHealth: previous.consentHealth,
+              consentComm: previous.consentComm,
+              consentBiometry: previous.consentBiometry,
+            },
+            next: updated,
+          }, tx);
 
-      return updated;
-    });
+          return updated;
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (error) {
+        if (this.retryable(error) && attempt < SERIALIZABLE_ATTEMPTS) continue;
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          throw new NotFoundException('Aluno nao encontrado');
+        }
+        throw error;
+      }
+    }
+
+    throw new ConflictException('Falha de concorrencia ao atualizar consentimentos');
   }
 }

@@ -49,6 +49,7 @@ function messageFixture(overrides = {}) {
     attemptCount: 1,
     dispatchLeaseOwner: 'lease-placeholder',
     student: {
+      status: 'ACTIVE',
       consentComm: true,
       user: { phone: '+55 11 99999-9999' },
       communicationPreference: { whatsappEnabled: true },
@@ -181,6 +182,7 @@ test('I6 communication consent and WhatsApp preference fail closed before provid
   let failedData;
   const message = messageFixture({
     student: {
+      status: 'ACTIVE',
       consentComm: false,
       user: { phone: '+5511999999999' },
       communicationPreference: { whatsappEnabled: true },
@@ -223,6 +225,52 @@ test('I6 communication consent and WhatsApp preference fail closed before provid
   assert.equal(failedData.status, 'FAILED');
   assert.equal(failedData.lastErrorCode, 'COMMUNICATION_CONSENT_REQUIRED');
   assert.ok(failedData.nextAttemptAt instanceof Date);
+});
+
+test('C06 revoked or suspended membership blocks provider dispatch even if message was already queued', async () => {
+  for (const status of ['INACTIVE', 'SUSPENDED']) {
+    let leaseOwner;
+    let finalState;
+    let providerResolved = false;
+    const message = messageFixture({
+      student: {
+        status, consentComm: true,
+        user: { phone: '+5511999999999' },
+        communicationPreference: { whatsappEnabled: true },
+      },
+    });
+    const service = new CommunicationDispatchService(
+      {
+        communicationMessage: {
+          updateMany: async ({ data }) => {
+            if (data.status === 'SENDING') {
+              leaseOwner = data.dispatchLeaseOwner;
+              return { count: 1 };
+            }
+            finalState = data;
+            return { count: 1 };
+          },
+          findUnique: async () => ({ ...message, dispatchLeaseOwner: leaseOwner }),
+        },
+        integrationConnection: {
+          findMany: async () => {
+            providerResolved = true;
+            return [];
+          },
+        },
+      },
+      { require: () => { throw new Error('adapter reached'); } },
+      { current: () => 'HOMOLOG' },
+      { resolveForExternalBoundary: async () => { throw new Error('secret reached'); } },
+      { record: async () => undefined },
+    );
+    const result = await service.dispatchOne(message.id);
+    assert.equal(result.dispatched, false);
+    assert.equal(result.reason, 'STUDENT_INACTIVE');
+    assert.equal(providerResolved, false);
+    assert.equal(finalState.status, 'FAILED');
+    assert.equal(finalState.lastErrorCode, 'STUDENT_INACTIVE');
+  }
 });
 
 test('I6 ambiguous Meta tenant connections fail closed instead of selecting a tenant authority arbitrarily', async () => {

@@ -112,7 +112,7 @@ export class TenantProductEntitlementsService {
       (definition.kind === 'POLICY' && TENANT_OPERATIONAL_POLICY_KEYS.has(definition.key));
     if (!allowed) {
       throw new ForbiddenException(
-        'Direitos e limites comerciais sao geridos pela FM Tecnologia. ' +
+        'Direitos e limites comerciais sao geridos pela FM Tecnologia IA. ' +
           'Configure a operacao no modulo proprio ou consulte o plano.',
       );
     }

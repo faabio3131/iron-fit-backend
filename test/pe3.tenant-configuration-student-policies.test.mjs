@@ -282,11 +282,11 @@ test('PE3 tenant API rejects FM-owned limits and core grants even if a new value
   ]) {
     await assert.rejects(
       () => service.setTenantConfiguration('gym-a', featureKey, payload, 'owner-a'),
-      /Direitos e limites comerciais sao geridos pela FM Tecnologia/,
+      /Direitos e limites comerciais sao geridos pela FM Tecnologia IA/,
     );
     await assert.rejects(
       () => service.resetTenantConfiguration('gym-a', featureKey, 'owner-a'),
-      /Direitos e limites comerciais sao geridos pela FM Tecnologia/,
+      /Direitos e limites comerciais sao geridos pela FM Tecnologia IA/,
     );
   }
 
@@ -317,11 +317,11 @@ test('PE3 historical tenant LIMIT stays readable without granting the academy au
   assert.equal(resolved.source, 'TENANT_CONFIGURATION');
   await assert.rejects(
     () => service.resetTenantConfiguration('gym-a', 'content.private_items_max', 'owner-a'),
-    /Direitos e limites comerciais sao geridos pela FM Tecnologia/,
+    /Direitos e limites comerciais sao geridos pela FM Tecnologia IA/,
   );
   await assert.rejects(
     () => service.setTenantConfiguration('gym-a', 'content.private_items_max', { limitValue: 50 }, 'owner-a'),
-    /Direitos e limites comerciais sao geridos pela FM Tecnologia/,
+    /Direitos e limites comerciais sao geridos pela FM Tecnologia IA/,
   );
   assert.equal(tenantStore.get('content.private_items_max').limitValue, 20);
   assert.equal(audits.length, 0);

@@ -205,5 +205,5 @@ test('logout revokes only matching AUTH_REFRESH session', async () => {
   });
   const result = await authService(prisma).logout(`session-1.${secret}`);
   assert.deepEqual(result, { revoked: true });
-  assert.deepEqual(revokeWhere, { id: 'session-1', revokedAt: null });
+  assert.deepEqual(revokeWhere, { id: 'session-1', revokedAt: null, refreshTokenHash: hashOpaqueToken(secret) });
 });

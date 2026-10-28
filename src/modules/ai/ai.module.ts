@@ -1,4 +1,7 @@
-import { Module } from '@nestjs/common';
+import { AiAttemptLedgerService } from './runtime/ai-attempt-ledger.service';
+import { AiHttpTransport } from './providers/ai-http-transport';
+import { Module, OnModuleInit } from '@nestjs/common';
+import { OpenAiCompatibleProviderAdapter, GeminiNativeProviderAdapter } from './providers/external-ai-provider.adapters';
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { CreatorNetworkModule } from '../creator-network/creator-network.module';
@@ -6,6 +9,9 @@ import { EquipmentsModule } from '../equipments/equipments.module';
 import { ProductEntitlementsModule } from '../product-entitlements/product-entitlements.module';
 import { WorkoutsModule } from '../workouts/workouts.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
+import { AuthModule } from '../auth/auth.module';
+import { AiConfigurationAdminController } from './configuration/ai-configuration-admin.controller';
+import { AiConfigurationAdminService } from './configuration/ai-configuration-admin.service';
 import { AiController } from './ai.controller';
 import { AiMobileAdvisoryService } from './ai-mobile-advisory.service';
 import { AiPersistenceService } from './ai-persistence.service';
@@ -24,14 +30,17 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     ProductEntitlementsModule,
     EquipmentsModule,
     CreatorNetworkModule,
     WorkoutsModule,
     IntegrationsModule,
   ],
-  controllers: [AiController, AiWorkoutCandidateController],
+  controllers: [AiController, AiWorkoutCandidateController, AiConfigurationAdminController],
   providers: [
+    AiHttpTransport,
+    AiAttemptLedgerService,
     AuditService,
     AiPersistenceService,
     AiSanitizerService,
@@ -39,7 +48,10 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     AiPolicyGuardService,
     AiOutputValidatorService,
     AiConfigurationResolverService,
+    AiConfigurationAdminService,
     NullAiProviderAdapter,
+    OpenAiCompatibleProviderAdapter,
+    GeminiNativeProviderAdapter,
     AiProviderRegistryService,
     AiSecretReferenceService,
     AiProviderExecutionService,
@@ -58,4 +70,15 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     AiProviderExecutionService,
   ],
 })
-export class AiModule {}
+export class AiModule implements OnModuleInit {
+  constructor(
+    private readonly registry: AiProviderRegistryService,
+    private readonly openaiCompatible: OpenAiCompatibleProviderAdapter,
+    private readonly gemini: GeminiNativeProviderAdapter,
+  ) {}
+
+  onModuleInit(): void {
+    this.registry.register(this.openaiCompatible);
+    this.registry.register(this.gemini);
+  }
+}

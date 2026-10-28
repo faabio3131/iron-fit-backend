@@ -46,6 +46,10 @@ model AiConfigurationProfile {
   region          String?
   timeoutMs       Int
   budgetUnits     Int?
+  consumedUnits   Int                   @default(0)
+  maxOutputTokens Int                   @default(1024)
+  fallbackTargets Json?
+  pricing         Json?
   enabled         Boolean               @default(false)
   fallbackBehavior AiFallbackBehavior
   secretReference String?
@@ -87,4 +91,29 @@ model AiExecutionTrace {
   @@index([studentId, createdAt])
   @@index([providerCode, modelCode, createdAt])
   @@index([configurationProfileId])
+}
+
+// One durable reservation per provider attempt; contains no prompt, output or credentials.
+model AiProviderAttempt {
+  id              String   @id @default(uuid())
+  profileId       String
+  tenantId        String
+  requestId       String
+  ordinal         Int
+  inputHash       String
+  providerCode    String
+  modelCode       String
+  promptKey       String
+  promptVersion   Int
+  status          String   @default("PENDING")
+  failureCategory String?
+  inputTokens     Int?
+  outputTokens    Int?
+  latencyMs       Int?
+  estimatedCostNanoUsd BigInt?
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@unique([tenantId, requestId, ordinal])
+  @@index([profileId, createdAt])
 }

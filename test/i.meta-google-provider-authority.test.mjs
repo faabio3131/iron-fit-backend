@@ -35,7 +35,15 @@ test('I bootstraps Meta as one umbrella provider and Google as a separate OAuth 
   assert.equal(google.supportsOAuth, true);
   assert.equal(google.tenantEntitlementFeatureKey, 'integration.google');
 
-  assert.equal(registry.list().length, 3);
+  // Meta, Google and fiscal providers remain unchanged; FM-only AI providers
+  // extend the catalog without granting academy control of API credentials.
+  assert.equal(registry.list().length, 5);
+  for (const code of ['openai_compatible', 'gemini_native']) {
+    const ai = registry.require(code);
+    assert.deepEqual(ai.authModels, ['API_KEY']);
+    assert.equal(ai.tenantEntitlementFeatureKey, undefined);
+    assert.ok(ai.capabilities.includes('ai.advisory_chat'));
+  }
   const fiscal = registry.require('fm-fiscal-core');
   assert.deepEqual(fiscal.capabilities, ['fiscal.bridge']);
   assert.deepEqual(fiscal.authModels, ['ACCESS_TOKEN']);
