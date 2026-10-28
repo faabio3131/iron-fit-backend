@@ -75,3 +75,25 @@ test('FM-only AI provider catalog uses global credential authority', async () =>
   assert.match(management, /if \(!featureKey\)/);
   assert.match(management, /Provider nao possui entitlement comercial configurado para tenant/);
 });
+
+test('FM provider credential probes use fixed trusted endpoints and never expose keys', async () => {
+  const { AiCredentialProbeBootstrapService } = require('../dist/src/modules/integrations/ai-credential-probe-bootstrap.service.js');
+  const registered = new Map();
+  new AiCredentialProbeBootstrapService({ register: (code, probe) => registered.set(code, probe) }).onModuleInit();
+  const before = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (url, opts) => {
+    seen.push([url, opts]);
+    return new Response('{}', { status: 200 });
+  };
+  try {
+    await registered.get('openai_compatible').verify({ authModel: 'API_KEY', publicConfiguration: { apiFamily: 'nvidia' }, secret: secret.credential });
+    await registered.get('gemini_native').verify({ authModel: 'API_KEY', publicConfiguration: null, secret: secret.credential });
+    assert.match(seen[0][0], /^https:\/\/integrate\.api\.nvidia\.com\/v1\/models$/);
+    assert.match(seen[1][0], /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models/);
+    assert.equal(seen[0][1].headers.Authorization, 'Bearer test-secret');
+    assert.equal(seen[1][1].headers['x-goog-api-key'], 'test-secret');
+    await assert.rejects(() => registered.get('openai_compatible').verify({ authModel: 'API_KEY', publicConfiguration: { apiFamily: 'untrusted' }, secret: secret.credential }));
+    assert.equal(seen.length, 2);
+  } finally { globalThis.fetch = before; }
+});
