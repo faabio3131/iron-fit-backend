@@ -1,3 +1,4 @@
+import { AiHttpTransport } from '../ai/providers/ai-http-transport';
 import { Module } from '@nestjs/common';
 import { AiCredentialProbeBootstrapService } from './ai-credential-probe-bootstrap.service';
 import { ConfigService } from '@nestjs/config';
@@ -48,6 +49,7 @@ import { UnavailableIntegrationSecretVaultAdapter } from './secrets/unavailable-
     IntegrationBreakGlassController,
   ],
   providers: [
+    AiHttpTransport,
     AuditService,
     IntegrationProviderRegistry,
     IntegrationProviderBootstrapService,

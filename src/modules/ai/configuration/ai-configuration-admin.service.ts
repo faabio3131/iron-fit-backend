@@ -1,3 +1,4 @@
+import { aiEndpoint } from '../providers/ai-provider-security';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { IntegrationConnectionStatus, IntegrationEnvironment, IntegrationScope } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -44,38 +45,49 @@ export class AiConfigurationAdminService {
       region: request.region,
       timeoutMs: request.timeoutMs,
       budgetUnits: request.budgetUnits,
+      maxOutputTokens: request.maxOutputTokens,
+      pricing: request.pricing,
+      fallbackTargets: request.fallbackTargets,
       enabled: request.enabled,
       fallbackBehavior: request.fallbackBehavior,
       secretReference: request.secretReference,
       status: request.status,
       version: request.version,
     });
-    if (!FM_SUPPORTED_PROVIDERS.has(config.providerCode) || !this.registry.has(config.providerCode)) {
-      throw new ForbiddenException('AI provider not supported by FM runtime');
-    }
-
-    if (config.enabled && config.status === 'ACTIVE') {
-      if (!config.secretReference) {
-        throw new ForbiddenException('Active AI configuration requires FM Vault Secret Reference');
+    const seenTargets = new Set<string>();
+    for (const target of [config, ...(config.fallbackTargets ?? []).map((target) => ({ ...config, ...target }))]) {
+      if (!FM_SUPPORTED_PROVIDERS.has(target.providerCode) || !this.registry.has(target.providerCode)) {
+        throw new ForbiddenException('AI provider not supported by FM runtime');
       }
-      const reference = assertIntegrationSecretReference(config.secretReference);
-      const connection = await this.prisma.integrationConnection.findFirst({
-        where: {
-          scope: IntegrationScope.GLOBAL,
-          gymId: null,
-          providerCode: config.providerCode,
-          environment: this.runtime.current() as IntegrationEnvironment,
-          status: IntegrationConnectionStatus.ACTIVE,
-          secretReference: reference,
-          secretVersion: { not: null },
-          secretRevokedAt: null,
-          OR: [{ secretExpiresAt: null }, { secretExpiresAt: { gt: new Date() } }],
-        },
-        select: { capabilities: true },
-      });
-      const needed = AI_INTEGRATION_CAPABILITY[config.capability];
-      if (!connection || !Array.isArray(connection.capabilities) || !connection.capabilities.includes(needed)) {
-        throw new ForbiddenException('FM AI credential not verified or capability not authorized');
+      const endpoint = aiEndpoint(target);
+      const key = [target.providerCode, target.modelCode, endpoint.href].join('|');
+      if (seenTargets.has(key)) throw new ForbiddenException('Duplicate AI fallback target');
+      seenTargets.add(key);
+      if (config.enabled && config.status === 'ACTIVE') {
+        if (config.budgetUnits === undefined) throw new ForbiddenException('Active AI profile requires an explicit attempt budget');
+        if (!target.secretReference) throw new ForbiddenException('Active AI configuration requires FM Vault Secret Reference');
+        const reference = assertIntegrationSecretReference(target.secretReference);
+        const connections = await this.prisma.integrationConnection.findMany({
+          where: {
+            scope: IntegrationScope.GLOBAL, gymId: null, providerCode: target.providerCode,
+            environment: this.runtime.current() as IntegrationEnvironment,
+            status: IntegrationConnectionStatus.ACTIVE, secretReference: reference,
+            secretVersion: { not: null }, secretRevokedAt: null,
+            OR: [{ secretExpiresAt: null }, { secretExpiresAt: { gt: new Date() } }],
+          },
+          select: { capabilities: true, publicConfiguration: true },
+        });
+        const needed = AI_INTEGRATION_CAPABILITY[config.capability];
+        if (connections.length !== 1 || !Array.isArray(connections[0].capabilities) || !connections[0].capabilities.includes(needed)) {
+          throw new ForbiddenException('FM AI credential not verified or capability not authorized');
+        }
+        if (target.providerCode === 'openai_compatible') {
+          const publicConfig = connections[0].publicConfiguration as Record<string, unknown> | null;
+          const family = publicConfig?.apiFamily ?? 'openai';
+          if (family !== (endpoint.hostname === 'api.openai.com' ? 'openai' : 'nvidia')) {
+            throw new ForbiddenException('FM AI credential destination mismatch');
+          }
+        }
       }
     }
     return this.persistence.createConfigurationProfile(config, userId);

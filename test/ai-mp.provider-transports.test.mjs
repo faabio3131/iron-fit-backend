@@ -4,6 +4,11 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { IntegrationSecretValue } = require('../dist/src/modules/integrations/secrets/integration-secret-vault.port.js');
 const { OpenAiCompatibleProviderAdapter, GeminiNativeProviderAdapter } = require('../dist/src/modules/ai/providers/external-ai-provider.adapters.js');
+// Deterministic HTTP boundary double; this does not homologate an external provider.
+const transport = { post: async (url, headers, body, signal) => {
+  const response = await globalThis.fetch(url, { headers, body, signal, method: 'POST', redirect: 'error' });
+  return { status: response.status, body: await response.text() };
+} };
 const req = { capability: 'ADVISORY_CHAT', prompt: { promptKey: 'student.chat', promptVersion: 1 }, context: { tenantId: 'tenantA', requestId: 'r1', purpose: 'advisory' }, input: { message: 'hi' } };
 const base = { scope: 'GLOBAL', capability: 'ADVISORY_CHAT', modelCode: 'configured-model', timeoutMs: 1500, enabled: true, fallbackBehavior: 'FAIL_CLOSED', status: 'ACTIVE', version: 1 };
 const secret = { connectionId: 'vault-ref', credential: new IntegrationSecretValue('test-secret') };
@@ -19,7 +24,7 @@ test('OpenAI-compatible adapter uses configured model, credential and structured
     return new Response(JSON.stringify({ choices: [{ message: { content: '{"message":"ok"}' } }] }), { status: 200 });
   };
   try {
-    const result = await new OpenAiCompatibleProviderAdapter().execute(req, { ...base, providerCode: 'openai_compatible' }, secret);
+    const result = await new OpenAiCompatibleProviderAdapter(transport).execute(req, { ...base, providerCode: 'openai_compatible' }, secret);
     assert.equal(result.status, 'SUCCEEDED');
     assert.deepEqual(result.output, { message: 'ok' });
     assert.equal(count, 1);
@@ -35,14 +40,14 @@ test('Gemini native adapter uses configured model and returns canonical JSON out
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"reply":"ok"}' }] } }] }), { status: 200 });
   };
   try {
-    const result = await new GeminiNativeProviderAdapter().execute(req, { ...base, providerCode: 'gemini_native' }, secret);
+    const result = await new GeminiNativeProviderAdapter(transport).execute(req, { ...base, providerCode: 'gemini_native' }, secret);
     assert.equal(result.status, 'SUCCEEDED');
     assert.deepEqual(result.output, { reply: 'ok' });
   } finally { globalThis.fetch = before; }
 });
 
 test('adapters fail closed on absent credentials and untrusted endpoints', async () => {
-  const adapter = new OpenAiCompatibleProviderAdapter();
+  const adapter = new OpenAiCompatibleProviderAdapter(transport);
   assert.equal((await adapter.execute(req, { ...base, providerCode: adapter.providerCode })).status, 'UNAVAILABLE');
   const before = globalThis.fetch;
   let called = false;
@@ -58,7 +63,7 @@ test('upstream auth and throttling errors are normalized', async () => {
   try {
     for (const [status, category] of [[401, 'BAD_CREDENTIALS'], [429, 'RATE_LIMIT'], [502, 'PROVIDER_INTERNAL_ERROR']]) {
       globalThis.fetch = async () => new Response('{}', { status });
-      const result = await new OpenAiCompatibleProviderAdapter().execute(req, { ...base, providerCode: 'openai_compatible' }, secret);
+      const result = await new OpenAiCompatibleProviderAdapter(transport).execute(req, { ...base, providerCode: 'openai_compatible' }, secret);
       assert.equal(result.failureCategory, category);
       assert.equal(result.status, 'FAILED');
     }
@@ -79,7 +84,7 @@ test('FM-only AI provider catalog uses global credential authority', async () =>
 test('FM provider credential probes use fixed trusted endpoints and never expose keys', async () => {
   const { AiCredentialProbeBootstrapService } = require('../dist/src/modules/integrations/ai-credential-probe-bootstrap.service.js');
   const registered = new Map();
-  new AiCredentialProbeBootstrapService({ register: (code, probe) => registered.set(code, probe) }).onModuleInit();
+  new AiCredentialProbeBootstrapService({ register: (code, probe) => registered.set(code, probe) }, { get: async (url, headers) => { const response = await globalThis.fetch(String(url), { headers }); return { status: response.status }; } }).onModuleInit();
   const before = globalThis.fetch;
   const seen = [];
   globalThis.fetch = async (url, opts) => {
@@ -104,12 +109,12 @@ test('FM-only profile administration enforces step-up, verified global Vault and
   const connection = { capabilities: ['ai.advisory_chat'] };
   let saved = 0, authorized = 0, checked = 0;
   const service = new AiConfigurationAdminService(
-    { integrationConnection: { findFirst: async (query) => {
+    { integrationConnection: { findMany: async (query) => {
       checked++;
       assert.equal(query.where.scope, 'GLOBAL');
       assert.equal(query.where.gymId, null);
       assert.equal(query.where.secretReference, ref);
-      return connection;
+      return [connection];
     } } },
     { assertStepUp: async () => { authorized++; } },
     { current: () => 'HOMOLOG' },
@@ -147,7 +152,7 @@ test('governed timeout aborts the in-flight provider request and classifies TIME
   const { AiProviderExecutionService } = require('../dist/src/modules/ai/runtime/ai-provider-execution.service.js');
   let aborted = false;
   const execution = new AiProviderExecutionService(
-    { resolve: async () => ({ available: true, configuration: {
+    { resolve: async () => ({ available: true, profileId: 'profile-test', configuration: {
       ...base, providerCode: 'openai_compatible', budgetUnits: 1,
       timeoutMs: 20, secretReference: 'isv_' + 'b'.repeat(43),
     } }) },
@@ -160,6 +165,7 @@ test('governed timeout aborts the in-flight provider request and classifies TIME
       }),
     }) },
     { resolveForExecution: async () => ({ available: true, connectionId: 'FM', credential: secret.credential }) },
+    { reserve: async () => 'attempt-test', complete: async () => {} },
   );
   const result = await execution.execute(req);
   assert.equal(result.status, 'FAILED');
@@ -173,7 +179,7 @@ test('malformed upstream AI output is a safe INVALID_RESPONSE, not successful co
     choices: [{ message: { content: 'not-json' } }],
   }), { status: 200 });
   try {
-    const result = await new OpenAiCompatibleProviderAdapter().execute(req, { ...base, providerCode: 'openai_compatible' }, secret);
+    const result = await new OpenAiCompatibleProviderAdapter(transport).execute(req, { ...base, providerCode: 'openai_compatible' }, secret);
     assert.equal(result.status, 'FAILED');
     assert.equal(result.failureCategory, 'INVALID_RESPONSE');
     assert.equal(result.output, undefined);

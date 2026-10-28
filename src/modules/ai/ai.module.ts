@@ -1,3 +1,5 @@
+import { AiAttemptLedgerService } from './runtime/ai-attempt-ledger.service';
+import { AiHttpTransport } from './providers/ai-http-transport';
 import { Module, OnModuleInit } from '@nestjs/common';
 import { OpenAiCompatibleProviderAdapter, GeminiNativeProviderAdapter } from './providers/external-ai-provider.adapters';
 import { AuditService } from '../../common/audit/audit.service';
@@ -37,6 +39,8 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
   ],
   controllers: [AiController, AiWorkoutCandidateController, AiConfigurationAdminController],
   providers: [
+    AiHttpTransport,
+    AiAttemptLedgerService,
     AuditService,
     AiPersistenceService,
     AiSanitizerService,

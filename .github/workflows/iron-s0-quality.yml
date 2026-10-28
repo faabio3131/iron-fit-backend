@@ -105,6 +105,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: AI multi-provider disposable PostgreSQL concurrency and budget certification
+        env:
+          IRON_AI_MP_DB_CERTIFY: 'true'
+        run: node scripts/ai-mp-db-certify.mjs
+
       - name: C11 seed DB-only secret-reference DR canary
         run: node scripts/c11-dr-seed.mjs
 

@@ -1,3 +1,4 @@
+import { AiHttpTransport } from '../ai/providers/ai-http-transport';
 import { Injectable, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { IntegrationCredentialProbeRegistry, IntegrationCredentialProbeInput } from './provider-credential-probe.registry';
 
@@ -5,7 +6,7 @@ import { IntegrationCredentialProbeRegistry, IntegrationCredentialProbeInput } f
 // after step-up. They never persist or log a provider secret.
 @Injectable()
 export class AiCredentialProbeBootstrapService implements OnModuleInit {
-  constructor(private readonly registry: IntegrationCredentialProbeRegistry) {}
+  constructor(private readonly registry: IntegrationCredentialProbeRegistry, private readonly transport: AiHttpTransport = new AiHttpTransport()) {}
 
   onModuleInit(): void {
     this.registry.register('openai_compatible', {
@@ -17,18 +18,13 @@ export class AiCredentialProbeBootstrapService implements OnModuleInit {
   }
 
   private async probe(url: string, headers: Record<string, string>): Promise<void> {
-    let response: Response;
+    let response: { status: number };
     try {
-      response = await fetch(url, {
-        method: 'GET',
-        headers,
-        redirect: 'error',
-        signal: AbortSignal.timeout(10000),
-      });
+      response = await this.transport.get(new URL(url), headers, AbortSignal.timeout(10000));
     } catch {
       throw new ServiceUnavailableException('AI provider credential verification unavailable');
     }
-    if (!response.ok) {
+    if (response.status < 200 || response.status >= 300) {
       // Never include provider error payload: it may contain confidential data.
       throw new ServiceUnavailableException('AI provider credential verification failed');
     }

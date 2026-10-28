@@ -184,6 +184,7 @@ test('K1 provider runtime receives redacted Vault credential only after config/b
         ),
       }),
     },
+    { reserve: async () => 'attempt-test', complete: async () => {} },
   );
 
   const result = await runtime.execute({
@@ -243,6 +244,7 @@ test('K1 required provider credential missing prevents adapter execution', async
         reason: 'SECRET_CONNECTION_NOT_FOUND',
       }),
     },
+    { reserve: async () => 'attempt-test', complete: async () => {} },
   );
 
   const result = await runtime.execute({

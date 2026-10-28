@@ -15,6 +15,7 @@ import {
   AiCapability,
   AiExternalConfigurationContract,
 } from '../contracts/ai-contract';
+import { aiEndpoint } from '../providers/ai-provider-security';
 import { assertIntegrationSecretReference } from '../../integrations/contracts/integration-contract';
 
 const AI_INTEGRATION_CAPABILITY: Record<AiCapability, string> = {
@@ -133,6 +134,16 @@ export class AiSecretReferenceService {
     }
 
     const connection = capable[0];
+    if (fmManaged) {
+      const endpoint = aiEndpoint(configuration);
+      if (configuration.providerCode === 'openai_compatible') {
+        const publicConfig = connection.publicConfiguration as Record<string, unknown> | null;
+        const family = publicConfig?.apiFamily ?? 'openai';
+        if (family !== (endpoint.hostname === 'api.openai.com' ? 'openai' : 'nvidia')) {
+          throw new ServiceUnavailableException('AI credential destination mismatch');
+        }
+      }
+    }
     const credential =
       await this.secrets.resolveForExternalBoundary(
         connection.id,
