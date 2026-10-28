@@ -14,6 +14,17 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
   const { decryptActionSecret } = createRequire(import.meta.url)('../dist/src/modules/auth/auth-security.js');
   const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+  // Module changes schedule data loading on the next event-loop turn. Wait for
+  // the canonical GET and its loading view before addressing the new form.
+  async function openModule(module, endpoints) {
+    await Promise.all([
+      ...endpoints.map((endpoint) => page.waitForResponse((response) =>
+        new URL(response.url()).pathname === `/api/v1${endpoint}` &&
+        response.request().method() === 'GET').then((response) => assert.equal(response.status(), 200))),
+      page.getByTestId(`nav-${module}`).click(),
+    ]);
+    await page.getByText('Carregando dados canônicos…', { exact: true }).waitFor({ state: 'hidden' });
+  }
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
   const id = randomUUID().slice(0, 8);
@@ -58,7 +69,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     }
     await page.setViewportSize({ width: 1366, height: 768 });
 
-    await page.getByTestId('nav-team').click();
+    await openModule('team', ['/users']);
     await page.getByTestId('team-invite-submit').waitFor({ timeout: 20000 });
     assert.equal(await page.getByTestId('team-invite-submit').isEnabled(), false, 'Empty team invite must be disabled');
 
@@ -78,10 +89,11 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         return button && button.getAttribute('aria-disabled') !== 'true' && !button.disabled;
       });
       assert.equal(await page.getByTestId('team-invite-submit').isEnabled(), true);
-      const invitationResponse = page.waitForResponse((response) =>
-        response.url().endsWith('/api/v1/users/invite') && response.request().method() === 'POST');
-      await page.getByTestId('team-invite-submit').click();
-      const response = await invitationResponse;
+      const [response] = await Promise.all([
+        page.waitForResponse((response) => response.url().endsWith('/api/v1/users/invite') &&
+          response.request().method() === 'POST'),
+        page.getByTestId('team-invite-submit').click(),
+      ]);
       assert.equal(response.status(), 201);
       const invited = await response.json();
       assert.equal(invited.invitation.delivery, 'PASSWORD_SETUP_EMAIL');
@@ -100,13 +112,19 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
 
     // Real student creation and invitation activation through the canonical API.
     const studentEmail = `student-ui-${id}@example.com`;
-    await page.getByTestId('nav-students').click();
+    await openModule('students', ['/students']);
     await page.getByRole('textbox', { name: 'Nome', exact: true }).fill('QA Student');
     await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill(studentEmail);
-    const createdResponse = page.waitForResponse((response) =>
-      response.url().endsWith('/api/v1/students') && response.request().method() === 'POST');
-    await page.getByTestId('student-create').click();
-    const studentCreated = await (await createdResponse).json();
+    const [createdResponse] = await Promise.all([
+      page.waitForResponse((response) => response.url().endsWith('/api/v1/students') &&
+        response.request().method() === 'POST'),
+      page.waitForResponse((response) => response.url().endsWith('/api/v1/students') &&
+        response.request().method() === 'GET'),
+      page.getByTestId('student-create').click(),
+    ]);
+    assert.equal(createdResponse.status(), 201);
+    await page.getByText('Carregando dados canônicos…', { exact: true }).waitFor({ state: 'hidden' });
+    const studentCreated = await createdResponse.json();
     assert.ok(studentCreated.onboarding?.token);
     const studentPassword = process.env.B6_STUDENT_PASSWORD;
     assert.ok(studentPassword);
@@ -119,7 +137,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
 
     // Verify a real previously nonfunctional-looking inventory CTA through
     // actual browser clicks, persistent API mutation and reverted state.
-    await page.getByTestId('nav-equipment').click();
+    await openModule('equipment', ['/equipments', '/equipments/catalog']);
     const catalogItem = page.locator('[data-testid^="equipment-item-"]').first();
     await catalogItem.waitFor({ timeout: 20000 });
     const catalogId = (await catalogItem.getAttribute('data-testid')).slice('equipment-item-'.length);

@@ -54,3 +54,11 @@ O proprietário autorizou explicitamente publicar a branch, código, migration, 
 - CI #40631054274 confirmou backend, PostgreSQL, testes e exportação do app #56, mas falhou na jornada browser que ainda esperava o antigo formulário de equipe. Falha não tratada como PASS.
 - Adaptado somente o teste backend ao convite atual, definição de senha pela API canônica (token da entrega isolada, mesmo procedimento do E2E de identidade), três funções e inventário com confirmação. Preservados login real por função, negativas RBAC e roundtrip persistente. Nenhum arquivo do app alterado.
 - Reteste remoto obrigatório antes do merge; homologação externa e deploy continuam pendentes.
+
+## Integração e correção pós-merge — 28/10/2026 UTC
+
+- PR #179 integrada em `af028e564b0b6674bb76f7e526b02eb81c967413`; PR #178 reconhecida como integrada por ancestralidade, sem sobrescrever seu trabalho.
+- CI da candidata #40632133078 SUCCESS: 788 testes backend, 342 app, navegador real em 20 módulos, PostgreSQL, Command, restart e container. ZAP passivo: 0 FAIL / 7 WARN.
+- Pós-merge #40632800105 falhou de forma intermitente no teste browser ao cadastrar aluno. Código da Web agenda o carregamento do módulo; teste podia preencher antes desse carregamento e perder a ação. Não declarar AI-MP-09 concluído com esse resultado.
+- Correção isolada do teste: aguardar GET canônico e término de loading nas telas de equipe/aluno/equipamento; observar respostas e cliques juntos, incluindo reload após criação. Nenhuma asserção de domínio/RBAC removida. PR e CI da correção serão registradas na PR vinculada.
+- AI-MP-00–07 implementados; AI-MP-08 IMPLEMENTED/EXTERNAL BLOCKER; AI-MP-09 aguardando correção e pós-merge verde. Nenhuma homologação externa, implantação ou alteração de infraestrutura executada.
