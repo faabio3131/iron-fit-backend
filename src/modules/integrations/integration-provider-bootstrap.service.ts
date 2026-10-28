@@ -8,6 +8,25 @@ export class IntegrationProviderBootstrapService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
+
+    // FM-owned AI integrations. Deliberately no tenant entitlement for credential
+    // creation: tenants consume AI capabilities, never supply AI API secrets.
+    for (const providerCode of ['openai_compatible', 'gemini_native']) {
+      this.providers.register({
+        providerCode,
+        capabilities: [
+          'ai.workout_insights',
+          'ai.advisory_chat',
+          'ai.workout_generation',
+          'ai.content_recommendation',
+        ],
+        authModels: ['API_KEY'],
+        environments: ['DEV', 'HOMOLOG', 'PROD'],
+        supportsWebhook: false,
+        supportsOAuth: false,
+      });
+    }
+
     this.providers.register({
       providerCode: 'meta',
       capabilities: [

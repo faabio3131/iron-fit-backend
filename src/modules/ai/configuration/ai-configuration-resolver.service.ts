@@ -67,6 +67,9 @@ export class AiConfigurationResolverService {
       region: string | null;
       timeoutMs: number;
       budgetUnits: number | null;
+      maxOutputTokens?: number;
+      pricing?: unknown;
+      fallbackTargets?: unknown;
       enabled: boolean;
       fallbackBehavior: 'FAIL_CLOSED' | 'ADVISORY_FALLBACK';
       secretReference: string | null;
@@ -95,6 +98,9 @@ export class AiConfigurationResolverService {
       region: profile.region ?? undefined,
       timeoutMs: profile.timeoutMs,
       budgetUnits: profile.budgetUnits ?? undefined,
+      maxOutputTokens: profile.maxOutputTokens,
+      pricing: profile.pricing == null ? undefined : profile.pricing as AiExternalConfigurationContract['pricing'],
+      fallbackTargets: profile.fallbackTargets == null ? undefined : profile.fallbackTargets as AiExternalConfigurationContract['fallbackTargets'],
       enabled: profile.enabled,
       fallbackBehavior: profile.fallbackBehavior,
       secretReference: profile.secretReference ?? undefined,

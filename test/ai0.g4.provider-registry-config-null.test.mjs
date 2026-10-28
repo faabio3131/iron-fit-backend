@@ -73,7 +73,7 @@ test('AI0 G4 runtime normalizes budget, timeout and provider failures', async ()
   const runtime = await source('src/modules/ai/runtime/ai-provider-execution.service.ts');
   assert.match(runtime, /budgetUnits === 0/);
   assert.match(runtime, /AI_BUDGET_EXHAUSTED/);
-  assert.match(runtime, /AiProviderTimeoutError/);
+  assert.match(runtime, /cancellation\.abort\(\)/);
   assert.match(runtime, /failureCategory: 'TIMEOUT'/);
   assert.match(runtime, /failureCategory: 'PROVIDER_INTERNAL_ERROR'/);
   assert.match(runtime, /provider\.providerCode === 'null_provider'/);

@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { PrismaClient } = require('@prisma/client');
+const { AiAttemptLedgerService } = require('../dist/src/modules/ai/runtime/ai-attempt-ledger.service.js');
+const { AiConfigurationResolverService } = require('../dist/src/modules/ai/configuration/ai-configuration-resolver.service.js');
+if (process.env.IRON_AI_MP_DB_CERTIFY !== 'true' || process.env.NODE_ENV !== 'test') throw new Error('Explicit disposable DB certification required');
+const db = new PrismaClient();
+const suffix = randomUUID();
+const gymIds = [], profileIds = [];
+const request = { capability: 'ADVISORY_CHAT', input: { message: 'synthetic only' }, prompt: { promptKey: 'student.chat', promptVersion: 1 }, context: { tenantId: '', requestId: 'mp-' + suffix, purpose: 'student_advisory_chat' } };
+try {
+  const a = await db.gym.create({ data: { name: 'AI MP disposable A', slug: 'ai-mp-a-' + suffix } }); gymIds.push(a.id);
+  const b = await db.gym.create({ data: { name: 'AI MP disposable B', slug: 'ai-mp-b-' + suffix } }); gymIds.push(b.id);
+  const fields = { scope: 'TENANT', gymId: a.id, capability: 'ADVISORY_CHAT', providerCode: 'openai_compatible', modelCode: 'test-model', timeoutMs: 1000, budgetUnits: 2, enabled: true, fallbackBehavior: 'FAIL_CLOSED', status: 'ACTIVE', version: 1 };
+  const profile = await db.aiConfigurationProfile.create({ data: fields }); profileIds.push(profile.id);
+  const ledger = new AiAttemptLedgerService(db);
+  const resolver = new AiConfigurationResolverService(db);
+  const config = (await resolver.resolve(a.id, 'ADVISORY_CHAT')).configuration;
+  request.context.tenantId = a.id;
+  const duplicate = await Promise.all(Array.from({ length: 5 }, () => ledger.reserve(profile.id, request, config, 0)));
+  assert.equal(duplicate.filter(Boolean).length, 1, 'same request must reserve once under contention');
+  assert.equal((await db.aiConfigurationProfile.findUnique({ where: { id: profile.id } })).consumedUnits, 1);
+  await ledger.complete(duplicate.find(Boolean), { status: 'SUCCEEDED', flags: [], usage: { inputTokens: 10, outputTokens: 4 } }, 12);
+  const crossTenant = await ledger.reserve(profile.id, { ...request, context: { ...request.context, tenantId: b.id } }, config, 1);
+  assert.equal(crossTenant, null);
+  const competing = await Promise.all(Array.from({ length: 5 }, (_, i) => ledger.reserve(profile.id, { ...request, context: { ...request.context, requestId: 'other-' + suffix + i } }, config, 0)));
+  assert.equal(competing.filter(Boolean).length, 1, 'budget must not overspend under contention');
+  assert.equal((await db.aiConfigurationProfile.findUnique({ where: { id: profile.id } })).consumedUnits, 2);
+  const disabled = await db.aiConfigurationProfile.create({ data: { ...fields, enabled: false, status: 'DISABLED', version: 2 } }); profileIds.push(disabled.id);
+  assert.equal((await resolver.resolve(a.id, 'ADVISORY_CHAT')).available, false);
+  assert.equal(await ledger.reserve(profile.id, request, config, 1), null, 'old active profile must not bypass latest disabled version');
+  const records = await db.aiProviderAttempt.findMany({ where: { profileId: profile.id } });
+  assert.equal(records.length, 2);
+  assert.equal(records.find(x => x.status === 'SUCCEEDED').inputTokens, 10);
+  assert.equal(JSON.stringify(records).includes('synthetic only'), false, 'no prompt/input persisted');
+  console.log('AI_MP_DB_CERTIFIED: concurrent replay, budget, tenant isolation, disabled latest version, usage and payload minimization');
+} finally {
+  await db.aiProviderAttempt.deleteMany({ where: { profileId: { in: profileIds } } });
+  await db.aiConfigurationProfile.deleteMany({ where: { id: { in: profileIds } } });
+  await db.gym.deleteMany({ where: { id: { in: gymIds } } });
+  await db.$disconnect();
+}

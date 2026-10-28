@@ -2,11 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { PrismaClient } from '@prisma/client';
 
 const require = createRequire('/tmp/iron-browser-qa/package.json');
 const { chromium } = require('playwright-core');
 
 test('Macro O real browser: trial, login, team actions, restricted finance, module navigation and logout', async () => {
+  assert.equal(process.env.CI, 'true', 'Browser certification requires the isolated CI database');
+  assert.equal(new URL(process.env.DATABASE_URL).pathname, '/iron_ci');
+  const prisma = new PrismaClient();
+  const { decryptActionSecret } = createRequire(import.meta.url)('../dist/src/modules/auth/auth-security.js');
   const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
   const pageErrors = [];
@@ -54,29 +59,43 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.setViewportSize({ width: 1366, height: 768 });
 
     await page.getByTestId('nav-team').click();
-    await page.getByTestId('team-invite').waitFor({ timeout: 20000 });
-    assert.equal(await page.getByTestId('team-invite').isEnabled(), false, 'Empty team invite must be disabled');
+    await page.getByTestId('team-invite-submit').waitFor({ timeout: 20000 });
+    assert.equal(await page.getByTestId('team-invite-submit').isEnabled(), false, 'Empty team invite must be disabled');
 
-    await page.getByRole('textbox', { name: 'Nome', exact: true }).fill('B6 Browser Trainer');
-    await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill(teamEmail);
-    assert.equal(await page.getByTestId('team-invite').isEnabled(), true);
-    await page.getByTestId('team-invite').click();
-    await page.getByText(teamEmail, { exact: false }).first().waitFor({ timeout: 20000 });
-
-    // Exercise the actual team creation UI for every employee role, not only API authorization.
+    // Invite each role through the current UI. Recover the isolated delivery token
+    // exactly as the identity E2E does; password setup still uses the canonical API.
     const employees = [
-      { role: 'MANAGER', label: 'Gerente', email: `manager-ui-${id}@example.com` },
-      { role: 'RECEPTION', label: 'Recepção', email: `reception-ui-${id}@example.com` },
-      { role: 'TRAINER', label: 'Professor', email: `trainer-ui-${id}@example.com` },
+      { role: 'MANAGER', email: `manager-ui-${id}@example.com` },
+      { role: 'RECEPTION', email: `reception-ui-${id}@example.com` },
+      { role: 'TRAINER', email: teamEmail },
     ];
     for (const employee of employees) {
-      await page.getByRole('textbox', { name: 'Nome', exact: true }).fill(`QA ${employee.role}`);
-      await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill(employee.email);
-      await page.getByLabel('Senha inicial (opcional)').fill(password);
-      await page.getByText(employee.label, { exact: true }).first().click();
-      assert.equal(await page.getByTestId('team-add').isEnabled(), true);
-      await page.getByTestId('team-add').click();
+      await page.getByTestId('team-invite-name').fill(`QA ${employee.role}`);
+      await page.getByTestId('team-invite-email').fill(employee.email);
+      await page.getByTestId(`team-invite-role-${employee.role}`).click();
+      await page.waitForFunction(() => {
+        const button = document.querySelector('[data-testid="team-invite-submit"]');
+        return button && button.getAttribute('aria-disabled') !== 'true' && !button.disabled;
+      });
+      assert.equal(await page.getByTestId('team-invite-submit').isEnabled(), true);
+      const invitationResponse = page.waitForResponse((response) =>
+        response.url().endsWith('/api/v1/users/invite') && response.request().method() === 'POST');
+      await page.getByTestId('team-invite-submit').click();
+      const response = await invitationResponse;
+      assert.equal(response.status(), 201);
+      const invited = await response.json();
+      assert.equal(invited.invitation.delivery, 'PASSWORD_SETUP_EMAIL');
       await page.getByText(employee.email, { exact: false }).first().waitFor({ timeout: 20000 });
+      const action = await prisma.authActionToken.findFirst({
+        where: { userId: invited.id, kind: 'PASSWORD_RESET' }, orderBy: { createdAt: 'desc' },
+      });
+      assert.ok(action?.deliveryCiphertext);
+      const token = decryptActionSecret({ get: (name) => process.env[name] }, action.deliveryCiphertext);
+      const setup = await fetch(`${process.env.B6_API_URL}/auth/password/reset/confirm`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword: password }),
+      });
+      assert.equal(setup.status, 200);
     }
 
     // Real student creation and invitation activation through the canonical API.
@@ -101,17 +120,18 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     // Verify a real previously nonfunctional-looking inventory CTA through
     // actual browser clicks, persistent API mutation and reverted state.
     await page.getByTestId('nav-equipment').click();
-    const catalogAction = page.locator('[data-testid^="equipment-catalog-select-"]').first();
-    await catalogAction.waitFor({ timeout: 20000 });
-    const beforeLabel = await catalogAction.innerText();
-    await catalogAction.click();
-    const expectedAfter = beforeLabel.includes('Adicionar')
-      ? 'Remover do inventário' : 'Adicionar ao inventário';
-    await page.locator('[data-testid^="equipment-catalog-select-"]').first()
-      .getByText(expectedAfter, { exact: true }).waitFor({ timeout: 20000 });
-    await page.locator('[data-testid^="equipment-catalog-select-"]').first().click();
-    await page.locator('[data-testid^="equipment-catalog-select-"]').first()
-      .getByText(beforeLabel.trim(), { exact: true }).waitFor({ timeout: 20000 });
+    const catalogItem = page.locator('[data-testid^="equipment-item-"]').first();
+    await catalogItem.waitFor({ timeout: 20000 });
+    const catalogId = (await catalogItem.getAttribute('data-testid')).slice('equipment-item-'.length);
+    await catalogItem.click();
+    await page.getByTestId('equipment-catalog-select').click();
+    const remove = page.getByTestId(`equipment-remove-${catalogId}`);
+    await remove.waitFor({ timeout: 20000 });
+    await remove.click();
+    await page.getByTestId(`equipment-remove-confirm-${catalogId}`).click();
+    await remove.waitFor({ state: 'hidden', timeout: 20000 });
+    await catalogItem.click();
+    await page.getByTestId('equipment-catalog-select').waitFor({ timeout: 20000 });
 
     await page.getByTestId('nav-financial').click();
     await page.getByTestId('admin-password-input').waitFor({ timeout: 15000 });
@@ -168,5 +188,6 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, staffRoles: employees.map(e => e.role), financialNavigationDenied: true, studentSelfService: true, inventoryCtaRoundtrip: true, stepUp: true, logout: true }));
   } finally {
     await browser.close();
+    await prisma.$disconnect();
   }
 }, { timeout: 160000 });
