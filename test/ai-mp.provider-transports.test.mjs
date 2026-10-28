@@ -166,3 +166,16 @@ test('governed timeout aborts the in-flight provider request and classifies TIME
   assert.equal(result.failureCategory, 'TIMEOUT');
   assert.equal(aborted, true);
 });
+
+test('malformed upstream AI output is a safe INVALID_RESPONSE, not successful content', async () => {
+  const before = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    choices: [{ message: { content: 'not-json' } }],
+  }), { status: 200 });
+  try {
+    const result = await new OpenAiCompatibleProviderAdapter().execute(req, { ...base, providerCode: 'openai_compatible' }, secret);
+    assert.equal(result.status, 'FAILED');
+    assert.equal(result.failureCategory, 'INVALID_RESPONSE');
+    assert.equal(result.output, undefined);
+  } finally { globalThis.fetch = before; }
+});
