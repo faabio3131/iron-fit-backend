@@ -97,14 +97,16 @@ export class AiProviderExecutionService {
       };
     }
 
+    const cancellation = new AbortController();
     try {
       return await this.withTimeout(
         provider.execute<TInput, TOutput>(
           request,
           resolution.configuration,
-          runtime,
+          { ...runtime, signal: cancellation.signal },
         ),
         resolution.configuration.timeoutMs,
+        () => cancellation.abort(),
       );
     } catch (error) {
       if (error instanceof AiProviderTimeoutError) {
@@ -122,10 +124,13 @@ export class AiProviderExecutionService {
     }
   }
 
-  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, abort: () => void): Promise<T> {
     let timer: NodeJS.Timeout | undefined;
     const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new AiProviderTimeoutError()), timeoutMs);
+      timer = setTimeout(() => {
+        abort();
+        reject(new AiProviderTimeoutError());
+      }, timeoutMs);
     });
 
     try {
