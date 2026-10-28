@@ -73,6 +73,10 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
       await page.getByTestId('team-invite-name').fill(`QA ${employee.role}`);
       await page.getByTestId('team-invite-email').fill(employee.email);
       await page.getByTestId(`team-invite-role-${employee.role}`).click();
+      await page.waitForFunction(() => {
+        const button = document.querySelector('[data-testid="team-invite-submit"]');
+        return button && button.getAttribute('aria-disabled') !== 'true' && !button.disabled;
+      });
       assert.equal(await page.getByTestId('team-invite-submit').isEnabled(), true);
       const invitationResponse = page.waitForResponse((response) =>
         response.url().endsWith('/api/v1/users/invite') && response.request().method() === 'POST');
