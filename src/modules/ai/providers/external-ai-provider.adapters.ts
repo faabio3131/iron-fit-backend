@@ -58,9 +58,13 @@ export class OpenAiCompatibleProviderAdapter implements AiProviderAdapter {
       signal: runtime?.signal,
     });
     if (!response.ok) return errorResponse<TOutput>(response.status);
-    const data = await readJson(response);
-    const output = parseText(data?.choices?.[0]?.message?.content);
-    return { status: 'SUCCEEDED', output: output as TOutput, flags: [] };
+    try {
+      const data = await readJson(response);
+      const output = parseText(data?.choices?.[0]?.message?.content);
+      return { status: 'SUCCEEDED', output: output as TOutput, flags: [] };
+    } catch {
+      return { status: 'FAILED', flags: ['AI_UPSTREAM_INVALID_RESPONSE'], failureCategory: 'INVALID_RESPONSE' };
+    }
   }
 }
 
@@ -81,8 +85,12 @@ export class GeminiNativeProviderAdapter implements AiProviderAdapter {
       signal: runtime?.signal,
     });
     if (!response.ok) return errorResponse<TOutput>(response.status);
-    const data = await readJson(response);
-    const output = parseText(data?.candidates?.[0]?.content?.parts?.[0]?.text);
-    return { status: 'SUCCEEDED', output: output as TOutput, flags: [] };
+    try {
+      const data = await readJson(response);
+      const output = parseText(data?.candidates?.[0]?.content?.parts?.[0]?.text);
+      return { status: 'SUCCEEDED', output: output as TOutput, flags: [] };
+    } catch {
+      return { status: 'FAILED', flags: ['AI_UPSTREAM_INVALID_RESPONSE'], failureCategory: 'INVALID_RESPONSE' };
+    }
   }
 }
