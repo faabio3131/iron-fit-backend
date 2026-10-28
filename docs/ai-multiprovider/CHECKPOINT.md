@@ -39,3 +39,12 @@
 ## Autorização de publicação — 28/10/2026 BRT
 
 O proprietário autorizou explicitamente publicar a branch, código, migration, testes e documentação e abrir a PR. O bloqueio de aprovação anterior está resolvido. Git HTTPS local não possui credencial de escrita; publicação pelo conector autenticado, verificando equivalência da árvore com o conteúdo local validado. CI/merge/homologação externa ainda dependem dos respectivos gates.
+
+## CI inicial e reconciliação do consumidor — 28/10/2026 BRT
+
+- PR #179 publicada: backend `5e6c3c9c656dd9b9bab1ae1501443f30401224b7`; árvore idêntica ao conteúdo local.
+- CI PR #40630267718 e push #40630263843 SUCCESS no mesmo SHA. PostgreSQL confirmou migration, replay concorrente, orçamento, isolamento e versão desabilitada; 788 testes backend PASS, zero skips. Backup/restore, E2E API, navegador, Command, reinício e container PASS.
+- ZAP passivo: 0 FAIL, 7 avisos; não equivale a DAST ativo nem homologação externa.
+- Limite identificado no workflow herdado: candidato Web era PR #22 `2ba90ee5`, com 189 testes PASS e 1 live separado ignorado na suíte comum. O teste live foi executado em passo próprio. Não chamar isso de certificação da PR #56.
+- Atualizada referência imutável do consumidor para PR #56 `36f2756301fa363696d22489c50e0321ad701106`, preservando `IRON_LIVE_E2E=true` somente no passo dedicado. Nenhum arquivo/branch do app modificado.
+- Nova CI necessária para comprovar interoperabilidade com essa candidata. Merge ainda não realizado.
