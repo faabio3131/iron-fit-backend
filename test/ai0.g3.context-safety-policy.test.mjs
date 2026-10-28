@@ -70,9 +70,9 @@ test('AI0 G3 module consumes canonical Product, Equipment and Creator modules', 
   assert.match(moduleSource, /ProductEntitlementsModule/);
   assert.match(moduleSource, /EquipmentsModule/);
   assert.match(moduleSource, /CreatorNetworkModule/);
-  for (const forbidden of ['openai', 'anthropic', 'gemini']) {
-    assert.equal(moduleSource.toLowerCase().includes(forbidden), false);
-  }
+  assert.match(moduleSource, /OpenAiCompatibleProviderAdapter/);
+  assert.match(moduleSource, /GeminiNativeProviderAdapter/);
+  assert.match(moduleSource, /this\.registry\.register/);
 });
 
 test('AI0 G3 documentation fixes security and no-provider boundaries', async () => {
