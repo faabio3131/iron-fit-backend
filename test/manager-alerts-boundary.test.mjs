@@ -6,12 +6,25 @@ const schema = readFileSync(new URL('../prisma/schema.prisma', import.meta.url),
 const service = readFileSync(new URL('../src/modules/manager-alerts/manager-alerts.service.ts', import.meta.url), 'utf8');
 const controller = readFileSync(new URL('../src/modules/manager-alerts/manager-alerts.controller.ts', import.meta.url), 'utf8');
 const preferenceDto = readFileSync(new URL('../src/modules/manager-alerts/dto/update-manager-alert-preference.dto.ts', import.meta.url), 'utf8');
+const producers = readFileSync(new URL('../src/modules/manager-alerts/manager-alert-producers.service.ts', import.meta.url), 'utf8');
 
 test('manager alerts use tenant-scoped deduplication and recipient boundary', () => {
   assert.match(schema, /@@unique\(\[gymId, deduplicationKey\]\)/);
   assert.match(schema, /@@unique\(\[alertId, userId\]\)/);
   assert.match(service, /recipients: \{ some: \{ userId: actor\.id \} \}/);
   assert.match(service, /where: \{ alertId, userId, alert: \{ gymId \} \}/);
+});
+
+test('all ten approved producer contracts map to the canonical ingest service', () => {
+  for (const method of [
+    'overdueStudentCharge', 'attendanceRisk', 'assessmentOrWorkoutPending',
+    'equipmentProblem', 'deliveryFailure', 'integrationDegraded',
+    'planLimitNear', 'suspiciousAccess', 'operationalIncident',
+    'humanApprovalPending',
+  ]) assert.match(producers, new RegExp(`${method}\\(`));
+  assert.match(producers, /return this\.alerts\.ingest\(\{/);
+  assert.match(producers, /createHash\('sha256'\)/);
+  assert.doesNotMatch(producers, /metadata:/);
 });
 
 test('individual preferences keep in-app mandatory and security non-silenceable', () => {
