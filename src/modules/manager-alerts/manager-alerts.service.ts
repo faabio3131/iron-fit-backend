@@ -111,7 +111,7 @@ export class ManagerAlertsService {
           if (SEVERITY_RANK[input.severity] < requiredRank) return [];
           const channels: ManagerAlertChannel[] = [];
           if (policy.emailAllowed && preference.emailEnabled) channels.push(ManagerAlertChannel.EMAIL);
-          if (policy.pushAllowed && preference.pushEnabled) channels.push(ManagerAlertChannel.PUSH);
+          // PUSH is outside this launch until device registration and an adapter exist.
           if (policy.whatsappAllowed && preference.whatsappEnabled) channels.push(ManagerAlertChannel.WHATSAPP);
           return channels.map((channel) => ({
             alertId: alert.id,
@@ -224,6 +224,7 @@ export class ManagerAlertsService {
       throw new BadRequestException('Categoria de alerta invalida');
     }
     const category = categoryValue as ManagerAlertCategory;
+    if (dto.pushEnabled === true) throw new BadRequestException('Notificacoes push indisponiveis nesta versao');
     if ((dto.quietHoursStart === undefined) !== (dto.quietHoursEnd === undefined)) {
       throw new BadRequestException('Inicio e fim do horario silencioso devem ser informados juntos');
     }
@@ -295,6 +296,7 @@ export class ManagerAlertsService {
       throw new BadRequestException('Categoria de alerta invalida');
     }
     const category = categoryValue as ManagerAlertCategory;
+    if (dto.pushAllowed === true) throw new BadRequestException('Notificacoes push indisponiveis nesta versao');
     if (category === ManagerAlertCategory.SECURITY && dto.minimumSeverity && dto.minimumSeverity !== 'INFO') {
       throw new BadRequestException('Politica de seguranca deve aceitar todas as severidades');
     }
