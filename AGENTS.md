@@ -747,3 +747,15 @@ Atualizar este bloco a cada entrega:
 - App: PR #58 preservada; último head consultado `aad3f8f` e CI `40802857324` SUCCESS. Macro O #56 não alterado.
 - A6: e-mail/WhatsApp via outbox existentes; push continua adapter/dispositivo pendente, sem token inventado. A10: teste físico Evolution/e-mail/push permanece PENDING_EXTERNAL conforme decisão do usuário.
 - Próximo passo obrigatório: consultar CI deste head, corrigir qualquer falha, concluir A9, reconciliar dependência app/backend e gates de merge antes de integrar. Depois seguir o cronograma sem reimplementar fontes concluídas.
+
+
+## Checkpoint A6/A9 — recuperação e autoridade atual (29/10/2026)
+
+- Candidate de código/testes: `57384f9`, PR #186. Lint/typecheck/build PASS; 27 testes focados PASS; regressão completa 819/819 PASS. Sem merge/deploy.
+- A5: a CI `40901321574` aprovou fresh migration e o novo gate PostgreSQL das fontes persistidas, repetição, ingestão concorrente, OWNER financeiro e isolamento entre tenants. A execução completa foi sucedida por novo candidate A6; não confundir esse gate parcial com CI integral do último head.
+- A6: leases SENDING expirados recuperados; tentativas esgotadas vão para DEAD_LETTER. Envios revalidam membership/role/academia ativa, categoria, policy, preferência e severidade atuais. Opt-out/perda de autoridade/alerta resolvido → SKIPPED, sem chamar provider. Preferência de quiet hours → DEFERRED, com timezone/DST e sem consumir retry de provider.
+- Segurança da caixa interna: leitura, listagem e contadores consultam autoridade atual no banco; uma snapshot histórica de destinatário OWNER não permite ver financeiro/segurança após rebaixamento de função.
+- Escalação crítica: somente com policy `criticalEscalationMin`, prazo vencido e alerta OPEN sem reconhecimento; eventKey/dedupe próprios, categoria preservada e exclusão das próprias escalações para impedir loop.
+- Script PostgreSQL ampliado para provar demotion de OWNER, recuperação de lease e DLQ usando o mesmo banco descartável; aguardar CI deste candidate para certificar esses novos cenários reais.
+- A6 push: adapter/token de dispositivo ainda não implementados; classificar DISABLED/OUT_OF_LAUNCH, nunca SENT nem homologado. E-mail/WhatsApp implementados, homologação física A10 adiada por decisão do usuário.
+- Próximo passo: concluir A9 na CI do último head; corrigir qualquer falha, reconciliar app PR #58 e cumprir os gates antes de merge. Depois W01 deve expor o novo estado operacional de equipamento sem alterar o trabalho visual concorrente.
