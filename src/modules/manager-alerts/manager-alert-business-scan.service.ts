@@ -10,6 +10,7 @@ export class ManagerAlertBusinessScanService {
   private attendanceCursor?: string;
   private trialCursor?: string;
   private incidentCursor?: string;
+  private escalationCursor?: string;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -26,7 +27,7 @@ export class ManagerAlertBusinessScanService {
   async scanDue(take = 50, now = new Date()) {
     take = Math.min(Math.max(Math.trunc(take) || 1, 1), 100);
     const results = await Promise.allSettled([
-      this.equipment(take), this.attendance(take, now), this.trials(take, now), this.incidents(take),
+      this.equipment(take), this.attendance(take, now), this.trials(take, now), this.incidents(take), this.escalations(take, now),
     ]);
     if (results.some((result) => result.status === 'rejected')) throw new Error('MANAGER_ALERT_BUSINESS_SCAN_FAILED');
   }
@@ -120,5 +121,27 @@ export class ManagerAlertBusinessScanService {
       this.incidentCursor = row.id;
     }
     if (rows.length < take) this.incidentCursor = undefined;
+  }
+
+  private async escalations(take: number, now: Date) {
+    const rows = await this.prisma.managerAlert.findMany({
+      where: {
+        severity: 'CRITICAL', status: 'OPEN', acknowledgedAt: null,
+        eventKey: { not: 'manager.alert.escalated' },
+        createdAt: { lte: new Date(now.getTime() - 5 * 60_000) },
+        ...(this.escalationCursor ? { id: { gt: this.escalationCursor } } : {}),
+      },
+      orderBy: { id: 'asc' }, take,
+      select: { id: true, gymId: true, category: true, createdAt: true },
+    });
+    for (const row of rows) {
+      const policy = await this.prisma.managerAlertPolicy.findUnique({ where: { gymId_category: { gymId: row.gymId, category: row.category } }, select: { criticalEscalationMin: true } });
+      const minutes = policy?.criticalEscalationMin;
+      if (minutes && minutes >= 5 && minutes <= 1440 && now.getTime() - row.createdAt.getTime() >= minutes * 60_000) {
+        await this.producers.criticalEscalation({ gymId: row.gymId, eventId: row.id, resourceId: row.id }, row.category);
+      }
+      this.escalationCursor = row.id;
+    }
+    if (rows.length < take) this.escalationCursor = undefined;
   }
 }
