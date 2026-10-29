@@ -3,6 +3,8 @@ import {
   TenantPaymentProviderAdapterRegistry,
   TenantPaymentCheckoutInput,
   TenantPaymentCheckoutResult,
+  TenantPaymentVerificationInput,
+  TenantPaymentVerificationResult,
 } from './tenant-payment-provider-adapter';
 
 function urlForConfig(raw: unknown): string {
@@ -26,6 +28,44 @@ export class StripeCheckoutAdapter implements OnModuleInit {
 
   constructor(private readonly registry: TenantPaymentProviderAdapterRegistry) {}
   onModuleInit() { this.registry.register(this); }
+
+  async verifyCheckout(input: TenantPaymentVerificationInput): Promise<TenantPaymentVerificationResult> {
+    if (!/^cs_[a-zA-Z0-9_]{1,120}$/.test(input.providerChargeRef)) {
+      throw new ServiceUnavailableException('STRIPE_SESSION_INVALID');
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(
+        'https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(input.providerChargeRef),
+        {
+          method: 'GET', redirect: 'error', signal: controller.signal,
+          headers: { authorization: 'Bearer ' + input.credential.reveal() },
+        },
+      );
+      if (!response.ok) throw new ServiceUnavailableException('STRIPE_VERIFICATION_HTTP_' + response.status);
+      const raw = await response.text();
+      if (Buffer.byteLength(raw, 'utf8') > 65536) throw new ServiceUnavailableException('STRIPE_VERIFICATION_TOO_LARGE');
+      let data: any;
+      try { data = JSON.parse(raw); } catch { throw new ServiceUnavailableException('STRIPE_VERIFICATION_INVALID'); }
+      if (!data || data.id !== input.providerChargeRef || data.mode !== 'payment' ||
+          data.client_reference_id !== input.chargeId || data.metadata?.iron_charge_id !== input.chargeId ||
+          data.amount_total !== input.amount || data.currency !== input.currency.toLowerCase() ||
+          data.livemode !== (input.environment === 'PROD')) {
+        throw new ServiceUnavailableException('STRIPE_VERIFICATION_MISMATCH');
+      }
+      if (data.payment_status === 'paid' && data.status === 'complete') {
+        return { status: 'PAID', providerPaymentRef: data.id, paidAt: null };
+      }
+      if (data.status === 'expired') return { status: 'REVERSED', providerPaymentRef: data.id, paidAt: null };
+      return { status: 'PENDING', providerPaymentRef: data.id, paidAt: null };
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      throw new ServiceUnavailableException('STRIPE_VERIFICATION_UNAVAILABLE');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   async createCheckout(input: TenantPaymentCheckoutInput): Promise<TenantPaymentCheckoutResult> {
     if (input.currency !== 'BRL' || !Number.isSafeInteger(input.amount) || input.amount <= 0) {
