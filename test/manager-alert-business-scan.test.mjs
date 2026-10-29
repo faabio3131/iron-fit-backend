@@ -80,7 +80,11 @@ test('equipment operational mutation rejects foreign tenant and stale changes an
     updateMany: async ({ where, data }) => { assert.equal(where.gymId, 'gym-a'); assert.equal(where.operationalStatus, 'OPERATIONAL'); assert.equal(data.operationalStatus, 'MAINTENANCE'); return { count }; },
     findFirstOrThrow: async () => ({ id: 'equipment-a', operationalStatus: 'MAINTENANCE' }),
   } };
-  const service = new EquipmentsService({ gym: { findFirst: async () => ({ id: 'gym-a' }) }, $transaction: async (fn) => fn(tx) }, { record: async (_event, db) => { assert.equal(db, tx); audits++; } });
+  let granted = false;
+  const service = new EquipmentsService({ gym: { findFirst: async () => ({ id: 'gym-a' }) }, $transaction: async (fn) => fn(tx) }, { record: async (_event, db) => { assert.equal(db, tx); audits++; } }, { resolveFeature: async (gymId, feature) => { assert.equal(gymId, 'gym-a'); assert.equal(feature, 'equipment.inventory'); return { kind: 'FEATURE', value: granted }; } });
+  await assert.rejects(service.updateOperationalStatus('equipment-a', 'gym-a', 'owner', 'MAINTENANCE'), (e) => e.getStatus() === 403);
+  assert.equal(audits, 0);
+  granted = true;
   await assert.rejects(service.updateOperationalStatus('equipment-a', 'gym-a', 'owner', 'MAINTENANCE'), (e) => e.getStatus() === 404);
   record = { operationalStatus: 'OPERATIONAL', operationalStatusChangedAt: null };
   await assert.rejects(service.updateOperationalStatus('equipment-a', 'gym-a', 'owner', 'MAINTENANCE'), (e) => e.getStatus() === 409);
