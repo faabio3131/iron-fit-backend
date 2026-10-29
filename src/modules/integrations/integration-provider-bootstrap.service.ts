@@ -58,6 +58,16 @@ export class IntegrationProviderBootstrapService implements OnModuleInit {
     });
 
     this.providers.register({
+      providerCode: 'mercado_pago_webhook',
+      capabilities: ['billing.student.webhook'],
+      authModels: ['WEBHOOK_SECRET'],
+      environments: ['DEV', 'HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+      tenantEntitlementFeatureKey: 'billing.student.checkout',
+    });
+
+    this.providers.register({
       providerCode: 'mercado_pago',
       capabilities: ['billing.student.checkout'],
       authModels: ['ACCESS_TOKEN'],
