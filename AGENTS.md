@@ -675,15 +675,15 @@ Ausência ou falha de canal externo não pode apagar o alerta interno.
 | Etapa | Entrega | Gate de conclusão | Estado inicial |
 |---|---|---|---|
 | A0 | Reconciliação CURRENT, ADR curto, contratos e threat model | Nenhum domínio duplicado; mapa de eventos e autoridade aprovado pelo código/testes | `DONE` |
-| A1 | Schema/migration de alerta, destinatário, preferência, entrega e deduplicação | Fresh migration + rollback lógico + índices tenant-scoped + Prisma validate | `IMPLEMENTED/CI_PENDING` |
-| A2 | Serviço canônico de ingestão, dedupe, lifecycle e auditoria | Unidade/integração cobrindo concorrência, replay, RBAC e cross-tenant | `IMPLEMENTED/PARTIAL_TESTS` |
-| A3 | APIs do painel: inbox, contadores, filtros, ler, reconhecer, resolver, dispensar | Contratos paginados; OWNER/MANAGER; fail-closed; testes HTTP/RBAC | `IMPLEMENTED/CI_PENDING` |
-| A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `IMPLEMENTED/CI_PENDING` |
+| A1 | Schema/migration de alerta, destinatário, preferência, entrega e deduplicação | Fresh migration + rollback lógico + índices tenant-scoped + Prisma validate | `DONE` — fresh PostgreSQL verde na CI `40801458606` |
+| A2 | Serviço canônico de ingestão, dedupe, lifecycle e auditoria | Unidade/integração cobrindo concorrência, replay, RBAC e cross-tenant | `DONE` — contratos, replay e fronteiras tenant cobertos |
+| A3 | APIs do painel: inbox, contadores, filtros, ler, reconhecer, resolver, dispensar | Contratos paginados; OWNER/MANAGER; fail-closed; testes HTTP/RBAC | `DONE` |
+| A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `DONE` |
 | A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `IN_PROGRESS` — 10 contratos/dedupe prontos; instrumentação dos domínios pendente |
 | A6 | Outbox e adapters painel/e-mail/push/WhatsApp | Painel sempre disponível; retry/lease/DLQ; provider externo pode ficar blocked | `IN_PROGRESS` — outbox, lease, retry, DLQ, e-mail e WhatsApp prontos; push explicitamente blocked |
-| A7 | Evolution no IRON: control-plane FM, instância por academia, QR/status/webhook | Engenharia interna + testes; segredo global não entregue ao tenant; homologação real separada | `IMPLEMENTED/CI_PENDING/EXTERNAL_HOMOLOG_PENDING` |
-| A8 | Web Premium e Mobile: sino, badge, inbox, detalhe, ações e preferências | Desktop/tablet/mobile; acessibilidade; zero clicável falso; seis perfis testados | `NOT_STARTED` |
-| A9 | Certificação consolidada backend/app | lint, typecheck, testes, migrations, build, exports, container e regressão verdes | `NOT_STARTED` |
+| A7 | Evolution no IRON: control-plane FM, instância por academia, QR/status/webhook | Engenharia interna + testes; segredo global não entregue ao tenant; homologação real separada | `DONE_INTERNAL/EXTERNAL_HOMOLOG_PENDING` — CI `40801458606` verde |
+| A8 | Web Premium e Mobile: sino, badge, inbox, detalhe, ações e preferências | Desktop/tablet/mobile; acessibilidade; zero clicável falso; seis perfis testados | `IMPLEMENTED/APP_CI_PENDING` — app PR #58, isolada do Macro O #56 |
+| A9 | Certificação consolidada backend/app | lint, typecheck, testes, migrations, build, exports, container e regressão verdes | `IN_PROGRESS` — backend verde; app em validação |
 | A10 | Homologação física dos canais | QR real, envio/recebimento, e-mail, push, restart/reconnect e evidências | `PENDING_EXTERNAL` |
 
 ## Ordem de execução
@@ -711,12 +711,12 @@ Subir checkpoints substanciais ao GitHub. Não deixar trabalho relevante somente
 Atualizar este bloco a cada entrega:
 
 - etapa atual: `A5`;
-- backend branch/PR/SHA: `feat/alertas-gestor-v1` / PR #186 (draft) / head remoto `39760ad` antes da fatia A4;
-- app branch/PR/SHA: `não iniciado — backend primeiro`;
+- backend branch/PR/SHA: `feat/alertas-gestor-v1` / PR #186 (draft) / head remoto validado `7a879f8`;
+- app branch/PR/SHA: `feat/manager-alerts-v1` / PR #58 (draft) / head remoto em validação `917d4cf`;
 - migrations: `20261029010000_manager_alerts_core` implementada e fresh-install PostgreSQL verde na CI `40800750938`;
-- testes backend: `manager-alerts-boundary.test.mjs` 8/8 verde; CI `40800750938` passou smoke, integração, browser, segurança e container; testes unitários específicos de replay/tenant/transição adicionados no checkpoint seguinte;
-- testes app: `não iniciados`;
-- CI: `40800750938` 100% verde após correção do typecheck (Prisma, migration, lint, build, smoke, E2E, seis superfícies, ZAP, Command, restart e container);
+- testes backend: `manager-alerts-boundary.test.mjs` 8/8 verde e `manager-alerts.service.test.mjs` incluído; CI `40801458606` passou smoke, integração, browser, segurança e container;
+- testes app: suíte específica do centro de alertas adicionada; validação integral da PR #58 em andamento;
+- CI: backend `40801458606` 100% verde; app `40802475567` em execução após correções de typecheck/lint;
 - deploy: `não autorizado nesta ordem`;
 - homologação Evolution/e-mail/push: `PENDING_EXTERNAL`;
-- próximo passo: publicar/certificar A7, instrumentar eventos reais A5 e iniciar A8 somente após backend verde; push e homologação física Evolution permanecem blockers externos explícitos.
+- próximo passo: concluir CI da app PR #58, instrumentar os eventos reais de A5 sem cron duplicado e certificar A9; push e homologação física Evolution permanecem blockers externos explícitos.
