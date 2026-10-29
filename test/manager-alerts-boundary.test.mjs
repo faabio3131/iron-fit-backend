@@ -7,6 +7,7 @@ const service = readFileSync(new URL('../src/modules/manager-alerts/manager-aler
 const controller = readFileSync(new URL('../src/modules/manager-alerts/manager-alerts.controller.ts', import.meta.url), 'utf8');
 const preferenceDto = readFileSync(new URL('../src/modules/manager-alerts/dto/update-manager-alert-preference.dto.ts', import.meta.url), 'utf8');
 const producers = readFileSync(new URL('../src/modules/manager-alerts/manager-alert-producers.service.ts', import.meta.url), 'utf8');
+const dispatcher = readFileSync(new URL('../src/modules/manager-alerts/manager-alert-dispatch.service.ts', import.meta.url), 'utf8');
 
 test('manager alerts use tenant-scoped deduplication and recipient boundary', () => {
   assert.match(schema, /@@unique\(\[gymId, deduplicationKey\]\)/);
@@ -25,6 +26,23 @@ test('all ten approved producer contracts map to the canonical ingest service', 
   assert.match(producers, /return this\.alerts\.ingest\(\{/);
   assert.match(producers, /createHash\('sha256'\)/);
   assert.doesNotMatch(producers, /metadata:/);
+});
+
+test('external outbox requires both tenant policy and individual opt-in', () => {
+  assert.match(service, /policy\.emailAllowed && preference\.emailEnabled/);
+  assert.match(service, /policy\.pushAllowed && preference\.pushEnabled/);
+  assert.match(service, /policy\.whatsappAllowed && preference\.whatsappEnabled/);
+  assert.match(service, /managerAlertDelivery\.createMany/);
+  assert.match(service, /status: ManagerAlertDeliveryStatus\.PENDING/);
+});
+
+test('external dispatcher uses leases, retries and explicit dead letter state', () => {
+  assert.match(dispatcher, /leaseOwner/);
+  assert.match(dispatcher, /ManagerAlertDeliveryStatus\.DEAD_LETTER/);
+  assert.match(dispatcher, /attemptCount: \{ lt: MAX_ATTEMPTS \}/);
+  assert.match(dispatcher, /resolveForExternalBoundary/);
+  assert.match(dispatcher, /PUSH_ADAPTER_NOT_IMPLEMENTED/);
+  assert.doesNotMatch(dispatcher, /status: ManagerAlertDeliveryStatus\.SENT[\s\S]{0,200}catch/);
 });
 
 test('individual preferences keep in-app mandatory and security non-silenceable', () => {
