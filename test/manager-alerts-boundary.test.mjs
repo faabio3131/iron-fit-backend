@@ -20,6 +20,8 @@ test('individual preferences keep in-app mandatory and security non-silenceable'
   assert.match(service, /Alertas de seguranca nao podem ser filtrados/);
   assert.match(service, /Membership de gestor inativa ou inexistente/);
   assert.match(controller, /@Put\('preferences\/:category'\)/);
+  assert.match(controller, /@Put\('policies\/:category'\)[\s\S]*@UseGuards\(StepUpGuard\)[\s\S]*@Roles\('OWNER'\)/);
+  assert.match(service, /Politica de seguranca deve aceitar todas as severidades/);
 });
 
 test('sensitive categories are owner-only and ingestion is replay-safe', () => {
