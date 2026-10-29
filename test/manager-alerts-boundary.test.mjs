@@ -32,7 +32,7 @@ test('all ten approved producer contracts map to the canonical ingest service', 
 
 test('external outbox requires both tenant policy and individual opt-in', () => {
   assert.match(service, /policy\.emailAllowed && preference\.emailEnabled/);
-  assert.match(service, /policy\.pushAllowed && preference\.pushEnabled/);
+  assert.doesNotMatch(service, /channels\.push\(ManagerAlertChannel\.PUSH\)/);
   assert.match(service, /policy\.whatsappAllowed && preference\.whatsappEnabled/);
   assert.match(service, /managerAlertDelivery\.createMany/);
   assert.match(service, /status: ManagerAlertDeliveryStatus\.PENDING/);
