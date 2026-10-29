@@ -5,6 +5,7 @@ import { ManagerAlertsController } from './manager-alerts.controller';
 import { ManagerAlertsService } from './manager-alerts.service';
 import { AuthModule } from '../auth/auth.module';
 import { ManagerAlertProducersService } from './manager-alert-producers.service';
+import { ManagerAlertSourceScanService } from './manager-alert-source-scan.service';
 import { CommunicationModule } from '../communication/communication.module';
 import { TransactionalEmailModule } from '../transactional-email/transactional-email.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
@@ -15,7 +16,7 @@ import { EvolutionTenantInstanceService } from './evolution-tenant-instance.serv
 @Module({
   imports: [PrismaModule, AuthModule, IntegrationsModule, CommunicationModule, TransactionalEmailModule],
   controllers: [ManagerAlertsController, EvolutionTenantInstanceController, EvolutionWebhookController],
-  providers: [ManagerAlertsService, ManagerAlertProducersService, ManagerAlertDispatchService, EvolutionTenantInstanceService, AuditService],
+  providers: [ManagerAlertsService, ManagerAlertProducersService, ManagerAlertSourceScanService, ManagerAlertDispatchService, EvolutionTenantInstanceService, AuditService],
   exports: [ManagerAlertsService, ManagerAlertProducersService],
 })
 export class ManagerAlertsModule {}
