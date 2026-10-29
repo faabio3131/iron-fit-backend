@@ -18,6 +18,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ManagerAlertQueryDto } from './dto/manager-alert-query.dto';
 import { UpdateManagerAlertPreferenceDto } from './dto/update-manager-alert-preference.dto';
 import { UpdateManagerAlertPolicyDto } from './dto/update-manager-alert-policy.dto';
+import { managerAlertLiveAccess, managerAlertRoles } from './manager-alert-authorization';
 
 export interface CreateManagerAlertInput {
   gymId: string;
@@ -32,11 +33,6 @@ export interface CreateManagerAlertInput {
   resourceId?: string;
   metadata?: Prisma.InputJsonValue;
 }
-
-const OWNER_ONLY = new Set<ManagerAlertCategory>([
-  ManagerAlertCategory.STUDENT_BILLING,
-  ManagerAlertCategory.SECURITY,
-]);
 
 const SEVERITY_RANK: Record<ManagerAlertSeverity, number> = {
   INFO: 1,
@@ -53,9 +49,7 @@ export class ManagerAlertsService {
 
   /** Canonical ingestion entry point for domain producers. Safe under replay. */
   async ingest(input: CreateManagerAlertInput) {
-    const roles: RoleName[] = OWNER_ONLY.has(input.category)
-      ? [RoleName.OWNER]
-      : [RoleName.OWNER, RoleName.MANAGER];
+    const roles = managerAlertRoles(input.category);
 
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -171,6 +165,7 @@ export class ManagerAlertsService {
       severity: query.severity,
       category: query.category,
       recipients: { some: { userId: actor.id } },
+      AND: [managerAlertLiveAccess(gymId, actor.id)],
     };
     const [items, total, unread] = await this.prisma.$transaction([
       this.prisma.managerAlert.findMany({
@@ -190,7 +185,7 @@ export class ManagerAlertsService {
       }),
       this.prisma.managerAlert.count({ where }),
       this.prisma.managerAlertRecipient.count({
-        where: { userId: actor.id, readAt: null, alert: { gymId } },
+        where: { userId: actor.id, readAt: null, alert: { gymId, AND: [managerAlertLiveAccess(gymId, actor.id)] } },
       }),
     ]);
     return {
@@ -201,9 +196,9 @@ export class ManagerAlertsService {
 
   async counters(actor: any) {
     const gymId = this.requireGym(actor);
-    const base = { gymId, recipients: { some: { userId: actor.id } } };
+    const base = { gymId, recipients: { some: { userId: actor.id } }, AND: [managerAlertLiveAccess(gymId, actor.id)] };
     const [unread, open, critical] = await this.prisma.$transaction([
-      this.prisma.managerAlertRecipient.count({ where: { userId: actor.id, readAt: null, alert: { gymId } } }),
+      this.prisma.managerAlertRecipient.count({ where: { userId: actor.id, readAt: null, alert: { gymId, AND: [managerAlertLiveAccess(gymId, actor.id)] } } }),
       this.prisma.managerAlert.count({ where: { ...base, status: ManagerAlertStatus.OPEN } }),
       this.prisma.managerAlert.count({ where: { ...base, severity: ManagerAlertSeverity.CRITICAL, status: { in: [ManagerAlertStatus.OPEN, ManagerAlertStatus.ACKNOWLEDGED] } } }),
     ]);
@@ -381,7 +376,7 @@ export class ManagerAlertsService {
 
   private async requireRecipient(alertId: string, userId: string, gymId: string) {
     const recipient = await this.prisma.managerAlertRecipient.findFirst({
-      where: { alertId, userId, alert: { gymId } },
+      where: { alertId, userId, alert: { gymId, AND: [managerAlertLiveAccess(gymId, userId)] } },
       include: { alert: true },
     });
     if (!recipient) throw new NotFoundException('Alerta nao encontrado');
