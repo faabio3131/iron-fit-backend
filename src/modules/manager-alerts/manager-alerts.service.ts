@@ -14,6 +14,7 @@ import {
 import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ManagerAlertQueryDto } from './dto/manager-alert-query.dto';
+import { UpdateManagerAlertPreferenceDto } from './dto/update-manager-alert-preference.dto';
 
 export interface CreateManagerAlertInput {
   gymId: string;
@@ -159,6 +160,77 @@ export class ManagerAlertsService {
       this.prisma.managerAlert.count({ where: { ...base, severity: ManagerAlertSeverity.CRITICAL, status: { in: [ManagerAlertStatus.OPEN, ManagerAlertStatus.ACKNOWLEDGED] } } }),
     ]);
     return { unread, open, critical };
+  }
+
+  async preferences(actor: any) {
+    const gymId = this.requireGym(actor);
+    return this.prisma.managerAlertPreference.findMany({
+      where: { gymId, userId: actor.id },
+      orderBy: { category: 'asc' },
+      select: {
+        category: true, inAppEnabled: true, emailEnabled: true, pushEnabled: true,
+        whatsappEnabled: true, minimumSeverity: true, quietHoursStart: true,
+        quietHoursEnd: true, timezone: true, updatedAt: true,
+      },
+    });
+  }
+
+  async updatePreference(categoryValue: string, dto: UpdateManagerAlertPreferenceDto, actor: any) {
+    const gymId = this.requireGym(actor);
+    if (!Object.values(ManagerAlertCategory).includes(categoryValue as ManagerAlertCategory)) {
+      throw new BadRequestException('Categoria de alerta invalida');
+    }
+    const category = categoryValue as ManagerAlertCategory;
+    if ((dto.quietHoursStart === undefined) !== (dto.quietHoursEnd === undefined)) {
+      throw new BadRequestException('Inicio e fim do horario silencioso devem ser informados juntos');
+    }
+    if (dto.timezone) {
+      try {
+        new Intl.DateTimeFormat('pt-BR', { timeZone: dto.timezone }).format();
+      } catch {
+        throw new BadRequestException('Timezone invalido');
+      }
+    }
+    if (category === ManagerAlertCategory.SECURITY) {
+      if (dto.minimumSeverity && dto.minimumSeverity !== 'INFO') {
+        throw new BadRequestException('Alertas de seguranca nao podem ser filtrados por severidade');
+      }
+    }
+
+    const membership = await this.prisma.userRole.findFirst({
+      where: {
+        gymId, userId: actor.id, active: true,
+        role: { name: { in: [RoleName.OWNER, RoleName.MANAGER] } },
+      },
+      select: { id: true },
+    });
+    if (!membership) throw new ForbiddenException('Membership de gestor inativa ou inexistente');
+
+    const data = {
+      emailEnabled: dto.emailEnabled,
+      pushEnabled: dto.pushEnabled,
+      whatsappEnabled: dto.whatsappEnabled,
+      minimumSeverity: category === ManagerAlertCategory.SECURITY
+        ? ManagerAlertSeverity.INFO
+        : dto.minimumSeverity,
+      quietHoursStart: dto.quietHoursStart,
+      quietHoursEnd: dto.quietHoursEnd,
+      timezone: dto.timezone,
+    };
+    const preference = await this.prisma.$transaction(async (tx) => {
+      const saved = await tx.managerAlertPreference.upsert({
+        where: { gymId_userId_category: { gymId, userId: actor.id, category } },
+        create: { gymId, userId: actor.id, category, ...data },
+        update: data,
+      });
+      await this.audit.record({
+        gymId, userId: actor.id, action: 'MANAGER_ALERT_PREFERENCE_UPDATED',
+        entity: 'ManagerAlertPreference', entityId: saved.id,
+        next: { category, emailEnabled: saved.emailEnabled, pushEnabled: saved.pushEnabled, whatsappEnabled: saved.whatsappEnabled, minimumSeverity: saved.minimumSeverity, quietHoursConfigured: Boolean(saved.quietHoursStart) },
+      }, tx);
+      return saved;
+    });
+    return preference;
   }
 
   async markRead(alertId: string, actor: any) {
