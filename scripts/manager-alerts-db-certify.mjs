@@ -15,6 +15,7 @@ const { ManagerAlertProducersService } = require('../dist/src/modules/manager-al
 const { ManagerAlertSourceScanService } = require('../dist/src/modules/manager-alerts/manager-alert-source-scan.service.js');
 const { ManagerAlertBusinessScanService } = require('../dist/src/modules/manager-alerts/manager-alert-business-scan.service.js');
 const { EquipmentsService } = require('../dist/src/modules/equipments/equipments.service.js');
+const { ManagerAlertDispatchService } = require('../dist/src/modules/manager-alerts/manager-alert-dispatch.service.js');
 const db = new PrismaClient();
 const gymIds = [], userIds = [], connectionIds = [];
 const suffix = randomUUID();
@@ -61,6 +62,19 @@ try {
   assert.deepEqual(financial.recipients.map((recipient) => recipient.userId), [ownerA.id]);
   await assert.rejects(alerts.markRead(financial.id, ownerB), (error) => error.getStatus() === 404);
   await assert.rejects(alerts.markRead(financial.id, managerA), (error) => error.getStatus() === 404);
+  const managerRole = await db.role.findUniqueOrThrow({ where: { name: 'MANAGER' } });
+  await db.userRole.updateMany({ where: { gymId: a.id, userId: ownerA.id }, data: { roleId: managerRole.id } });
+  await assert.rejects(alerts.markRead(financial.id, ownerA), (error) => error.getStatus() === 404);
+  const inbox = await alerts.list(ownerA, { limit: 100, offset: 0 });
+  assert.equal(inbox.items.some((row) => ['STUDENT_BILLING', 'SECURITY'].includes(row.category)), false, 'historical OWNER recipient must not retain financial/security access after demotion');
+  for (const attemptCount of [1, 5]) {
+    await db.managerAlertDelivery.create({ data: { alertId: financial.id, recipientId: financial.recipients[0].id, channel: attemptCount === 1 ? 'EMAIL' : 'WHATSAPP', status: 'SENDING', attemptCount, leaseOwner: 'expired-worker', leaseUntil: old, idempotencyKey: `${suffix}:${attemptCount}` } });
+  }
+  const dispatcher = new ManagerAlertDispatchService(db, {}, {}, {}, {}, {}, audit);
+  await dispatcher.dispatchDue(100);
+  const recovered = await db.managerAlertDelivery.findMany({ where: { alertId: financial.id } });
+  assert.ok(recovered.some((row) => row.status === 'SKIPPED' && row.attemptCount === 1));
+  assert.ok(recovered.some((row) => row.status === 'DEAD_LETTER' && row.attemptCount === 5));
   const rows = await db.managerAlert.findMany({ where: { gymId: a.id } });
   assert.equal(JSON.stringify(rows).includes('synthetic message must not enter alerts'), false);
   assert.equal(await db.managerAlert.count({ where: { gymId: b.id } }), 0);
