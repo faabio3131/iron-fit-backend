@@ -8,6 +8,7 @@ export const PRODUCT_CAPABILITY_DOMAINS = [
   'EQUIPMENT',
   'AGGREGATOR',
   'ANALYTICS',
+  'FINANCIAL',
   'AI',
 ] as const;
 
