@@ -233,6 +233,7 @@ export class FinancialService {
     dto: PayChargeDto,
     gymId: string,
     actorUserId?: string,
+    verifiedProviderEvidence?: { connectionId: string; paymentRef: string },
   ) {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
@@ -294,6 +295,18 @@ export class FinancialService {
 
           if (existingTransaction) {
             throw new BadRequestException('Transacao financeira duplicada para cobranca nao paga');
+          }
+
+          // A hosted checkout is not proof of money received. The manual
+          // endpoint cannot book a gateway-backed charge without server-side
+          // verification of the canonical provider/connection.
+          if (
+            charge.gatewayRequestId &&
+            (!verifiedProviderEvidence ||
+              !verifiedProviderEvidence.paymentRef ||
+              verifiedProviderEvidence.connectionId !== charge.gatewayConnectionId)
+          ) {
+            throw new ConflictException('Cobranca vinculada ao gateway exige confirmacao verificada pelo provider');
           }
 
           const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
