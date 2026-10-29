@@ -7,6 +7,7 @@ import { IntegrationsModule } from '../integrations/integrations.module';
 import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
 import { TenantPaymentProviderAdapterRegistry } from './tenant-payment-provider-adapter';
 import { MercadoPagoCheckoutAdapter } from './mercado-pago-checkout.adapter';
+import { StripeCheckoutAdapter } from './stripe-checkout.adapter';
 import { AuthModule } from '../auth/auth.module';
 import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
 import { FiscalBridgeHttpTransport } from './fiscal-bridge.contract';
@@ -22,6 +23,7 @@ import { FiscalReconciliationCancellationService } from './fiscal-reconciliation
     TenantPaymentCheckoutService,
     TenantPaymentProviderAdapterRegistry,
     MercadoPagoCheckoutAdapter,
+    StripeCheckoutAdapter,
     FiscalScopeBindingService,
     FiscalBridgeHttpTransport,
     FiscalBridgeDispatchService,
