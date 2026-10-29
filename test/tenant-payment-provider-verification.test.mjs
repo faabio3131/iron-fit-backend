@@ -98,7 +98,7 @@ test('verified status with missing payment reference fails closed', async () => 
 });
 
 test('tenant charge read model exposes only gateway safe binding needed for reconciliation', async () => {
-  const { tenantChargeReadSelect } = await import('../dist/src/modules/financial/charge-read-model.js');
+  const { tenantChargeReadSelect } = require('../dist/src/modules/financial/charge-read-model.js');
   assert.equal(tenantChargeReadSelect.gatewayConnectionId, true);
   assert.equal(tenantChargeReadSelect.gatewayProviderCode, true);
   assert.equal('secretReference' in tenantChargeReadSelect, false);
