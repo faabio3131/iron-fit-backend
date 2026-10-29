@@ -15,6 +15,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ManagerAlertQueryDto } from './dto/manager-alert-query.dto';
 import { UpdateManagerAlertPreferenceDto } from './dto/update-manager-alert-preference.dto';
+import { UpdateManagerAlertPolicyDto } from './dto/update-manager-alert-policy.dto';
 
 export interface CreateManagerAlertInput {
   gymId: string;
@@ -231,6 +232,50 @@ export class ManagerAlertsService {
       return saved;
     });
     return preference;
+  }
+
+  async policies(actor: any) {
+    const gymId = this.requireGym(actor);
+    return this.prisma.managerAlertPolicy.findMany({
+      where: { gymId },
+      orderBy: { category: 'asc' },
+      select: {
+        category: true, emailAllowed: true, pushAllowed: true,
+        whatsappAllowed: true, minimumSeverity: true,
+        criticalEscalationMin: true, updatedAt: true,
+      },
+    });
+  }
+
+  async updatePolicy(categoryValue: string, dto: UpdateManagerAlertPolicyDto, actor: any) {
+    const gymId = this.requireGym(actor);
+    if (!Object.values(ManagerAlertCategory).includes(categoryValue as ManagerAlertCategory)) {
+      throw new BadRequestException('Categoria de alerta invalida');
+    }
+    const category = categoryValue as ManagerAlertCategory;
+    if (category === ManagerAlertCategory.SECURITY && dto.minimumSeverity && dto.minimumSeverity !== 'INFO') {
+      throw new BadRequestException('Politica de seguranca deve aceitar todas as severidades');
+    }
+    const data = {
+      emailAllowed: dto.emailAllowed,
+      pushAllowed: dto.pushAllowed,
+      whatsappAllowed: dto.whatsappAllowed,
+      minimumSeverity: category === ManagerAlertCategory.SECURITY ? ManagerAlertSeverity.INFO : dto.minimumSeverity,
+      criticalEscalationMin: dto.criticalEscalationMin,
+    };
+    return this.prisma.$transaction(async (tx) => {
+      const saved = await tx.managerAlertPolicy.upsert({
+        where: { gymId_category: { gymId, category } },
+        create: { gymId, category, ...data },
+        update: data,
+      });
+      await this.audit.record({
+        gymId, userId: actor.id, action: 'MANAGER_ALERT_POLICY_UPDATED',
+        entity: 'ManagerAlertPolicy', entityId: saved.id,
+        next: { category, emailAllowed: saved.emailAllowed, pushAllowed: saved.pushAllowed, whatsappAllowed: saved.whatsappAllowed, minimumSeverity: saved.minimumSeverity, criticalEscalationMin: saved.criticalEscalationMin },
+      }, tx);
+      return saved;
+    });
   }
 
   async markRead(alertId: string, actor: any) {
