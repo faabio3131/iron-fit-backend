@@ -85,6 +85,37 @@ export class TenantPaymentCheckoutService {
     private readonly audit: AuditService,
   ) {}
 
+  async listAvailableProviders(gymId: string) {
+    const environment = this.runtime.current() as IntegrationEnvironment;
+    const rows = await this.prisma.integrationConnection.findMany({
+      where: {
+        scope: IntegrationScope.TENANT,
+        gymId,
+        environment,
+        status: IntegrationConnectionStatus.ACTIVE,
+        secretReference: { not: null },
+        secretVersion: { not: null },
+        secretRevokedAt: null,
+        OR: [{ secretExpiresAt: null }, { secretExpiresAt: { gt: new Date() } }],
+      },
+      orderBy: [{ providerCode: 'asc' }, { updatedAt: 'desc' }],
+    });
+    return rows
+      .filter((connection) => hasCapability(connection.capabilities, TENANT_PAYMENT_CAPABILITY))
+      .filter((connection) => {
+        try {
+          this.adapters.require(connection.providerCode);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .map((connection) => ({
+        connectionId: connection.id,
+        providerCode: connection.providerCode,
+      }));
+  }
+
   private async resolveTenantConnection(gymId: string, providerConnectionId?: string) {
     const environment =
       this.runtime.current() as IntegrationEnvironment;
