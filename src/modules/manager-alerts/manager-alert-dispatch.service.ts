@@ -80,7 +80,7 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
       take: Math.min(Math.max(limit, 1), 100),
       select: { id: true },
     });
-    const results = [];
+    const results: Array<{ id: string; dispatched: boolean; reason?: string }> = [];
     for (const row of rows) results.push(await this.dispatchOne(row.id));
     return results;
   }
@@ -156,15 +156,29 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
   }
 
   private async sendWhatsapp(row: any) {
-    const connection = await this.connection(row.alert.gymId, IntegrationScope.TENANT, ['evolution.whatsapp', 'meta.whatsapp']);
-    const credential = await this.secrets.resolveForExternalBoundary(connection.id, { scope: 'TENANT', gymId: row.alert.gymId });
+    let connection = await this.optionalConnection(row.alert.gymId, IntegrationScope.TENANT, ['meta.whatsapp']);
+    let publicConfiguration: unknown;
+    let credential;
+    if (connection) {
+      credential = await this.secrets.resolveForExternalBoundary(connection.id, { scope: 'TENANT', gymId: row.alert.gymId });
+      publicConfiguration = connection.publicConfiguration;
+    } else {
+      const binding = await this.prisma.evolutionTenantInstance.findUnique({ where: { gymId: row.alert.gymId } });
+      if (!binding) throw new CommunicationDispatchFailure('EVOLUTION_INSTANCE_MISSING');
+      connection = await this.connection(null, IntegrationScope.GLOBAL, ['evolution.whatsapp'], binding.globalConnectionId);
+      credential = await this.secrets.resolveForExternalBoundary(connection.id, { scope: 'GLOBAL' });
+      const raw = connection.publicConfiguration && typeof connection.publicConfiguration === 'object' && !Array.isArray(connection.publicConfiguration)
+        ? connection.publicConfiguration as Record<string, unknown>
+        : {};
+      publicConfiguration = { ...raw, instanceName: binding.instanceName };
+    }
     const adapter = this.communicationAdapters.require(connection.providerCode, 'WHATSAPP');
     const result = await adapter.dispatch({
       dispatchKey: row.idempotencyKey,
       recipient: row.recipient.user.phone ?? '',
       title: row.alert.title,
       body: `${row.alert.title}\n\n${row.alert.message}`,
-      publicConfiguration: connection.publicConfiguration,
+      publicConfiguration,
       credential,
     });
     return { ...result, providerCode: connection.providerCode };
@@ -190,7 +204,7 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
     throw new CommunicationDispatchFailure('PUSH_ADAPTER_NOT_IMPLEMENTED');
   }
 
-  private async connection(gymId: string | null, scope: IntegrationScope, capabilities: string[]) {
+  private async optionalConnection(gymId: string | null, scope: IntegrationScope, capabilities: string[]) {
     const candidates = await this.prisma.integrationConnection.findMany({
       where: {
         gymId,
@@ -204,8 +218,16 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
       orderBy: { updatedAt: 'desc' },
     });
     const capable = candidates.filter((item) => capabilities.some((capability) => hasCapability(item.capabilities, capability)));
-    if (capable.length !== 1) throw new CommunicationDispatchFailure(capable.length ? 'PROVIDER_CONNECTION_AMBIGUOUS' : 'PROVIDER_CONNECTION_MISSING');
-    return capable[0];
+    if (capable.length > 1) throw new CommunicationDispatchFailure('PROVIDER_CONNECTION_AMBIGUOUS');
+    return capable[0] ?? null;
+  }
+
+  private async connection(gymId: string | null, scope: IntegrationScope, capabilities: string[], connectionId?: string) {
+    const connection = await this.optionalConnection(gymId, scope, capabilities);
+    if (!connection || (connectionId && connection.id !== connectionId)) {
+      throw new CommunicationDispatchFailure('PROVIDER_CONNECTION_MISSING');
+    }
+    return connection;
   }
 
   private escape(value: string) {
