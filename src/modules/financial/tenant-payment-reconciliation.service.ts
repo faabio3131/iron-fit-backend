@@ -83,6 +83,7 @@ export class TenantPaymentReconciliationService {
       },
       gymId,
       actorUserId,
+      { connectionId: connection.id, paymentRef: verified.providerPaymentRef },
     );
     await this.audit.record({
       gymId, userId: actorUserId,
