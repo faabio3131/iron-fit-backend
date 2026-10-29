@@ -23,7 +23,7 @@ test('C6 provider catalog returns only safe descriptor metadata and active envir
     },
     { current: () => 'HOMOLOG' },
   );
-  const result = controller.list();
+  const result = controller.list({ roles: ['OWNER'] });
   assert.equal(result.environment, 'HOMOLOG');
   assert.deepEqual(result.providers, [{
     providerCode: 'example',
@@ -80,4 +80,28 @@ test('C6 provider registry validates configurable tenant entitlement binding', (
     }),
     /tenantEntitlementFeatureKey invalida/,
   );
+});
+
+
+test('Provedores da FM (sem entitlement de tenant) só aparecem para SUPER_ADMIN', () => {
+  const { IntegrationProviderCatalogController } = require(
+    '../dist/src/modules/integrations/integration-provider-catalog.controller.js',
+  );
+  const base = { capabilities: ['x.y'], authModels: ['API_KEY'], environments: ['HOMOLOG'], supportsWebhook: false, supportsOAuth: false };
+  const controller = new IntegrationProviderCatalogController(
+    {
+      list: () => [
+        { ...base, providerCode: 'openai_compatible' },
+        { ...base, providerCode: 'meta', tenantEntitlementFeatureKey: 'integration.meta' },
+      ],
+    },
+    { current: () => 'HOMOLOG' },
+  );
+  const owner = controller.list({ roles: ['OWNER'] }).providers.map((p) => p.providerCode);
+  const manager = controller.list({ roles: ['MANAGER'] }).providers.map((p) => p.providerCode);
+  const platform = controller.list({ roles: ['SUPER_ADMIN'] }).providers.map((p) => p.providerCode);
+  assert.deepEqual(owner, ['meta']);
+  assert.deepEqual(manager, ['meta']);
+  assert.deepEqual(platform, ['openai_compatible', 'meta']);
+  assert.deepEqual(controller.list().providers.map((p) => p.providerCode), ['meta']);
 });

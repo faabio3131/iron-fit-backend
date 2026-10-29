@@ -22,6 +22,6 @@ import { CommunicationDispatchService } from './communication-dispatch.service';
     EvolutionWhatsAppCommunicationAdapter,
     AuditService,
   ],
-  exports: [CommunicationService, CommunicationDispatchService],
+  exports: [CommunicationService, CommunicationDispatchService, ExternalCommunicationAdapterRegistry],
 })
 export class CommunicationModule {}

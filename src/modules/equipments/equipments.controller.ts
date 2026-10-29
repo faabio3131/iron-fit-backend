@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { EquipmentsService } from './equipments.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
+import { UpdateEquipmentOperationDto } from './dto/update-equipment-operation.dto';
 import { EquipmentCatalogQueryDto } from './dto/equipment-catalog-query.dto';
 import { SelectCatalogEquipmentDto } from './dto/select-catalog-equipment.dto';
 import { SubmitEquipmentCatalogCandidateDto } from './dto/submit-equipment-catalog-candidate.dto';
@@ -168,5 +169,16 @@ export class EquipmentsController {
       isSuperAdmin: user.isSuperAdmin === true,
     });
     return this.equipmentsService.findOne(id, gymId);
+  }
+
+  @Post(':id/operational-status')
+  @Roles('OWNER', 'MANAGER')
+  updateOperationalStatus(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateEquipmentOperationDto,
+    @CurrentUser() user: any,
+  ) {
+    const gymId = resolveTenantOperationGymId({ activeGymId: user.activeGymId ?? user.gymId, isSuperAdmin: false });
+    return this.equipmentsService.updateOperationalStatus(id, gymId, user.id, dto.status);
   }
 }

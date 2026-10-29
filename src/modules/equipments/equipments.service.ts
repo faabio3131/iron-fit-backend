@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -9,6 +9,7 @@ import { EquipmentCatalogQueryDto } from './dto/equipment-catalog-query.dto';
 import { SelectCatalogEquipmentDto } from './dto/select-catalog-equipment.dto';
 import { SubmitEquipmentCatalogCandidateDto } from './dto/submit-equipment-catalog-candidate.dto';
 import { EquipmentCatalogCandidateQueryDto } from './dto/equipment-catalog-candidate-query.dto';
+import { TenantProductEntitlementsService } from '../product-entitlements/tenant-product-entitlements.service';
 import {
   EquipmentCatalogCandidateDecision,
   ReviewEquipmentCatalogCandidateDto,
@@ -19,7 +20,32 @@ export class EquipmentsService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private entitlements: TenantProductEntitlementsService,
   ) {}
+
+  async updateOperationalStatus(id: string, gymId: string, userId: string, status: string) {
+    if (!['OPERATIONAL', 'MAINTENANCE', 'OUT_OF_SERVICE'].includes(status)) {
+      throw new BadRequestException('Estado operacional invalido');
+    }
+    await this.ensureActiveGym(gymId);
+    const entitlement = await this.entitlements.resolveFeature(gymId, 'equipment.inventory');
+    if (entitlement.kind !== 'FEATURE' || entitlement.value !== true) {
+      throw new ForbiddenException('Inventario de equipamentos indisponivel para esta academia');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const equipment = await tx.equipment.findFirst({ where: { id, gymId } });
+      if (!equipment) throw new NotFoundException('Equipamento nao encontrado');
+      if (equipment.operationalStatus === status) return equipment;
+      const changedAt = new Date();
+      const changed = await tx.equipment.updateMany({
+        where: { id, gymId, operationalStatus: equipment.operationalStatus, operationalStatusChangedAt: equipment.operationalStatusChangedAt },
+        data: { operationalStatus: status, operationalStatusChangedAt: changedAt },
+      });
+      if (changed.count !== 1) throw new ConflictException('Estado do equipamento foi alterado; atualize e tente novamente');
+      await this.audit.record({ gymId, userId, action: 'EQUIPMENT_OPERATIONAL_STATUS_CHANGED', entity: 'Equipment', entityId: id, previous: { status: equipment.operationalStatus }, next: { status } }, tx);
+      return tx.equipment.findFirstOrThrow({ where: { id, gymId } });
+    });
+  }
 
   private async ensureActiveGym(gymId: string) {
     const gym = await this.prisma.gym.findFirst({
