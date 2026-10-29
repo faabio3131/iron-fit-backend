@@ -1,5 +1,6 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ManagerAlertSourceScanService } from './manager-alert-source-scan.service';
 import {
   IntegrationConnectionStatus,
   IntegrationEnvironment,
@@ -41,6 +42,7 @@ function errorCode(error: unknown) {
 
 @Injectable()
 export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(ManagerAlertDispatchService.name);
   private timer: NodeJS.Timeout | null = null;
   private running = false;
 
@@ -52,11 +54,12 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
     private readonly communicationAdapters: ExternalCommunicationAdapterRegistry,
     private readonly emailAdapters: TransactionalEmailProviderAdapterRegistry,
     private readonly audit: AuditService,
+    private readonly sourceScan: ManagerAlertSourceScanService,
   ) {}
 
   onModuleInit() {
-    if (this.config.get<string>('MANAGER_ALERT_DISPATCH_ENABLED')?.trim().toLowerCase() !== 'true') return;
-    this.timer = setInterval(() => void this.runCycle().catch(() => undefined), INTERVAL_MS);
+    if (!this.enabled('MANAGER_ALERT_DISPATCH_ENABLED') && !this.enabled('MANAGER_ALERT_SCAN_ENABLED')) return;
+    this.timer = setInterval(() => void this.runCycle().catch(() => this.logger.error('MANAGER_ALERT_CYCLE_FAILED')), INTERVAL_MS);
     this.timer.unref();
   }
 
@@ -237,6 +240,16 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
   private async runCycle() {
     if (this.running) return;
     this.running = true;
-    try { await this.dispatchDue(); } finally { this.running = false; }
+    try {
+      if (this.enabled('MANAGER_ALERT_SCAN_ENABLED')) {
+        try { await this.sourceScan.scanDue(); }
+        catch { this.logger.error('MANAGER_ALERT_SOURCE_SCAN_FAILED'); }
+      }
+      if (this.enabled('MANAGER_ALERT_DISPATCH_ENABLED')) await this.dispatchDue();
+    } finally { this.running = false; }
+  }
+
+  private enabled(key: string) {
+    return this.config.get<string>(key)?.trim().toLowerCase() === 'true';
   }
 }
