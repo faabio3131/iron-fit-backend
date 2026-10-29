@@ -9,11 +9,13 @@ import { CommunicationModule } from '../communication/communication.module';
 import { TransactionalEmailModule } from '../transactional-email/transactional-email.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { ManagerAlertDispatchService } from './manager-alert-dispatch.service';
+import { EvolutionTenantInstanceController, EvolutionWebhookController } from './evolution-tenant-instance.controller';
+import { EvolutionTenantInstanceService } from './evolution-tenant-instance.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, IntegrationsModule, CommunicationModule, TransactionalEmailModule],
-  controllers: [ManagerAlertsController],
-  providers: [ManagerAlertsService, ManagerAlertProducersService, ManagerAlertDispatchService, AuditService],
+  controllers: [ManagerAlertsController, EvolutionTenantInstanceController, EvolutionWebhookController],
+  providers: [ManagerAlertsService, ManagerAlertProducersService, ManagerAlertDispatchService, EvolutionTenantInstanceService, AuditService],
   exports: [ManagerAlertsService, ManagerAlertProducersService],
 })
 export class ManagerAlertsModule {}
