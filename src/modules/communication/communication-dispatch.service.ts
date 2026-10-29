@@ -83,15 +83,16 @@ export class CommunicationDispatchService
     this.timer = null;
   }
 
-  private requiredProvider(channel: MessageChannel): {
+  private requiredProviders(channel: MessageChannel): Array<{
     providerCode: string;
     capability: string;
-  } {
+    authModel: string;
+  }> {
     if (channel === MessageChannel.WHATSAPP) {
-      return {
-        providerCode: 'meta',
-        capability: 'meta.whatsapp',
-      };
+      return [
+        { providerCode: 'meta', capability: 'meta.whatsapp', authModel: 'OAUTH2' },
+        { providerCode: 'evolution', capability: 'evolution.whatsapp', authModel: 'API_KEY' },
+      ];
     }
     throw new CommunicationDispatchFailure(
       'CHANNEL_NOT_EXTERNAL_I6',
@@ -102,16 +103,16 @@ export class CommunicationDispatchService
     gymId: string,
     channel: MessageChannel,
   ) {
-    const required = this.requiredProvider(channel);
+    const required = this.requiredProviders(channel);
     const environment =
       this.runtime.current() as IntegrationEnvironment;
     const candidates = await this.prisma.integrationConnection.findMany({
       where: {
         scope: IntegrationScope.TENANT,
         gymId,
-        providerCode: required.providerCode,
+        providerCode: { in: required.map((item) => item.providerCode) },
         environment,
-        authModel: 'OAUTH2',
+        authModel: { in: required.map((item) => item.authModel) },
         status: IntegrationConnectionStatus.ACTIVE,
         secretReference: { not: null },
         secretVersion: { not: null },
@@ -124,9 +125,14 @@ export class CommunicationDispatchService
       orderBy: { updatedAt: 'desc' },
     });
 
-    const capable = candidates.filter((candidate) =>
-      hasCapability(candidate.capabilities, required.capability),
-    );
+    const capable = candidates.filter((candidate) => {
+      const rule = required.find(
+        (item) =>
+          item.providerCode === candidate.providerCode &&
+          item.authModel === candidate.authModel,
+      );
+      return Boolean(rule && hasCapability(candidate.capabilities, rule.capability));
+    });
     if (capable.length !== 1) {
       throw new CommunicationDispatchFailure(
         capable.length === 0
@@ -284,18 +290,12 @@ export class CommunicationDispatchService
         connection.id,
         { scope: 'TENANT', gymId: message.gymId },
       );
-      const bundle = parseOAuthTokenBundle(
-        secret.reveal(),
-        connection.providerCode,
-      );
+      const credential = connection.authModel === 'OAUTH2'
+        ? parseOAuthTokenBundle(secret.reveal(), connection.providerCode)
+        : null;
 
-      if (
-        bundle.accessExpiresAt &&
-        bundle.accessExpiresAt <= new Date()
-      ) {
-        throw new CommunicationDispatchFailure(
-          'OAUTH_ACCESS_TOKEN_EXPIRED',
-        );
+      if (credential?.accessExpiresAt && credential.accessExpiresAt <= new Date()) {
+        throw new CommunicationDispatchFailure('OAUTH_ACCESS_TOKEN_EXPIRED');
       }
 
       const adapter = this.adapters.require(
@@ -308,7 +308,7 @@ export class CommunicationDispatchService
         title: message.title,
         body: message.body,
         publicConfiguration: connection.publicConfiguration,
-        credential: bundle.accessToken,
+        credential: credential?.accessToken ?? secret,
       });
 
       const sentAt = new Date();

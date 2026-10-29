@@ -69,6 +69,25 @@ function configuration(raw: unknown): {
   };
 }
 
+function evolutionConfiguration(raw: unknown): {
+  baseUrl: string;
+  instanceName: string;
+} {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new CommunicationDispatchFailure('PROVIDER_CONFIG_MISSING');
+  }
+  const value = raw as Record<string, unknown>;
+  const baseUrl = httpsEndpoint(value.baseUrl);
+  const instanceName = value.instanceName;
+  if (
+    typeof instanceName !== 'string' ||
+    !/^[a-zA-Z0-9_-]{1,100}$/.test(instanceName)
+  ) {
+    throw new CommunicationDispatchFailure('EVOLUTION_INSTANCE_INVALID');
+  }
+  return { baseUrl, instanceName };
+}
+
 @Injectable()
 export class MetaWhatsAppCommunicationAdapter
   implements ExternalCommunicationAdapter
@@ -162,17 +181,99 @@ export class MetaWhatsAppCommunicationAdapter
 }
 
 @Injectable()
+export class EvolutionWhatsAppCommunicationAdapter
+  implements ExternalCommunicationAdapter
+{
+  readonly providerCode = 'evolution';
+  readonly channel = 'WHATSAPP';
+
+  async dispatch(
+    input: ExternalCommunicationDispatchInput,
+  ): Promise<ExternalCommunicationDispatchResult> {
+    const cfg = evolutionConfiguration(input.publicConfiguration);
+    const recipient = normalizePhone(input.recipient);
+    const body = input.body.trim();
+    if (!body || body.length > 4000) {
+      throw new CommunicationDispatchFailure('MESSAGE_BODY_INVALID');
+    }
+    const endpoint = new URL(
+      'message/sendText/' + encodeURIComponent(cfg.instanceName),
+      cfg.baseUrl.endsWith('/') ? cfg.baseUrl : cfg.baseUrl + '/',
+    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), DISPATCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          apikey: input.credential.reveal(),
+          'content-type': 'application/json',
+          accept: 'application/json',
+          'x-idempotency-key': input.dispatchKey,
+        },
+        body: JSON.stringify({ number: recipient, text: body }),
+        redirect: 'error',
+        signal: controller.signal,
+      });
+      const raw = await response.text();
+      if (Buffer.byteLength(raw, 'utf8') > MAX_PROVIDER_RESPONSE_BYTES) {
+        throw new CommunicationDispatchFailure('PROVIDER_RESPONSE_TOO_LARGE');
+      }
+      let payload: Record<string, unknown> = {};
+      if (raw.trim()) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            throw new Error('shape');
+          }
+          payload = parsed as Record<string, unknown>;
+        } catch {
+          throw new CommunicationDispatchFailure('PROVIDER_RESPONSE_INVALID');
+        }
+      }
+      if (!response.ok) {
+        throw new CommunicationDispatchFailure('PROVIDER_HTTP_' + response.status);
+      }
+      const key =
+        payload.key && typeof payload.key === 'object' && !Array.isArray(payload.key)
+          ? (payload.key as Record<string, unknown>)
+          : null;
+      const providerMessageRef =
+        key && typeof key.id === 'string' && key.id.trim() && key.id.length <= 200
+          ? key.id.trim()
+          : null;
+      if (!providerMessageRef) {
+        throw new CommunicationDispatchFailure('PROVIDER_MESSAGE_ID_MISSING');
+      }
+      return { providerMessageRef };
+    } catch (error) {
+      if (error instanceof CommunicationDispatchFailure) throw error;
+      throw new CommunicationDispatchFailure('PROVIDER_UNAVAILABLE_OR_TIMEOUT');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+@Injectable()
 export class ExternalCommunicationAdapterRegistry {
   private readonly adapters: ReadonlyMap<
     string,
     ExternalCommunicationAdapter
   >;
 
-  constructor(metaWhatsApp: MetaWhatsAppCommunicationAdapter) {
-    this.adapters = new Map([
+  constructor(
+    metaWhatsApp: MetaWhatsAppCommunicationAdapter,
+    evolutionWhatsApp: EvolutionWhatsAppCommunicationAdapter,
+  ) {
+    this.adapters = new Map<string, ExternalCommunicationAdapter>([
       [
         this.key(metaWhatsApp.providerCode, metaWhatsApp.channel),
         metaWhatsApp,
+      ],
+      [
+        this.key(evolutionWhatsApp.providerCode, evolutionWhatsApp.channel),
+        evolutionWhatsApp,
       ],
     ]);
   }

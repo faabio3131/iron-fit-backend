@@ -42,6 +42,16 @@ export class IntegrationProviderBootstrapService implements OnModuleInit {
     });
 
     this.providers.register({
+      providerCode: 'evolution',
+      capabilities: ['evolution.whatsapp'],
+      authModels: ['API_KEY'],
+      environments: ['DEV', 'HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+      tenantEntitlementFeatureKey: 'integration.meta',
+    });
+
+    this.providers.register({
       providerCode: 'google',
       capabilities: ['google.oauth'],
       authModels: ['OAUTH2'],
