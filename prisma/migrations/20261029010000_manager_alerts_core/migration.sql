@@ -78,6 +78,21 @@ CREATE TABLE "ManagerAlertDelivery" (
   CONSTRAINT "ManagerAlertDelivery_pkey" PRIMARY KEY ("id")
 );
 
+CREATE TABLE "ManagerAlertPolicy" (
+  "id" TEXT NOT NULL,
+  "gymId" TEXT NOT NULL,
+  "category" "ManagerAlertCategory" NOT NULL,
+  "emailAllowed" BOOLEAN NOT NULL DEFAULT false,
+  "pushAllowed" BOOLEAN NOT NULL DEFAULT false,
+  "whatsappAllowed" BOOLEAN NOT NULL DEFAULT false,
+  "minimumSeverity" "ManagerAlertSeverity" NOT NULL DEFAULT 'INFO',
+  "criticalEscalationMin" INTEGER,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "ManagerAlertPolicy_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "ManagerAlertPolicy_criticalEscalationMin_check" CHECK ("criticalEscalationMin" IS NULL OR ("criticalEscalationMin" >= 5 AND "criticalEscalationMin" <= 1440))
+);
+
 CREATE UNIQUE INDEX "ManagerAlert_gymId_deduplicationKey_key" ON "ManagerAlert"("gymId", "deduplicationKey");
 CREATE INDEX "ManagerAlert_gymId_status_severity_createdAt_idx" ON "ManagerAlert"("gymId", "status", "severity", "createdAt");
 CREATE INDEX "ManagerAlert_gymId_category_occurredAt_idx" ON "ManagerAlert"("gymId", "category", "occurredAt");
@@ -91,6 +106,8 @@ CREATE UNIQUE INDEX "ManagerAlertDelivery_recipientId_channel_key" ON "ManagerAl
 CREATE INDEX "ManagerAlertDelivery_status_nextAttemptAt_idx" ON "ManagerAlertDelivery"("status", "nextAttemptAt");
 CREATE INDEX "ManagerAlertDelivery_leaseUntil_idx" ON "ManagerAlertDelivery"("leaseUntil");
 CREATE INDEX "ManagerAlertDelivery_alertId_channel_idx" ON "ManagerAlertDelivery"("alertId", "channel");
+CREATE UNIQUE INDEX "ManagerAlertPolicy_gymId_category_key" ON "ManagerAlertPolicy"("gymId", "category");
+CREATE INDEX "ManagerAlertPolicy_gymId_idx" ON "ManagerAlertPolicy"("gymId");
 
 ALTER TABLE "ManagerAlert" ADD CONSTRAINT "ManagerAlert_gymId_fkey" FOREIGN KEY ("gymId") REFERENCES "Gym"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ManagerAlertRecipient" ADD CONSTRAINT "ManagerAlertRecipient_alertId_fkey" FOREIGN KEY ("alertId") REFERENCES "ManagerAlert"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -99,3 +116,4 @@ ALTER TABLE "ManagerAlertPreference" ADD CONSTRAINT "ManagerAlertPreference_gymI
 ALTER TABLE "ManagerAlertPreference" ADD CONSTRAINT "ManagerAlertPreference_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ManagerAlertDelivery" ADD CONSTRAINT "ManagerAlertDelivery_alertId_fkey" FOREIGN KEY ("alertId") REFERENCES "ManagerAlert"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ManagerAlertDelivery" ADD CONSTRAINT "ManagerAlertDelivery_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "ManagerAlertRecipient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ManagerAlertPolicy" ADD CONSTRAINT "ManagerAlertPolicy_gymId_fkey" FOREIGN KEY ("gymId") REFERENCES "Gym"("id") ON DELETE CASCADE ON UPDATE CASCADE;
