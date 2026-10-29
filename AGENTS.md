@@ -780,3 +780,14 @@ Atualizar este bloco a cada entrega:
 - PR #187 agora também certifica o fluxo HTTP real no E2E operacional existente: alteração de manutenção no domínio real, ingestão pelo produtor canônico, listagem/contadores/read/acknowledge/resolve, tentativa cross-tenant, rejeição de estado inválido e push indisponível. Inbox exercita OWNER/MANAGER permitidos e TRAINER/RECEPTION/STUDENT/SUPER_ADMIN global negados, além de 401 sem autenticação. SUPER_ADMIN global não ganha autoridade operacional de tenant automaticamente.
 - Candidate do teste HTTP de seis perfis `c6d20f6`; sintaxe e diff locais verificados. Esses novos cenários HTTP ainda aguardam execução na CI da #187: não marcar PASS antecipadamente. O cenário sem as duas últimas verificações extras já havia entrado no gate anterior; nenhuma evidência externa é inventada.
 - Próximo gate: aguardar CI consolidada #187; corrigir qualquer falha real; integrar somente verde e verificar pós-merge. Depois continuar o cronograma pelos gaps comprovados. Homologação física A10 permanece adiada por decisão do usuário; push DISABLED/OUT_OF_LAUNCH.
+
+
+## Gate final de ALERTAS-1 — versão atual congelada para CI (29/10/2026)
+
+- Backend funcional: #186 integrada em `51e54d9`; CI pré-merge `40903399389` e pós-merge `40904429721` SUCCESS, 820 testes locais PASS.
+- App #60 integrada em `640f2a1`; CI pré-merge `40905301576` e pós-merge `40906217602` SUCCESS. #58 fechada como substituída, sem perda de histórico ou código.
+- App #61 integrada em `41dc68d5e19247b1a4755ca4cab36bdb73575c21` após CI integral `40907651366` SUCCESS. Corrige uma dependência indevida: Evolution/preferências opcionais não bloqueiam mais o inbox; erros/contagem desconhecida não viram zero nem falso vazio. Regressão 80 suítes/352 testes PASS; typecheck/lint sem erros. Pós-merge da #61 ainda deve ser consultado.
+- Gate cruzado #187: o ciclo `40907644651` aprovou HTTP real com seis perfis, migrations/PostgreSQL, consumidores do app, 348 testes da candidata então fixada e navegador real. O overflow transitório após resize foi resolvido aguardando o reflow de useWindowDimensions; limite original de 2px mantido, com diagnóstico de DOM para falha persistente. Não foi alterado o visual nem relaxado o limite.
+- O pipeline agora fixa o app final já integrado `41dc68d5e19247b1a4755ca4cab36bdb73575c21` para certificar também o isolamento opcional da #61. Aguardar CI completa deste HEAD da #187 antes de merge. Caso falhe, causa-raiz → corrigir → retestar.
+- A10 físico Evolution/e-mail permanece PENDING_EXTERNAL por decisão do usuário. Push DISABLED/OUT_OF_LAUNCH. Nenhum deploy ou alteração em ambiente produtivo foi executado.
+- Próximo passo: concluir CI #187 + pós-merge app #61; integrar #187 somente verde; conferir pós-merge backend. Depois seguir as próximas pendências reais do cronograma. ALERTAS-1 interno não representa GO-LIVE global.
