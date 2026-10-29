@@ -9,12 +9,13 @@ const preferenceDto = readFileSync(new URL('../src/modules/manager-alerts/dto/up
 const producers = readFileSync(new URL('../src/modules/manager-alerts/manager-alert-producers.service.ts', import.meta.url), 'utf8');
 const dispatcher = readFileSync(new URL('../src/modules/manager-alerts/manager-alert-dispatch.service.ts', import.meta.url), 'utf8');
 const evolution = readFileSync(new URL('../src/modules/manager-alerts/evolution-tenant-instance.service.ts', import.meta.url), 'utf8');
+const authorization = readFileSync(new URL('../src/modules/manager-alerts/manager-alert-authorization.ts', import.meta.url), 'utf8');
 
 test('manager alerts use tenant-scoped deduplication and recipient boundary', () => {
   assert.match(schema, /@@unique\(\[gymId, deduplicationKey\]\)/);
   assert.match(schema, /@@unique\(\[alertId, userId\]\)/);
   assert.match(service, /recipients: \{ some: \{ userId: actor\.id \} \}/);
-  assert.match(service, /where: \{ alertId, userId, alert: \{ gymId \} \}/);
+  assert.match(service, /where: \{ alertId, userId, alert: \{ gymId, AND: \[managerAlertLiveAccess\(gymId, userId\)\]/);
 });
 
 test('all ten approved producer contracts map to the canonical ingest service', () => {
@@ -69,9 +70,9 @@ test('individual preferences keep in-app mandatory and security non-silenceable'
 });
 
 test('sensitive categories are owner-only and ingestion is replay-safe', () => {
-  assert.match(service, /ManagerAlertCategory\.STUDENT_BILLING/);
-  assert.match(service, /ManagerAlertCategory\.SECURITY/);
-  assert.match(service, /\? \[RoleName\.OWNER\]/);
+  assert.match(authorization, /ManagerAlertCategory\.STUDENT_BILLING/);
+  assert.match(authorization, /ManagerAlertCategory\.SECURITY/);
+  assert.match(authorization, /\? \[RoleName\.OWNER\]/);
   assert.match(service, /error\.code === 'P2002'/);
 });
 
