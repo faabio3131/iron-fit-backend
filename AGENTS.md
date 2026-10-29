@@ -720,3 +720,14 @@ Atualizar este bloco a cada entrega:
 - deploy: `não autorizado nesta ordem`;
 - homologação Evolution/e-mail/push: `PENDING_EXTERNAL`;
 - próximo passo: concluir CI da app PR #58, instrumentar os eventos reais de A5 sem cron duplicado e certificar A9; push e homologação física Evolution permanecem blockers externos explícitos.
+
+
+## Retomada ALERTAS-1 — 29/10/2026
+
+- CURRENT remoto recuperado: backend PR #186 `f899a80` com CI `40802577119` SUCCESS; app PR #58 `aad3f8f` com CI `40802857324` SUCCESS. A falha de tipagem da tela já foi corrigida.
+- A5 avanço: reconciliação paginada de cobranças PENDING/EXPIRED vencidas e não pagas, treinos PENDING_REVIEW e aprovação humana de candidatos IA. Tenant derivado dos registros canônicos; IDs estáveis para dedupe; cursor só avança após ingestão; reinício reprocessa com dedupe persistida. Não altera pagamentos nem aprova treinos.
+- Scheduler existente compartilhado: `MANAGER_ALERT_SCAN_ENABLED=true` habilita leitura de fontes internas; `MANAGER_ALERT_DISPATCH_ENABLED=true` habilita entrega externa separadamente. Flags desabilitadas por padrão; nenhuma configuração de ambiente/deploy alterada. Falha de scan registra código sanitizado e não impede despacho da outbox.
+- Testes locais: Prisma generate, lint/typecheck, build e 14/14 testes focados PASS. Primeira regressão: 802/806 PASS; quatro falhas por configuração local ausente (runtime e chaves efêmeras de teste). Reexecução com ambiente isolado equivalente ao CI em andamento; não declarar regressão completa verde antes do resultado.
+- Código publicado na PR #186, candidate `949ba76`; CI `40896296677` pendente no momento deste checkpoint. Sem merge/deploy. PR visual #56 preservada.
+- A5 continua IN_PROGRESS: produtores restantes (frequência, equipamentos, integrações, limites, segurança, incidentes e falhas externas) ainda exigem conexão aos fatos reais. A10/homologação física Evolution, e-mail e push permanece PENDING_EXTERNAL, conforme decisão do usuário.
+- Próximo passo: concluir regressão e CI do candidate; corrigir falhas reais, instrumentar produtores restantes e certificar A9. Não tratar este avanço como conclusão dos dez produtores nem como GO-LIVE.
