@@ -61,6 +61,10 @@ export class ManagerAlertProducersService {
     return this.emit(event, 'approval.human.pending', ManagerAlertCategory.HUMAN_APPROVAL, ManagerAlertSeverity.INFO, 'Aprovação humana pendente', 'Há um candidato gerado por IA aguardando decisão humana.', 'ApprovalCandidate');
   }
 
+  criticalEscalation(event: ManagerAlertDomainEvent, category: ManagerAlertCategory) {
+    return this.emit(event, 'manager.alert.escalated', category, ManagerAlertSeverity.CRITICAL, 'Alerta crítico aguarda acompanhamento', 'Um alerta crítico permanece sem reconhecimento e atingiu o prazo de escalação configurado pela academia.', 'ManagerAlert');
+  }
+
   private emit(
     event: ManagerAlertDomainEvent,
     eventKey: string,
