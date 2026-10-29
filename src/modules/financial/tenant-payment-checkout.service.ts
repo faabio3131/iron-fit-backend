@@ -85,13 +85,45 @@ export class TenantPaymentCheckoutService {
     private readonly audit: AuditService,
   ) {}
 
-  private async resolveTenantConnection(gymId: string) {
+  async listAvailableProviders(gymId: string) {
+    const environment = this.runtime.current() as IntegrationEnvironment;
+    const rows = await this.prisma.integrationConnection.findMany({
+      where: {
+        scope: IntegrationScope.TENANT,
+        gymId,
+        environment,
+        status: IntegrationConnectionStatus.ACTIVE,
+        secretReference: { not: null },
+        secretVersion: { not: null },
+        secretRevokedAt: null,
+        OR: [{ secretExpiresAt: null }, { secretExpiresAt: { gt: new Date() } }],
+      },
+      orderBy: [{ providerCode: 'asc' }, { updatedAt: 'desc' }],
+    });
+    return rows
+      .filter((connection) => hasCapability(connection.capabilities, TENANT_PAYMENT_CAPABILITY))
+      .filter((connection) => {
+        try {
+          this.adapters.require(connection.providerCode);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .map((connection) => ({
+        connectionId: connection.id,
+        providerCode: connection.providerCode,
+      }));
+  }
+
+  private async resolveTenantConnection(gymId: string, providerConnectionId?: string) {
     const environment =
       this.runtime.current() as IntegrationEnvironment;
     const candidates = await this.prisma.integrationConnection.findMany({
       where: {
         scope: IntegrationScope.TENANT,
         gymId,
+        ...(providerConnectionId ? { id: providerConnectionId } : {}),
         environment,
         status: IntegrationConnectionStatus.ACTIVE,
         secretReference: { not: null },
@@ -114,7 +146,7 @@ export class TenantPaymentCheckoutService {
       throw new ServiceUnavailableException(
         capable.length === 0
           ? 'Gateway tenant nao configurado/homologado'
-          : 'Gateway tenant ambiguo',
+          : 'Mais de um gateway ativo: informe providerConnectionId para selecionar explicitamente',
       );
     }
     return capable[0];
@@ -161,7 +193,7 @@ export class TenantPaymentCheckoutService {
       );
     }
 
-    const connection = await this.resolveTenantConnection(gymId);
+    const connection = await this.resolveTenantConnection(gymId, dto.providerConnectionId);
     const adapter = this.adapters.require(connection.providerCode);
     const credential = await this.secrets.resolveForExternalBoundary(
       connection.id,
