@@ -763,7 +763,7 @@ Atualizar este bloco a cada entrega:
 
 ## CURRENT consolidado — PR #186 integrada / A9 em andamento (29/10/2026)
 
-- Backend #186 MERGED: main `51e54d9aa911b08609c49459fb5311d0f01f2e73`; candidate `f80894b` certificado pela CI integral `40903399389` SUCCESS. Regressão local final 820/820 PASS. Pós-merge `40904429721` em execução na última consulta; consultar resultado antes de declará-lo verde.
+- Backend #186 MERGED: main `51e54d9aa911b08609c49459fb5311d0f01f2e73`; candidate `f80894b` certificado pela CI integral `40903399389` SUCCESS. Regressão local final 820/820 PASS. Pós-merge `40904429721` SUCCESS confirmado.
 - A5 DONE_INTERNAL: dez tipos iniciais conectados a fontes canônicas, com testes e PostgreSQL real descartável. Limite de plano monitorado é o cap de trial aplicado pelo cadastro; não inventar medidor para outras capabilities.
 - A6 DONE_INTERNAL no launch: recuperação de SENDING expirado, retry/DLQ, revalidação de autoridade/preferência antes de envio, quiet hours/timezone/DST, escalação crítica configurada sem loop. Leituras/listas/contadores também negam financeiro/segurança após demotion de OWNER. Push fora do lançamento e bloqueado na API/UI até haver adapter/registro de dispositivo.
 - CURRENT visual: app PR #56 já MERGED na main `3eacb62` pelo outro executor. A antiga regra de esperar #56 não representa mais o estado atual.
@@ -771,3 +771,12 @@ Atualizar este bloco a cada entrega:
 - Gate A9/I01: backend PR #187, `fix/manager-alerts-live-certification`, atualiza o SHA do app candidato no pipeline para o head real da #60, preservando consumidor legado e toda a matriz. Sem alteração de runtime, infraestrutura ou deploy.
 - Homologação física Evolution/e-mail A10 continua PENDING_EXTERNAL por decisão do usuário. Nenhuma integração externa declarada live; nenhum deploy executado.
 - Próximo passo: conferir CI #60 e pós-merge backend; resolver falhas do gate cruzado #187; integrar somente com gates verdes; validar pós-merge e encerrar #58 como superseded; seguir cronograma pelos gaps reais. Não confundir conclusão de ALERTAS-1 com GO-LIVE global do IRON.
+
+
+## Atualização de integração — gates reais (29/10/2026)
+
+- App PR #60 MERGED após CI integral `40905301576` SUCCESS; main `640f2a18441f556c960c191b3e7c0a76bdc55299`. PR #58 encerrada como substituída, com histórico/branch preservados. Pós-merge app `40906217602` em execução na última consulta.
+- Backend PR #186 e pós-merge `40904429721` ambos verdes. Sem deploy.
+- PR #187 agora também certifica o fluxo HTTP real no E2E operacional existente: alteração de manutenção no domínio real, ingestão pelo produtor canônico, listagem/contadores/read/acknowledge/resolve, tentativa cross-tenant, rejeição de estado inválido e push indisponível. Inbox exercita OWNER/MANAGER permitidos e TRAINER/RECEPTION/STUDENT/SUPER_ADMIN global negados, além de 401 sem autenticação. SUPER_ADMIN global não ganha autoridade operacional de tenant automaticamente.
+- Candidate do teste HTTP de seis perfis `c6d20f6`; sintaxe e diff locais verificados. Esses novos cenários HTTP ainda aguardam execução na CI da #187: não marcar PASS antecipadamente. O cenário sem as duas últimas verificações extras já havia entrado no gate anterior; nenhuma evidência externa é inventada.
+- Próximo gate: aguardar CI consolidada #187; corrigir qualquer falha real; integrar somente verde e verificar pós-merge. Depois continuar o cronograma pelos gaps comprovados. Homologação física A10 permanece adiada por decisão do usuário; push DISABLED/OUT_OF_LAUNCH.
