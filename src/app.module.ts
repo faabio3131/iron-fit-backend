@@ -29,6 +29,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { TransactionalEmailModule } from './modules/transactional-email/transactional-email.module';
 import { PrivacyGovernanceModule } from './modules/privacy/privacy-governance.module';
 import { FmCommandModule } from './modules/fm-command/fm-command.module';
+import { ManagerAlertsModule } from './modules/manager-alerts/manager-alerts.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -63,6 +64,7 @@ import { PrismaModule } from './prisma/prisma.module';
     TransactionalEmailModule,
     PrivacyGovernanceModule,
     FmCommandModule,
+    ManagerAlertsModule,
   ],
   controllers: [HealthController, MetricsController],
   providers: [RuntimeMetricsService, RequestObservabilityMiddleware],
