@@ -679,10 +679,10 @@ Ausência ou falha de canal externo não pode apagar o alerta interno.
 | A2 | Serviço canônico de ingestão, dedupe, lifecycle e auditoria | Unidade/integração cobrindo concorrência, replay, RBAC e cross-tenant | `DONE` — contratos, replay e fronteiras tenant cobertos |
 | A3 | APIs do painel: inbox, contadores, filtros, ler, reconhecer, resolver, dispensar | Contratos paginados; OWNER/MANAGER; fail-closed; testes HTTP/RBAC | `DONE` |
 | A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `DONE` |
-| A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `IN_PROGRESS` — 10 contratos/dedupe prontos; instrumentação dos domínios pendente |
+| A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `IMPLEMENTED/CI_PENDING` — dez tipos conectados a fontes reais; certificação PostgreSQL e CI consolidada pendentes |
 | A6 | Outbox e adapters painel/e-mail/push/WhatsApp | Painel sempre disponível; retry/lease/DLQ; provider externo pode ficar blocked | `IN_PROGRESS` — outbox, lease, retry, DLQ, e-mail e WhatsApp prontos; push explicitamente blocked |
 | A7 | Evolution no IRON: control-plane FM, instância por academia, QR/status/webhook | Engenharia interna + testes; segredo global não entregue ao tenant; homologação real separada | `DONE_INTERNAL/EXTERNAL_HOMOLOG_PENDING` — CI `40801458606` verde |
-| A8 | Web Premium e Mobile: sino, badge, inbox, detalhe, ações e preferências | Desktop/tablet/mobile; acessibilidade; zero clicável falso; seis perfis testados | `IMPLEMENTED/APP_CI_PENDING` — app PR #58, isolada do Macro O #56 |
+| A8 | Web Premium e Mobile: sino, badge, inbox, detalhe, ações e preferências | Desktop/tablet/mobile; acessibilidade; zero clicável falso; seis perfis testados | `IMPLEMENTED/APP_CI_GREEN` — app PR #58 CI `40802857324` SUCCESS, isolada do Macro O #56 |
 | A9 | Certificação consolidada backend/app | lint, typecheck, testes, migrations, build, exports, container e regressão verdes | `IN_PROGRESS` — backend verde; app em validação |
 | A10 | Homologação física dos canais | QR real, envio/recebimento, e-mail, push, restart/reconnect e evidências | `PENDING_EXTERNAL` |
 
@@ -731,3 +731,19 @@ Atualizar este bloco a cada entrega:
 - Código publicado na PR #186, candidate de código/testes `616e375`; CI `40896592711` pendente no momento deste checkpoint. Sem merge/deploy. PR visual #56 preservada.
 - A5 continua IN_PROGRESS: produtores restantes (frequência, equipamentos, integrações, limites, segurança, incidentes e falhas externas) ainda exigem conexão aos fatos reais. A10/homologação física Evolution, e-mail e push permanece PENDING_EXTERNAL, conforme decisão do usuário.
 - Próximo passo: concluir regressão e CI do candidate; corrigir falhas reais, instrumentar produtores restantes e certificar A9. Não tratar este avanço como conclusão dos dez produtores nem como GO-LIVE.
+
+
+## Checkpoint vigente ALERTAS-1 — fontes reais (29/10/2026)
+
+- Etapa: A5 implementada; A9 em certificação. Backend PR #186 / branch `feat/alertas-gestor-v1`; candidate de código `d41d778`. Sem merge/deploy.
+- Validação anterior: CI `40896681831` SUCCESS no head `47477d8`.
+- Fontes: cobrança vencida e pagamento FAILED → STUDENT_BILLING/OWNER; ausência de presença conhecida por 14 dias → ATTENDANCE_RISK; treino PENDING_REVIEW → ASSESSMENT_WORKOUT; equipamento MAINTENANCE/OUT_OF_SERVICE reportado → EQUIPMENT; CommunicationMessage FAILED de EMAIL/WHATSAPP → DELIVERY_FAILURE; IntegrationConnection TENANT/ambiente atual/DEGRADED → INTEGRATION_HEALTH; limite canônico aplicado ao trial → PLAN_LIMIT; replay/autenticação inválida de dispositivo em AccessEvent → SECURITY/OWNER; falhas auditadas de revalidação provisória/ingestão de mídia → OPERATIONAL_INCIDENT; candidato IA PENDING_REVIEW → HUMAN_APPROVAL.
+- Escopo: limite de plano usa o cap de trial realmente aplicado pelo cadastro (`commercial.trial_students_max`), nunca inventa consumo para capabilities sem medidor. Ausência de histórico de frequência não vira zero; sinal de acompanhamento não afirma churn. Desconexão intencional não vira falha. Financeiro da academia continua separado do billing FM.
+- Equipamentos: migration aditiva `20261029153000_equipment_operational_status`; API `POST /equipments/:id/operational-status` somente OWNER/MANAGER no tenant ativo, DTO validado, transação/CAS, replay idempotente e auditoria. Estado de seleção `active` preservado. Integração visual desse novo controle segue W01; não declarar botão já disponível.
+- Execução: mesmo scheduler existente, paginação limitada e cursores por fonte; todas as famílias são aguardadas mesmo se outra falhar. Erros sanitizados; falha de fonte não bloqueia a outbox. Dedupe persistida permite recuperação após reinício.
+- Configuração interna: `MANAGER_ALERT_ATTENDANCE_INACTIVITY_DAYS` (7–90, padrão 14) e `MANAGER_ALERT_PLAN_THRESHOLD_PERCENT` (1–100, padrão 80); flags SCAN/DISPATCH permanecem independentes e desativadas por padrão. Não houve ativação em ambiente externo.
+- Testes locais executados: Prisma generate, lint/typecheck, build, 22/22 testes focados e regressão completa 814/814 PASS, zero falhas; diff e sintaxe do script de CI verificados.
+- Gate adicional: `scripts/manager-alerts-db-certify.mjs` incluído na CI após fresh migration. Só aceita NODE_ENV=test, HOMOLOG, flag explícita e banco local descartável iron_ci. Valida fontes persistidas, mutation de manutenção, replay, concorrência, financeiro OWNER-only, tenant isolation e minimização de payload. Resultado ainda pendente; testes sintéticos não são homologação externa.
+- App: PR #58 preservada; último head consultado `aad3f8f` e CI `40802857324` SUCCESS. Macro O #56 não alterado.
+- A6: e-mail/WhatsApp via outbox existentes; push continua adapter/dispositivo pendente, sem token inventado. A10: teste físico Evolution/e-mail/push permanece PENDING_EXTERNAL conforme decisão do usuário.
+- Próximo passo obrigatório: consultar CI deste head, corrigir qualquer falha, concluir A9, reconciliar dependência app/backend e gates de merge antes de integrar. Depois seguir o cronograma sem reimplementar fontes concluídas.
