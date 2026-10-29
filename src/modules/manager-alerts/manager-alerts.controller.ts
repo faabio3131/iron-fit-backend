@@ -1,10 +1,11 @@
-import { Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Put, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { ManagerAlertQueryDto } from './dto/manager-alert-query.dto';
 import { ManagerAlertsService } from './manager-alerts.service';
+import { UpdateManagerAlertPreferenceDto } from './dto/update-manager-alert-preference.dto';
 
 @Controller('manager-alerts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,6 +21,20 @@ export class ManagerAlertsController {
   @Get('counters')
   counters(@CurrentUser() user: any) {
     return this.alerts.counters(user);
+  }
+
+  @Get('preferences')
+  preferences(@CurrentUser() user: any) {
+    return this.alerts.preferences(user);
+  }
+
+  @Put('preferences/:category')
+  updatePreference(
+    @Param('category') category: string,
+    @Body() dto: UpdateManagerAlertPreferenceDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.alerts.updatePreference(category, dto, user);
   }
 
   @Patch(':id/read')
