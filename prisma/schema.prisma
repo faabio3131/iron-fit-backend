@@ -623,6 +623,23 @@ model ManagerAlertDelivery {
   @@index([alertId, channel])
 }
 
+model ManagerAlertPolicy {
+  id                    String               @id @default(uuid())
+  gymId                 String
+  category              ManagerAlertCategory
+  emailAllowed          Boolean              @default(false)
+  pushAllowed           Boolean              @default(false)
+  whatsappAllowed       Boolean              @default(false)
+  minimumSeverity       ManagerAlertSeverity @default(INFO)
+  criticalEscalationMin Int?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  gym                   Gym                  @relation(fields: [gymId], references: [id], onDelete: Cascade)
+
+  @@unique([gymId, category])
+  @@index([gymId])
+}
+
 
 model CommercialTrialProvisioning {
   requestId          String   @id
@@ -711,6 +728,7 @@ model Gym {
   fmCommandControlPlaneCommands FmCommandControlPlaneCommand[]
   managerAlerts ManagerAlert[]
   managerAlertPreferences ManagerAlertPreference[]
+  managerAlertPolicies ManagerAlertPolicy[]
   @@index([slug])
 }
 
