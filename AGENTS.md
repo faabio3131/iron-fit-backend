@@ -678,7 +678,7 @@ Ausência ou falha de canal externo não pode apagar o alerta interno.
 | A1 | Schema/migration de alerta, destinatário, preferência, entrega e deduplicação | Fresh migration + rollback lógico + índices tenant-scoped + Prisma validate | `IMPLEMENTED/CI_PENDING` |
 | A2 | Serviço canônico de ingestão, dedupe, lifecycle e auditoria | Unidade/integração cobrindo concorrência, replay, RBAC e cross-tenant | `IMPLEMENTED/PARTIAL_TESTS` |
 | A3 | APIs do painel: inbox, contadores, filtros, ler, reconhecer, resolver, dispensar | Contratos paginados; OWNER/MANAGER; fail-closed; testes HTTP/RBAC | `IMPLEMENTED/CI_PENDING` |
-| A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `IN_PROGRESS` — preferência individual pronta; política tenant pendente |
+| A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `IMPLEMENTED/CI_PENDING` |
 | A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `NOT_STARTED` |
 | A6 | Outbox e adapters painel/e-mail/push/WhatsApp | Painel sempre disponível; retry/lease/DLQ; provider externo pode ficar blocked | `NOT_STARTED` |
 | A7 | Evolution no IRON: control-plane FM, instância por academia, QR/status/webhook | Engenharia interna + testes; segredo global não entregue ao tenant; homologação real separada | `NOT_STARTED` |
@@ -710,7 +710,7 @@ Subir checkpoints substanciais ao GitHub. Não deixar trabalho relevante somente
 
 Atualizar este bloco a cada entrega:
 
-- etapa atual: `A4`;
+- etapa atual: `A5`;
 - backend branch/PR/SHA: `feat/alertas-gestor-v1` / PR #186 (draft) / head remoto `39760ad` antes da fatia A4;
 - app branch/PR/SHA: `não iniciado — backend primeiro`;
 - migrations: `20261029010000_manager_alerts_core` implementada; validação Prisma aguarda CI porque o executor não possui dependências npm;
@@ -719,4 +719,4 @@ Atualizar este bloco a cada entrega:
 - CI: `em execução na PR #186`;
 - deploy: `não autorizado nesta ordem`;
 - homologação Evolution/e-mail/push: `PENDING_EXTERNAL`;
-- próximo passo: publicar a preferência individual A4, corrigir gates da CI e concluir política tenant com step-up; não declarar migration/build verdes antes da CI.
+- próximo passo: publicar política tenant A4, corrigir gates da CI e instrumentar os produtores A5; não declarar migration/build verdes antes da CI.
