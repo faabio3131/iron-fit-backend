@@ -7,6 +7,7 @@ export interface ManagerAlertDomainEvent {
   gymId: string;
   eventId: string;
   resourceId?: string;
+  resourceType?: string;
   occurredAt?: Date;
   summary?: string;
 }
@@ -33,6 +34,11 @@ export class ManagerAlertProducersService {
 
   deliveryFailure(event: ManagerAlertDomainEvent) {
     return this.emit(event, 'delivery.failed', ManagerAlertCategory.DELIVERY_FAILURE, ManagerAlertSeverity.WARNING, 'Falha de entrega ou pagamento', 'Uma operação externa falhou e requer acompanhamento.', 'Delivery');
+  }
+
+  paymentFailure(event: ManagerAlertDomainEvent) {
+    // Financial content stays OWNER-only through the canonical category policy.
+    return this.emit(event, 'charge.payment.failed', ManagerAlertCategory.STUDENT_BILLING, ManagerAlertSeverity.WARNING, 'Falha no pagamento de aluno', 'Uma cobrança de aluno apresentou falha de pagamento e requer análise.', 'Charge');
   }
 
   integrationDegraded(event: ManagerAlertDomainEvent) {
@@ -75,7 +81,7 @@ export class ManagerAlertProducersService {
       severity,
       title,
       message: event.summary?.trim().slice(0, 500) || fallbackMessage,
-      resourceType,
+      resourceType: event.resourceType ?? resourceType,
       resourceId: event.resourceId,
       occurredAt: event.occurredAt,
     });
