@@ -106,6 +106,49 @@ enum MessageStatus {
   CANCELED
 }
 
+enum ManagerAlertCategory {
+  STUDENT_BILLING
+  ATTENDANCE_RISK
+  ASSESSMENT_WORKOUT
+  EQUIPMENT
+  DELIVERY_FAILURE
+  INTEGRATION_HEALTH
+  PLAN_LIMIT
+  SECURITY
+  OPERATIONAL_INCIDENT
+  HUMAN_APPROVAL
+}
+
+enum ManagerAlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ManagerAlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum ManagerAlertChannel {
+  IN_APP
+  EMAIL
+  PUSH
+  WHATSAPP
+}
+
+enum ManagerAlertDeliveryStatus {
+  PENDING
+  DEFERRED
+  SENDING
+  SENT
+  FAILED
+  DEAD_LETTER
+  SKIPPED
+}
+
 enum AggregatorConnectionStatus {
   PENDING
   ACTIVE
@@ -228,6 +271,8 @@ model User {
   equipmentCandidatesReviewed  EquipmentCatalogCandidate[] @relation("EquipmentCandidateReviewedBy")
   dataSubjectRequests DataSubjectRequest[]
   legalAcceptances LegalAcceptance[]
+  managerAlertRecipients ManagerAlertRecipient[]
+  managerAlertPreferences ManagerAlertPreference[]
 }
 
 
@@ -482,6 +527,102 @@ model AuditLog {
   @@index([gymId])
 }
 
+model ManagerAlert {
+  id                 String               @id @default(uuid())
+  gymId              String
+  category           ManagerAlertCategory
+  severity           ManagerAlertSeverity
+  status             ManagerAlertStatus   @default(OPEN)
+  eventKey           String
+  deduplicationKey   String
+  title              String
+  message            String
+  resourceType       String?
+  resourceId         String?
+  metadata           Json?
+  occurredAt         DateTime             @default(now())
+  acknowledgedAt     DateTime?
+  acknowledgedById   String?
+  resolvedAt         DateTime?
+  resolvedById       String?
+  dismissedAt        DateTime?
+  dismissedById      String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  gym                Gym                  @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  recipients         ManagerAlertRecipient[]
+  deliveries         ManagerAlertDelivery[]
+
+  @@unique([gymId, deduplicationKey])
+  @@index([gymId, status, severity, createdAt])
+  @@index([gymId, category, occurredAt])
+  @@index([resourceType, resourceId])
+}
+
+model ManagerAlertRecipient {
+  id              String       @id @default(uuid())
+  alertId         String
+  userId          String
+  roleSnapshot    RoleName
+  readAt          DateTime?
+  acknowledgedAt DateTime?
+  createdAt       DateTime     @default(now())
+  alert           ManagerAlert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries      ManagerAlertDelivery[]
+
+  @@unique([alertId, userId])
+  @@index([userId, readAt, createdAt])
+}
+
+model ManagerAlertPreference {
+  id               String                @id @default(uuid())
+  gymId            String
+  userId           String
+  category         ManagerAlertCategory
+  inAppEnabled     Boolean               @default(true)
+  emailEnabled     Boolean               @default(false)
+  pushEnabled      Boolean               @default(false)
+  whatsappEnabled  Boolean               @default(false)
+  minimumSeverity  ManagerAlertSeverity  @default(INFO)
+  quietHoursStart  String?
+  quietHoursEnd    String?
+  timezone         String                @default("America/Sao_Paulo")
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  gym              Gym                   @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gymId, userId, category])
+  @@index([gymId, category])
+}
+
+model ManagerAlertDelivery {
+  id                 String                     @id @default(uuid())
+  alertId            String
+  recipientId        String
+  channel            ManagerAlertChannel
+  status             ManagerAlertDeliveryStatus @default(PENDING)
+  idempotencyKey     String                     @unique
+  attemptCount       Int                        @default(0)
+  nextAttemptAt      DateTime?
+  leaseOwner         String?
+  leaseUntil         DateTime?
+  providerCode       String?
+  providerMessageRef String?
+  lastErrorCode      String?
+  sentAt             DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  alert              ManagerAlert               @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  recipient          ManagerAlertRecipient      @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([recipientId, channel])
+  @@index([status, nextAttemptAt])
+  @@index([leaseUntil])
+  @@index([alertId, channel])
+}
+
 
 model CommercialTrialProvisioning {
   requestId          String   @id
@@ -568,6 +709,8 @@ model Gym {
   aggregatorConnections AggregatorProviderConnection[]
   commercialOnboardingCheckpoints CommercialOnboardingCheckpoint[]
   fmCommandControlPlaneCommands FmCommandControlPlaneCommand[]
+  managerAlerts ManagerAlert[]
+  managerAlertPreferences ManagerAlertPreference[]
   @@index([slug])
 }
 
