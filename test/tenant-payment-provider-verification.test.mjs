@@ -45,8 +45,8 @@ function fixture({ status = 'PAID', connection = true, chargeGym = 'gym-a', veri
       },
     },
     {
-      payCharge: async (chargeId, dto, gymId, userId) => {
-        calls.payments.push({ chargeId, dto, gymId, userId });
+      payCharge: async (chargeId, dto, gymId, userId, evidence) => {
+        calls.payments.push({ chargeId, dto, gymId, userId, evidence });
         return { idempotent: false };
       },
     },
@@ -68,6 +68,7 @@ test('settlement requires tenant-specific provider API proof before writing fina
   assert.equal(calls.payments.length, 1);
   assert.equal(calls.payments[0].dto.accountId, 'account-a');
   assert.equal(calls.payments[0].dto.paymentMethod, 'GATEWAY_STRIPE');
+  assert.deepEqual(calls.payments[0].evidence, { connectionId: 'connection-a', paymentRef: 'payment-a' });
   assert.equal(calls.audits[0].next.providerPaymentRef, 'payment-a');
   assert.doesNotMatch(JSON.stringify(calls.audits), /vault-secret-only/);
 });
