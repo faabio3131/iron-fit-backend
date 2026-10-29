@@ -75,7 +75,10 @@ test('manager inbox scopes every list and unread count to tenant plus current re
   await service.list(owner, { limit: 30, offset: 0 });
   assert.equal(calls[0].gymId, 'gym-a');
   assert.deepEqual(calls[0].recipients, { some: { userId: 'owner-a' } });
-  assert.deepEqual(calls[2], { userId: 'owner-a', readAt: null, alert: { gymId: 'gym-a' } });
+  assert.equal(calls[2].userId, 'owner-a');
+  assert.equal(calls[2].readAt, null);
+  assert.equal(calls[2].alert.gymId, 'gym-a');
+  assert.ok(calls[2].alert.AND.length > 0, 'counts must revalidate live authority too');
 });
 
 test('stale manager alert transition fails closed and does not audit success', async () => {
