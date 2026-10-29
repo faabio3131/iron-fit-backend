@@ -55,7 +55,53 @@ export class StripeCheckoutAdapter implements OnModuleInit {
         throw new ServiceUnavailableException('STRIPE_VERIFICATION_MISMATCH');
       }
       if (data.payment_status === 'paid' && data.status === 'complete') {
-        return { status: 'PAID', providerPaymentRef: data.id, paidAt: null };
+        // A completed Checkout Session alone does not prove that its
+        // underlying PaymentIntent has not since been refunded or disputed.
+        if (typeof data.payment_intent !== 'string' ||
+            !/^pi_[a-zA-Z0-9_]{1,120}$/.test(data.payment_intent)) {
+          throw new ServiceUnavailableException('STRIPE_PAYMENT_INTENT_MISSING');
+        }
+        const detailsUrl = 'https://api.stripe.com/v1/payment_intents/' +
+          encodeURIComponent(data.payment_intent) + '?expand%5B%5D=latest_charge';
+        const paymentResponse = await fetch(detailsUrl, {
+          method: 'GET', redirect: 'error', signal: controller.signal,
+          headers: { authorization: 'Bearer ' + input.credential.reveal() },
+        });
+        if (!paymentResponse.ok) {
+          throw new ServiceUnavailableException('STRIPE_PAYMENT_INTENT_HTTP_' + paymentResponse.status);
+        }
+        const paymentRaw = await paymentResponse.text();
+        if (Buffer.byteLength(paymentRaw, 'utf8') > 65536) {
+          throw new ServiceUnavailableException('STRIPE_PAYMENT_INTENT_TOO_LARGE');
+        }
+        let intent: any;
+        try { intent = JSON.parse(paymentRaw); } catch {
+          throw new ServiceUnavailableException('STRIPE_PAYMENT_INTENT_INVALID');
+        }
+        if (!intent || intent.id !== data.payment_intent ||
+            intent.currency !== input.currency.toLowerCase() ||
+            intent.amount !== input.amount ||
+            intent.livemode !== (input.environment === 'PROD')) {
+          throw new ServiceUnavailableException('STRIPE_PAYMENT_INTENT_MISMATCH');
+        }
+        if (intent.status !== 'succeeded' || intent.amount_received !== input.amount) {
+          return { status: 'PENDING', providerPaymentRef: intent.id, paidAt: null };
+        }
+        const latestCharge = intent.latest_charge;
+        if (!latestCharge || typeof latestCharge !== 'object' ||
+            latestCharge.payment_intent !== intent.id ||
+            typeof latestCharge.id !== 'string') {
+          throw new ServiceUnavailableException('STRIPE_CHARGE_NOT_VERIFIED');
+        }
+        if (latestCharge.disputed === true || latestCharge.refunded === true ||
+            Number(latestCharge.amount_refunded ?? 0) > 0) {
+          return { status: 'REVERSED', providerPaymentRef: intent.id, paidAt: null };
+        }
+        if (latestCharge.paid !== true || latestCharge.status !== 'succeeded' ||
+            latestCharge.amount !== input.amount || latestCharge.currency !== input.currency.toLowerCase()) {
+          throw new ServiceUnavailableException('STRIPE_CHARGE_NOT_VERIFIED');
+        }
+        return { status: 'PAID', providerPaymentRef: intent.id, paidAt: null };
       }
       if (data.status === 'expired') return { status: 'REVERSED', providerPaymentRef: data.id, paidAt: null };
       return { status: 'PENDING', providerPaymentRef: data.id, paidAt: null };
