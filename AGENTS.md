@@ -674,10 +674,10 @@ Ausência ou falha de canal externo não pode apagar o alerta interno.
 
 | Etapa | Entrega | Gate de conclusão | Estado inicial |
 |---|---|---|---|
-| A0 | Reconciliação CURRENT, ADR curto, contratos e threat model | Nenhum domínio duplicado; mapa de eventos e autoridade aprovado pelo código/testes | `IN_PROGRESS` |
-| A1 | Schema/migration de alerta, destinatário, preferência, entrega e deduplicação | Fresh migration + rollback lógico + índices tenant-scoped + Prisma validate | `NOT_STARTED` |
-| A2 | Serviço canônico de ingestão, dedupe, lifecycle e auditoria | Unidade/integração cobrindo concorrência, replay, RBAC e cross-tenant | `NOT_STARTED` |
-| A3 | APIs do painel: inbox, contadores, filtros, ler, reconhecer, resolver, dispensar | Contratos paginados; OWNER/MANAGER; fail-closed; testes HTTP/RBAC | `NOT_STARTED` |
+| A0 | Reconciliação CURRENT, ADR curto, contratos e threat model | Nenhum domínio duplicado; mapa de eventos e autoridade aprovado pelo código/testes | `DONE` |
+| A1 | Schema/migration de alerta, destinatário, preferência, entrega e deduplicação | Fresh migration + rollback lógico + índices tenant-scoped + Prisma validate | `IMPLEMENTED/CI_PENDING` |
+| A2 | Serviço canônico de ingestão, dedupe, lifecycle e auditoria | Unidade/integração cobrindo concorrência, replay, RBAC e cross-tenant | `IMPLEMENTED/PARTIAL_TESTS` |
+| A3 | APIs do painel: inbox, contadores, filtros, ler, reconhecer, resolver, dispensar | Contratos paginados; OWNER/MANAGER; fail-closed; testes HTTP/RBAC | `IMPLEMENTED/CI_PENDING` |
 | A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `NOT_STARTED` |
 | A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `NOT_STARTED` |
 | A6 | Outbox e adapters painel/e-mail/push/WhatsApp | Painel sempre disponível; retry/lease/DLQ; provider externo pode ficar blocked | `NOT_STARTED` |
@@ -710,13 +710,13 @@ Subir checkpoints substanciais ao GitHub. Não deixar trabalho relevante somente
 
 Atualizar este bloco a cada entrega:
 
-- etapa atual: `A0`;
-- backend branch/PR/SHA: `a criar`;
-- app branch/PR/SHA: `a criar`;
-- migrations: `não iniciadas`;
-- testes backend: `não iniciados`;
+- etapa atual: `A4`;
+- backend branch/PR/SHA: `feat/alertas-gestor-v1` / PR a criar / checkpoint local pendente de publicação;
+- app branch/PR/SHA: `não iniciado — backend primeiro`;
+- migrations: `20261029010000_manager_alerts_core` implementada; validação Prisma aguarda CI porque o executor não possui dependências npm;
+- testes backend: `manager-alerts-boundary.test.mjs` 3/3 verde; suíte completa aguarda CI;
 - testes app: `não iniciados`;
-- CI: `não iniciada`;
+- CI: `a iniciar após publicação da primeira fatia`;
 - deploy: `não autorizado nesta ordem`;
 - homologação Evolution/e-mail/push: `PENDING_EXTERNAL`;
-- próximo passo: concluir A0 e implementar A1 sem alterar domínios concorrentes.
+- próximo passo: publicar A0–A3, abrir PR/CI, corrigir gates e implementar A4; não declarar migration/build verdes antes da CI.
