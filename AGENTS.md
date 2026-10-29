@@ -610,3 +610,113 @@ A auditoria funcional de 24/10/2026 é o inventário de referência, sujeito ao 
 **Gates:** PR #22/Macro O só recebe merge após aprovação visual explícita do proprietário. Nenhum endpoint, provider ou recurso sem prova deve ser anunciado live. Homologação externa ausente não bloqueia construção interna independente e deve ficar em `IMPLEMENTED/EXTERNAL BLOCKER` ou `DISABLED/OUT OF LAUNCH`. Após software internamente concluído, executar homologações externas exigidas para GO-LIVE.
 
 **Migração:** Claude Code é responsável pela mudança de hospedagem para Contabo. Este executor não altera Render, Railway, Supabase, DNS, containers, banco ou deploy físico durante essa migração.
+
+---
+
+# ALERTAS-1 — Centro de Alertas do Gestor e entrega multicanal (29/10/2026)
+
+## Decisão aprovada
+
+Construir integralmente o Centro de Alertas do Gestor. O alerta é um domínio canônico do IRON e não pertence à Evolution, ao e-mail ou ao push. Cada canal é somente um adapter de entrega governado.
+
+**Fluxo obrigatório:**
+
+`evento canônico → regra/política → alerta persistido → destinatários autorizados → painel interno → adapters opcionais → status/evidência`
+
+Não reutilizar `CommunicationMessage` como banco genérico de alertas: comunicação academia→aluno e alertas operacionais a gestores possuem destinatários, consentimentos, autoridade e retenção diferentes.
+
+## Escopo funcional aprovado
+
+Alertas iniciais:
+
+1. cobrança de aluno vencida/inadimplência;
+2. queda de frequência e risco de cancelamento;
+3. avaliação ou treino pendente;
+4. equipamento com problema;
+5. falha de pagamento, e-mail ou WhatsApp;
+6. integração desconectada/degradada;
+7. limite do plano próximo;
+8. tentativa de acesso suspeita;
+9. incidente operacional;
+10. pendência de aprovação humana de treino/candidato IA.
+
+Destinatários iniciais: `OWNER` e `MANAGER`, respeitando tenant, membership ativa, RBAC, preferência individual e sensibilidade. Financeiro e segurança nunca podem ser ampliados a papéis sem autoridade. `SUPER_ADMIN` atua somente no escopo administrativo legítimo da plataforma.
+
+## Canais
+
+- **Painel interno:** obrigatório na V1 e fonte de verdade de leitura.
+- **Push:** adapter opcional; não inventar token/dispositivo inexistente.
+- **E-mail:** adapter opcional, dependente do provider transacional homologado.
+- **WhatsApp/Evolution:** adapter opcional para alertas importantes; usa a Evolution central da FM, instância isolada por academia e nunca expõe API key ao cliente.
+- **Meta WhatsApp:** alternativa futura/por tenant; exatamente um provider WhatsApp ativo por academia.
+
+Ausência ou falha de canal externo não pode apagar o alerta interno.
+
+## Arquitetura e segurança obrigatórias
+
+- tenant isolation em todas as chaves, consultas, índices e eventos;
+- destinatário por membership/role canônica, nunca por `role` recebido livremente do browser;
+- idempotência/deduplicação por evento, regra, tenant e janela;
+- severidade `INFO | WARNING | CRITICAL`;
+- ciclo `OPEN | ACKNOWLEDGED | RESOLVED | DISMISSED` com transições autorizadas;
+- confirmação individual de leitura e reconhecimento;
+- auditoria de criação, leitura, reconhecimento, resolução, silenciamento e falha de entrega;
+- preferências por usuário/categoria/canal, quiet hours e timezone;
+- escalação governada de críticos sem loop;
+- retry/backoff/lease/DLQ nos canais externos;
+- payload mínimo, sem segredo, PAN/CVV, token, senha ou dado de saúde desnecessário;
+- step-up para políticas sensíveis e mudanças globais;
+- retenção e redaction compatíveis com LGPD;
+- alertas de segurança não podem ser silenciados de forma insegura;
+- Evolution/Meta/e-mail/push sempre via Vault/Secret Reference e adapters existentes.
+
+## Cronograma executável e retomável
+
+| Etapa | Entrega | Gate de conclusão | Estado inicial |
+|---|---|---|---|
+| A0 | Reconciliação CURRENT, ADR curto, contratos e threat model | Nenhum domínio duplicado; mapa de eventos e autoridade aprovado pelo código/testes | `IN_PROGRESS` |
+| A1 | Schema/migration de alerta, destinatário, preferência, entrega e deduplicação | Fresh migration + rollback lógico + índices tenant-scoped + Prisma validate | `NOT_STARTED` |
+| A2 | Serviço canônico de ingestão, dedupe, lifecycle e auditoria | Unidade/integração cobrindo concorrência, replay, RBAC e cross-tenant | `NOT_STARTED` |
+| A3 | APIs do painel: inbox, contadores, filtros, ler, reconhecer, resolver, dispensar | Contratos paginados; OWNER/MANAGER; fail-closed; testes HTTP/RBAC | `NOT_STARTED` |
+| A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `NOT_STARTED` |
+| A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `NOT_STARTED` |
+| A6 | Outbox e adapters painel/e-mail/push/WhatsApp | Painel sempre disponível; retry/lease/DLQ; provider externo pode ficar blocked | `NOT_STARTED` |
+| A7 | Evolution no IRON: control-plane FM, instância por academia, QR/status/webhook | Engenharia interna + testes; segredo global não entregue ao tenant; homologação real separada | `NOT_STARTED` |
+| A8 | Web Premium e Mobile: sino, badge, inbox, detalhe, ações e preferências | Desktop/tablet/mobile; acessibilidade; zero clicável falso; seis perfis testados | `NOT_STARTED` |
+| A9 | Certificação consolidada backend/app | lint, typecheck, testes, migrations, build, exports, container e regressão verdes | `NOT_STARTED` |
+| A10 | Homologação física dos canais | QR real, envio/recebimento, e-mail, push, restart/reconnect e evidências | `PENDING_EXTERNAL` |
+
+## Ordem de execução
+
+`A0 → A1 → A2 → A3 → A4 → A5 → A6 → A7 → A8 → A9`, mantendo `A10` para quando houver credenciais, dispositivos e autorização de teste real.
+
+Subir checkpoints substanciais ao GitHub. Não deixar trabalho relevante somente no ambiente local. Uma PR pode agrupar etapas coesas, mas nenhum merge pode omitir CI verde, migrations seguras ou compatibilidade com o trabalho concorrente do Macro O.
+
+## Critérios de aceite mínimos
+
+- alerta criado uma única vez sob replay/concorrência;
+- academia A nunca lê, reconhece ou resolve alerta da academia B;
+- MANAGER não recebe conteúdo financeiro/segurança além da autoridade efetiva;
+- alerta crítico aparece no painel mesmo com todos os providers externos indisponíveis;
+- quiet hours adiam apenas canais externos permitidos;
+- resolução e reconhecimento são distintos e auditados;
+- falha de Evolution/e-mail/push produz estado de entrega e retry, não falso `SENT`;
+- QR/session da Evolution é isolado por academia;
+- nenhum segredo aparece em API, log, banco de domínio, UI ou evidência;
+- UI apresenta loading/error/empty/offline/retry sem transformar falha em lista vazia;
+- compatibilidade com `CommunicationMessage` academia→aluno preservada.
+
+## Checkpoint ALERTAS-1
+
+Atualizar este bloco a cada entrega:
+
+- etapa atual: `A0`;
+- backend branch/PR/SHA: `a criar`;
+- app branch/PR/SHA: `a criar`;
+- migrations: `não iniciadas`;
+- testes backend: `não iniciados`;
+- testes app: `não iniciados`;
+- CI: `não iniciada`;
+- deploy: `não autorizado nesta ordem`;
+- homologação Evolution/e-mail/push: `PENDING_EXTERNAL`;
+- próximo passo: concluir A0 e implementar A1 sem alterar domínios concorrentes.
