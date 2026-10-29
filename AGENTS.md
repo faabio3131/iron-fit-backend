@@ -679,8 +679,8 @@ Ausência ou falha de canal externo não pode apagar o alerta interno.
 | A2 | Serviço canônico de ingestão, dedupe, lifecycle e auditoria | Unidade/integração cobrindo concorrência, replay, RBAC e cross-tenant | `DONE` — contratos, replay e fronteiras tenant cobertos |
 | A3 | APIs do painel: inbox, contadores, filtros, ler, reconhecer, resolver, dispensar | Contratos paginados; OWNER/MANAGER; fail-closed; testes HTTP/RBAC | `DONE` |
 | A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `DONE` |
-| A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `IMPLEMENTED/CI_PENDING` — dez tipos conectados a fontes reais; certificação PostgreSQL e CI consolidada pendentes |
-| A6 | Outbox e adapters painel/e-mail/push/WhatsApp | Painel sempre disponível; retry/lease/DLQ; provider externo pode ficar blocked | `IN_PROGRESS` — outbox, lease, retry, DLQ, e-mail e WhatsApp prontos; push explicitamente blocked |
+| A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `DONE_INTERNAL` — fontes reais e gate PostgreSQL/CI integral da PR #186 aprovados |
+| A6 | Outbox e adapters painel/e-mail/push/WhatsApp | Painel sempre disponível; retry/lease/DLQ; provider externo pode ficar blocked | `DONE_INTERNAL` — outbox, recovery, retry, DLQ, consentimento atual e quiet hours; push DISABLED/OUT_OF_LAUNCH |
 | A7 | Evolution no IRON: control-plane FM, instância por academia, QR/status/webhook | Engenharia interna + testes; segredo global não entregue ao tenant; homologação real separada | `DONE_INTERNAL/EXTERNAL_HOMOLOG_PENDING` — CI `40801458606` verde |
 | A8 | Web Premium e Mobile: sino, badge, inbox, detalhe, ações e preferências | Desktop/tablet/mobile; acessibilidade; zero clicável falso; seis perfis testados | `IMPLEMENTED/APP_CI_GREEN` — app PR #58 CI `40802857324` SUCCESS, isolada do Macro O #56 |
 | A9 | Certificação consolidada backend/app | lint, typecheck, testes, migrations, build, exports, container e regressão verdes | `IN_PROGRESS` — backend verde; app em validação |
@@ -759,3 +759,15 @@ Atualizar este bloco a cada entrega:
 - Script PostgreSQL ampliado para provar demotion de OWNER, recuperação de lease e DLQ usando o mesmo banco descartável; aguardar CI deste candidate para certificar esses novos cenários reais.
 - A6 push: adapter/token de dispositivo ainda não implementados; classificar DISABLED/OUT_OF_LAUNCH, nunca SENT nem homologado. E-mail/WhatsApp implementados, homologação física A10 adiada por decisão do usuário.
 - Próximo passo: concluir A9 na CI do último head; corrigir qualquer falha, reconciliar app PR #58 e cumprir os gates antes de merge. Depois W01 deve expor o novo estado operacional de equipamento sem alterar o trabalho visual concorrente.
+
+
+## CURRENT consolidado — PR #186 integrada / A9 em andamento (29/10/2026)
+
+- Backend #186 MERGED: main `51e54d9aa911b08609c49459fb5311d0f01f2e73`; candidate `f80894b` certificado pela CI integral `40903399389` SUCCESS. Regressão local final 820/820 PASS. Pós-merge `40904429721` em execução na última consulta; consultar resultado antes de declará-lo verde.
+- A5 DONE_INTERNAL: dez tipos iniciais conectados a fontes canônicas, com testes e PostgreSQL real descartável. Limite de plano monitorado é o cap de trial aplicado pelo cadastro; não inventar medidor para outras capabilities.
+- A6 DONE_INTERNAL no launch: recuperação de SENDING expirado, retry/DLQ, revalidação de autoridade/preferência antes de envio, quiet hours/timezone/DST, escalação crítica configurada sem loop. Leituras/listas/contadores também negam financeiro/segurança após demotion de OWNER. Push fora do lançamento e bloqueado na API/UI até haver adapter/registro de dispositivo.
+- CURRENT visual: app PR #56 já MERGED na main `3eacb62` pelo outro executor. A antiga regra de esperar #56 não representa mais o estado atual.
+- App candidata: PR #60, branch `feat/manager-alerts-premium-reconciled`, head `e2775dbd9b1aded3970c1166c550fb1520cfabb4`, construída sobre main premium. Preserva marca, responsividade, Fiscal, Privacidade, OAuth e módulos atuais. Montagem do inbox e manutenção concluída; 348/348 testes em 80 suítes PASS, typecheck PASS, lint sem erros (24 warnings herdados), exports Web/Android/iOS PASS. CI `40905301576` em execução. PR #58 antiga/conflitante será encerrada como substituída após certificar/integrar #60, nunca mesclada por cima do visual atual.
+- Gate A9/I01: backend PR #187, `fix/manager-alerts-live-certification`, atualiza o SHA do app candidato no pipeline para o head real da #60, preservando consumidor legado e toda a matriz. Sem alteração de runtime, infraestrutura ou deploy.
+- Homologação física Evolution/e-mail A10 continua PENDING_EXTERNAL por decisão do usuário. Nenhuma integração externa declarada live; nenhum deploy executado.
+- Próximo passo: conferir CI #60 e pós-merge backend; resolver falhas do gate cruzado #187; integrar somente com gates verdes; validar pós-merge e encerrar #58 como superseded; seguir cronograma pelos gaps reais. Não confundir conclusão de ALERTAS-1 com GO-LIVE global do IRON.
