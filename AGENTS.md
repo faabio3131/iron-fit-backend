@@ -713,10 +713,10 @@ Atualizar este bloco a cada entrega:
 - etapa atual: `A5`;
 - backend branch/PR/SHA: `feat/alertas-gestor-v1` / PR #186 (draft) / head remoto `39760ad` antes da fatia A4;
 - app branch/PR/SHA: `não iniciado — backend primeiro`;
-- migrations: `20261029010000_manager_alerts_core` implementada; validação Prisma aguarda CI porque o executor não possui dependências npm;
-- testes backend: `manager-alerts-boundary.test.mjs` 8/8 verde após control-plane Evolution; suíte completa aguarda CI;
+- migrations: `20261029010000_manager_alerts_core` implementada e fresh-install PostgreSQL verde na CI `40800750938`;
+- testes backend: `manager-alerts-boundary.test.mjs` 8/8 verde; CI `40800750938` passou smoke, integração, browser, segurança e container; testes unitários específicos de replay/tenant/transição adicionados no checkpoint seguinte;
 - testes app: `não iniciados`;
-- CI: primeira execução validou fresh migration e falhou no typecheck do array do dispatcher; correção aplicada, nova execução pendente;
+- CI: `40800750938` 100% verde após correção do typecheck (Prisma, migration, lint, build, smoke, E2E, seis superfícies, ZAP, Command, restart e container);
 - deploy: `não autorizado nesta ordem`;
 - homologação Evolution/e-mail/push: `PENDING_EXTERNAL`;
 - próximo passo: publicar/certificar A7, instrumentar eventos reais A5 e iniciar A8 somente após backend verde; push e homologação física Evolution permanecem blockers externos explícitos.
