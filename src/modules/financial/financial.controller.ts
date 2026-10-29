@@ -6,6 +6,8 @@ import { CreateChargeDto } from './dto/create-charge.dto';
 import { PayChargeDto } from './dto/pay-charge.dto';
 import { CreateChargePaymentSessionDto } from './dto/create-charge-payment-session.dto';
 import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
+import { TenantPaymentReconciliationService } from './tenant-payment-reconciliation.service';
+import { ReconcileChargePaymentDto } from './dto/reconcile-charge-payment.dto';
 import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
 import { UpsertFiscalScopeBindingDto } from './dto/upsert-fiscal-scope-binding.dto';
 import { CancelFiscalHandoffDto } from './dto/cancel-fiscal-handoff.dto';
@@ -23,6 +25,7 @@ export class FinancialController {
   constructor(
     private financialService: FinancialService,
     private tenantPaymentCheckout: TenantPaymentCheckoutService,
+    private tenantPaymentReconciliation: TenantPaymentReconciliationService,
     private fiscalScopeBinding: FiscalScopeBindingService,
     private fiscalLifecycle: FiscalReconciliationCancellationService,
   ) {}
@@ -133,6 +136,19 @@ export class FinancialController {
   ) {
     return this.tenantPaymentCheckout.listAvailableProviders(
       this.resolveGymId(user, requestedGymId),
+    );
+  }
+
+  @Post('charges/:id/reconcile-payment')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  reconcileProviderPayment(
+    @Param('id') id: string,
+    @Body() dto: ReconcileChargePaymentDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.tenantPaymentReconciliation.reconcile(
+      id, dto.accountId, this.resolveGymId(user, requestedGymId), user.id,
     );
   }
 
