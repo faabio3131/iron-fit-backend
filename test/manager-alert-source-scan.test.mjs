@@ -4,6 +4,28 @@ import test from 'node:test';
 
 const require = createRequire(import.meta.url);
 const { ManagerAlertSourceScanService } = require('../dist/src/modules/manager-alerts/manager-alert-source-scan.service.js');
+const { ManagerAlertDispatchService } = require('../dist/src/modules/manager-alerts/manager-alert-dispatch.service.js');
+
+test('internal scanning runs without external delivery and scan failure cannot block existing outbox', async () => {
+  const flags = new Map([['MANAGER_ALERT_SCAN_ENABLED', 'true']]);
+  let scanned = 0;
+  let dispatched = 0;
+  const dispatcher = new ManagerAlertDispatchService({}, { get: (key) => flags.get(key) }, {}, {}, {}, {}, {}, {
+    scanDue: async () => { scanned++; throw new Error('must never appear in logs'); },
+  });
+  const messages = [];
+  dispatcher.logger = { error: (message) => messages.push(message) };
+  dispatcher.dispatchDue = async () => { dispatched++; };
+  await dispatcher.runCycle();
+  assert.equal(scanned, 1);
+  assert.equal(dispatched, 0);
+  flags.set('MANAGER_ALERT_DISPATCH_ENABLED', 'true');
+  await dispatcher.runCycle();
+  assert.equal(scanned, 2);
+  assert.equal(dispatched, 1);
+  assert.deepEqual(messages, ['MANAGER_ALERT_SOURCE_SCAN_FAILED', 'MANAGER_ALERT_SOURCE_SCAN_FAILED']);
+  assert.equal(dispatcher.running, false);
+});
 
 test('scan derives tenants from committed facts and excludes settled or non-review records', async () => {
   const calls = [];
