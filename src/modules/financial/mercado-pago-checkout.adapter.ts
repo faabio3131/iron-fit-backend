@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { TenantPaymentProviderAdapterRegistry, TenantPaymentCheckoutInput, TenantPaymentCheckoutResult } from './tenant-payment-provider-adapter';
+import { TenantPaymentProviderAdapterRegistry, TenantPaymentCheckoutInput, TenantPaymentCheckoutResult, TenantPaymentVerificationInput, TenantPaymentVerificationResult } from './tenant-payment-provider-adapter';
 import { ServiceUnavailableException } from '@nestjs/common';
 
 @Injectable()
@@ -7,6 +7,65 @@ export class MercadoPagoCheckoutAdapter implements OnModuleInit {
   readonly providerCode = 'mercado_pago';
   constructor(private readonly registry: TenantPaymentProviderAdapterRegistry) {}
   onModuleInit() { this.registry.register(this); }
+
+  async verifyCheckout(input: TenantPaymentVerificationInput): Promise<TenantPaymentVerificationResult> {
+    // A Checkout Pro preference is not a payment. Look up the actual payment
+    // under the same tenant merchant token and confirm the full amount.
+    if (!input.chargeId || input.currency !== 'BRL') {
+      throw new ServiceUnavailableException('PAYMENT_VERIFICATION_INVALID');
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const headers = { authorization: 'Bearer ' + input.credential.reveal(), accept: 'application/json' };
+    const read = async (url: string) => {
+      const response = await fetch(url, { method: 'GET', headers, redirect: 'error', signal: controller.signal });
+      if (!response.ok) throw new ServiceUnavailableException('PAYMENT_VERIFICATION_HTTP_' + response.status);
+      const raw = await response.text();
+      if (Buffer.byteLength(raw, 'utf8') > 65536) throw new ServiceUnavailableException('PAYMENT_VERIFICATION_TOO_LARGE');
+      try { return JSON.parse(raw) as Record<string, any>; } catch {
+        throw new ServiceUnavailableException('PAYMENT_VERIFICATION_INVALID_RESPONSE');
+      }
+    };
+    try {
+      const search = new URL('https://api.mercadopago.com/v1/payments/search');
+      search.searchParams.set('external_reference', input.chargeId);
+      search.searchParams.set('sort', 'date_created');
+      search.searchParams.set('criteria', 'desc');
+      search.searchParams.set('limit', '50');
+      const result = await read(search.toString());
+      if (!Array.isArray(result?.results) || (typeof result.paging?.total === 'number' && result.paging.total > 50)) {
+        throw new ServiceUnavailableException('PAYMENT_VERIFICATION_AMBIGUOUS');
+      }
+      const rows = result.results.filter((row: any) => row?.external_reference === input.chargeId);
+      if (rows.length === 0) return { status: 'PENDING', providerPaymentRef: null, paidAt: null };
+      if (rows.length !== 1 || !/^\d{1,25}$/.test(String(rows[0].id ?? ''))) {
+        throw new ServiceUnavailableException('PAYMENT_VERIFICATION_AMBIGUOUS');
+      }
+      const payment = await read('https://api.mercadopago.com/v1/payments/' + encodeURIComponent(String(rows[0].id)));
+      const value = payment.transaction_amount;
+      const minor = typeof value === 'number' && Number.isFinite(value) ? value * 100 : NaN;
+      if (String(payment.id) !== String(rows[0].id) ||
+          payment.external_reference !== input.chargeId ||
+          payment.currency_id !== 'BRL' ||
+          !Number.isSafeInteger(input.amount) ||
+          !Number.isFinite(minor) || Math.abs(minor - input.amount) > 0.000001) {
+        throw new ServiceUnavailableException('PAYMENT_VERIFICATION_MISMATCH');
+      }
+      if (payment.status === 'approved' && payment.status_detail === 'accredited' && !(Number(payment.amount_refunded ?? 0) > 0)) {
+        const date = typeof payment.date_approved === 'string' ? new Date(payment.date_approved) : null;
+        return { status: 'PAID', providerPaymentRef: String(payment.id), paidAt: date && !Number.isNaN(date.getTime()) ? date : null };
+      }
+      if (['refunded', 'charged_back', 'cancelled'].includes(String(payment.status)) || Number(payment.amount_refunded ?? 0) > 0) {
+        return { status: 'REVERSED', providerPaymentRef: String(payment.id), paidAt: null };
+      }
+      return { status: 'PENDING', providerPaymentRef: String(payment.id), paidAt: null };
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      throw new ServiceUnavailableException('PAYMENT_VERIFICATION_UNAVAILABLE');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   async createCheckout(input: TenantPaymentCheckoutInput): Promise<TenantPaymentCheckoutResult> {
     if (input.currency !== 'BRL' || !Number.isSafeInteger(input.amount) || input.amount <= 0)
