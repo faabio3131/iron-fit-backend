@@ -681,7 +681,7 @@ Ausência ou falha de canal externo não pode apagar o alerta interno.
 | A4 | Preferências, quiet hours, severidade mínima e políticas governadas | Preferência individual; política tenant com step-up; segurança não silenciável | `IMPLEMENTED/CI_PENDING` |
 | A5 | Produtores dos 10 alertas aprovados | Cada produtor tem evento/dedupe/evidência e teste; sem cron duplicado | `IN_PROGRESS` — 10 contratos/dedupe prontos; instrumentação dos domínios pendente |
 | A6 | Outbox e adapters painel/e-mail/push/WhatsApp | Painel sempre disponível; retry/lease/DLQ; provider externo pode ficar blocked | `IN_PROGRESS` — outbox, lease, retry, DLQ, e-mail e WhatsApp prontos; push explicitamente blocked |
-| A7 | Evolution no IRON: control-plane FM, instância por academia, QR/status/webhook | Engenharia interna + testes; segredo global não entregue ao tenant; homologação real separada | `NOT_STARTED` |
+| A7 | Evolution no IRON: control-plane FM, instância por academia, QR/status/webhook | Engenharia interna + testes; segredo global não entregue ao tenant; homologação real separada | `IMPLEMENTED/CI_PENDING/EXTERNAL_HOMOLOG_PENDING` |
 | A8 | Web Premium e Mobile: sino, badge, inbox, detalhe, ações e preferências | Desktop/tablet/mobile; acessibilidade; zero clicável falso; seis perfis testados | `NOT_STARTED` |
 | A9 | Certificação consolidada backend/app | lint, typecheck, testes, migrations, build, exports, container e regressão verdes | `NOT_STARTED` |
 | A10 | Homologação física dos canais | QR real, envio/recebimento, e-mail, push, restart/reconnect e evidências | `PENDING_EXTERNAL` |
@@ -714,9 +714,9 @@ Atualizar este bloco a cada entrega:
 - backend branch/PR/SHA: `feat/alertas-gestor-v1` / PR #186 (draft) / head remoto `39760ad` antes da fatia A4;
 - app branch/PR/SHA: `não iniciado — backend primeiro`;
 - migrations: `20261029010000_manager_alerts_core` implementada; validação Prisma aguarda CI porque o executor não possui dependências npm;
-- testes backend: `manager-alerts-boundary.test.mjs` 7/7 verde após outbox/dispatcher; suíte completa aguarda CI;
+- testes backend: `manager-alerts-boundary.test.mjs` 8/8 verde após control-plane Evolution; suíte completa aguarda CI;
 - testes app: `não iniciados`;
-- CI: `em execução na PR #186`;
+- CI: primeira execução validou fresh migration e falhou no typecheck do array do dispatcher; correção aplicada, nova execução pendente;
 - deploy: `não autorizado nesta ordem`;
 - homologação Evolution/e-mail/push: `PENDING_EXTERNAL`;
-- próximo passo: instrumentar eventos reais A5, validar compilação do dispatcher A6 na CI e iniciar control-plane Evolution A7; push permanece blocker explícito até existir provider/dispositivo.
+- próximo passo: publicar/certificar A7, instrumentar eventos reais A5 e iniciar A8 somente após backend verde; push e homologação física Evolution permanecem blockers externos explícitos.
