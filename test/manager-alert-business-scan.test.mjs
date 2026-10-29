@@ -12,6 +12,8 @@ function fixture() {
   const calls = [];
   const queries = {};
   const prisma = {
+    managerAlert: { findMany: async () => [] },
+    managerAlertPolicy: { findUnique: async () => null },
     equipment: { findMany: async (q) => { queries.equipment = q; return [{ id: 'e', gymId: 'a', operationalStatusChangedAt: old }]; } },
     student: {
       findMany: async (q) => { queries.student = q; return [
@@ -90,4 +92,27 @@ test('equipment operational mutation rejects foreign tenant and stale changes an
   record = { operationalStatus: 'MAINTENANCE' };
   await service.updateOperationalStatus('equipment-a', 'gym-a', 'owner', 'MAINTENANCE');
   assert.equal(audits, 1, 'replay must not create a new status event');
+});
+
+test('critical escalation requires configured elapsed policy and keeps a stable one-shot source without loops', async () => {
+  const { scan, prisma } = fixture();
+  let query;
+  let minutes = null;
+  const emitted = [];
+  prisma.managerAlert.findMany = async (q) => { query = q; return [{ id: 'critical-original', gymId: 'a', category: 'SECURITY', createdAt: new Date(now.getTime() - 10 * 60_000) }]; };
+  prisma.managerAlertPolicy.findUnique = async () => ({ criticalEscalationMin: minutes });
+  scan.producers.criticalEscalation = async (event, category) => emitted.push({ event, category });
+  await scan.scanDue(50, now);
+  assert.equal(emitted.length, 0);
+  minutes = 15;
+  await scan.scanDue(50, now);
+  assert.equal(emitted.length, 0);
+  minutes = 5;
+  await scan.scanDue(50, now);
+  assert.equal(emitted.length, 1);
+  assert.equal(emitted[0].category, 'SECURITY', 'escalation must preserve OWNER-only category');
+  assert.equal(emitted[0].event.eventId, 'critical-original', 'canonical ingest deduplicates every later cycle');
+  assert.equal(query.where.status, 'OPEN');
+  assert.equal(query.where.acknowledgedAt, null);
+  assert.deepEqual(query.where.eventKey, { not: 'manager.alert.escalated' });
 });
