@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import {
   ManagerAlertCategory,
+  ManagerAlertChannel,
+  ManagerAlertDeliveryStatus,
   ManagerAlertSeverity,
   ManagerAlertStatus,
   Prisma,
@@ -36,6 +38,12 @@ const OWNER_ONLY = new Set<ManagerAlertCategory>([
   ManagerAlertCategory.SECURITY,
 ]);
 
+const SEVERITY_RANK: Record<ManagerAlertSeverity, number> = {
+  INFO: 1,
+  WARNING: 2,
+  CRITICAL: 3,
+};
+
 @Injectable()
 export class ManagerAlertsService {
   constructor(
@@ -62,6 +70,20 @@ export class ManagerAlertsService {
           distinct: ['userId'],
         });
 
+        const [policy, preferences] = await Promise.all([
+          tx.managerAlertPolicy.findUnique({
+            where: { gymId_category: { gymId: input.gymId, category: input.category } },
+          }),
+          tx.managerAlertPreference.findMany({
+            where: {
+              gymId: input.gymId,
+              category: input.category,
+              userId: { in: memberships.map((membership) => membership.userId) },
+            },
+          }),
+        ]);
+        const preferenceByUser = new Map(preferences.map((item) => [item.userId, item]));
+
         const alert = await tx.managerAlert.create({
           data: {
             gymId: input.gymId,
@@ -85,6 +107,30 @@ export class ManagerAlertsService {
           include: { recipients: true },
         });
 
+        const deliveryRows = alert.recipients.flatMap((recipient) => {
+          const preference = preferenceByUser.get(recipient.userId);
+          if (!policy || !preference) return [];
+          const requiredRank = Math.max(
+            SEVERITY_RANK[policy.minimumSeverity],
+            SEVERITY_RANK[preference.minimumSeverity],
+          );
+          if (SEVERITY_RANK[input.severity] < requiredRank) return [];
+          const channels: ManagerAlertChannel[] = [];
+          if (policy.emailAllowed && preference.emailEnabled) channels.push(ManagerAlertChannel.EMAIL);
+          if (policy.pushAllowed && preference.pushEnabled) channels.push(ManagerAlertChannel.PUSH);
+          if (policy.whatsappAllowed && preference.whatsappEnabled) channels.push(ManagerAlertChannel.WHATSAPP);
+          return channels.map((channel) => ({
+            alertId: alert.id,
+            recipientId: recipient.id,
+            channel,
+            status: ManagerAlertDeliveryStatus.PENDING,
+            idempotencyKey: `${input.gymId}:${input.deduplicationKey}:${recipient.userId}:${channel}`,
+          }));
+        });
+        if (deliveryRows.length > 0) {
+          await tx.managerAlertDelivery.createMany({ data: deliveryRows });
+        }
+
         await this.audit.record({
           gymId: input.gymId,
           action: 'MANAGER_ALERT_CREATED',
@@ -94,6 +140,7 @@ export class ManagerAlertsService {
             category: alert.category,
             severity: alert.severity,
             recipientCount: alert.recipients.length,
+            externalDeliveryCount: deliveryRows.length,
             eventKey: alert.eventKey,
           },
         }, tx);
