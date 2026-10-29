@@ -37,6 +37,16 @@ export class IntegrationProviderBootstrapService implements OnModuleInit {
     });
 
     this.providers.register({
+      providerCode: 'stripe',
+      capabilities: ['billing.student.checkout'],
+      authModels: ['API_KEY'],
+      environments: ['DEV', 'HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+      tenantEntitlementFeatureKey: 'billing.student.checkout',
+    });
+
+    this.providers.register({
       providerCode: 'mercado_pago',
       capabilities: ['billing.student.checkout'],
       authModels: ['ACCESS_TOKEN'],
