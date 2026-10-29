@@ -143,6 +143,53 @@ export class CommunicationDispatchService
     return capable[0];
   }
 
+  // An expired SENDING lease does not prove that the provider did not accept
+  // the message. Quarantine ambiguous deliveries instead of blindly retrying
+  // a WhatsApp request whose acknowledgement may have been lost.
+  async recoverExpiredLeases(limit = DISPATCH_BATCH_SIZE) {
+    const now = new Date();
+    const leases = await this.prisma.communicationMessage.findMany({
+      where: {
+        channel: MessageChannel.WHATSAPP,
+        status: MessageStatus.SENDING,
+        dispatchLeaseUntil: { lt: now },
+      },
+      orderBy: { dispatchLeaseUntil: 'asc' },
+      take: Math.min(Math.max(limit, 1), 100),
+      select: { id: true, gymId: true, dispatchLeaseOwner: true, dispatchLeaseUntil: true },
+    });
+    let recovered = 0;
+    for (const lease of leases) {
+      const changed = await this.prisma.communicationMessage.updateMany({
+        where: {
+          id: lease.id,
+          status: MessageStatus.SENDING,
+          dispatchLeaseOwner: lease.dispatchLeaseOwner,
+          dispatchLeaseUntil: lease.dispatchLeaseUntil,
+        },
+        data: {
+          status: MessageStatus.FAILED,
+          dispatchLeaseOwner: null,
+          dispatchLeaseUntil: null,
+          nextAttemptAt: null,
+          lastErrorCode: 'DELIVERY_OUTCOME_UNKNOWN',
+          errorMessage: 'DELIVERY_OUTCOME_UNKNOWN',
+        },
+      });
+      if (changed.count !== 1) continue;
+      recovered += 1;
+      await this.audit.record({
+        gymId: lease.gymId,
+        userId: null,
+        action: 'COMMUNICATION_DELIVERY_OUTCOME_UNKNOWN',
+        entity: 'CommunicationMessage',
+        entityId: lease.id,
+        next: { failureCode: 'DELIVERY_OUTCOME_UNKNOWN', requiresReconciliation: true },
+      }).catch(() => undefined);
+    }
+    return recovered;
+  }
+
   async dispatchDue(limit = DISPATCH_BATCH_SIZE) {
     const now = new Date();
     const rows = await this.prisma.communicationMessage.findMany({
@@ -152,6 +199,10 @@ export class CommunicationDispatchService
           in: [MessageStatus.QUEUED, MessageStatus.FAILED],
         },
         attemptCount: { lt: MAX_DISPATCH_ATTEMPTS },
+        OR: [
+          { lastErrorCode: null },
+          { lastErrorCode: { not: 'DELIVERY_OUTCOME_UNKNOWN' } },
+        ],
         AND: [
           {
             OR: [
@@ -192,6 +243,10 @@ export class CommunicationDispatchService
           in: [MessageStatus.QUEUED, MessageStatus.FAILED],
         },
         attemptCount: { lt: MAX_DISPATCH_ATTEMPTS },
+        OR: [
+          { lastErrorCode: null },
+          { lastErrorCode: { not: 'DELIVERY_OUTCOME_UNKNOWN' } },
+        ],
         AND: [
           {
             OR: [
@@ -428,8 +483,9 @@ export class CommunicationDispatchService
     if (this.cycleRunning) return { skipped: true };
     this.cycleRunning = true;
     try {
+      const recovered = await this.recoverExpiredLeases();
       const results = await this.dispatchDue();
-      return { skipped: false, results };
+      return { skipped: false, recovered, results };
     } finally {
       this.cycleRunning = false;
     }
