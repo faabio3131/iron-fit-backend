@@ -35,6 +35,8 @@ export interface TenantPaymentVerificationResult {
   status: 'PAID' | 'PENDING' | 'REVERSED';
   providerPaymentRef: string | null;
   paidAt: Date | null;
+  reversalReason?: 'FULL_REFUND' | 'PARTIAL_REFUND' | 'CHARGEBACK' | 'EXPIRED' | 'CANCELLED';
+  reversedAmount?: number | null;
 }
 
 export interface TenantPaymentProviderAdapter {

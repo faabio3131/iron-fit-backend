@@ -61,7 +61,48 @@ export class TenantPaymentReconciliationService {
       credential,
     });
     if (verified.status !== 'PAID') {
-      if (charge.status === ChargeStatus.PAID) {
+      if (verified.status === 'REVERSED' &&
+          (charge.status === ChargeStatus.PAID || charge.status === ChargeStatus.REFUNDED)) {
+        if (!verified.providerPaymentRef) {
+          throw new ServiceUnavailableException('Estorno sem referencia de pagamento verificavel');
+        }
+        if (verified.reversalReason === 'FULL_REFUND' &&
+            verified.reversedAmount === charge.amount) {
+          const refund = await this.financial.refundVerifiedGatewayCharge(
+            charge.id, gymId, actorUserId,
+            { connectionId: connection.id,
+              paymentRef: verified.providerPaymentRef,
+              refundedAmount: verified.reversedAmount },
+          );
+          return {
+            chargeId: charge.id,
+            providerCode: connection.providerCode,
+            status: 'REFUNDED',
+            booked: false,
+            reversalBooked: true,
+            idempotent: refund.idempotent,
+            reversalTransactionId: refund.reversalTransactionId,
+          };
+        }
+        // Do not book partial refunds or chargebacks as a full reversal.
+        // Leave a tenant-scoped audit trail for owner/fiscal review.
+        await this.audit.record({
+          gymId, userId: actorUserId,
+          action: 'FINANCIAL_GATEWAY_REVERSAL_REQUIRES_REVIEW',
+          entity: 'Charge', entityId: charge.id,
+          next: {
+            providerCode: connection.providerCode,
+            providerPaymentRef: verified.providerPaymentRef,
+            reversalReason: verified.reversalReason ?? 'UNKNOWN',
+            reversedAmount: verified.reversedAmount ?? null,
+            chargeAmount: charge.amount,
+            fiscalReviewRequired: true,
+          },
+        });
+        return { chargeId: charge.id, providerCode: connection.providerCode,
+          status: 'MANUAL_REVIEW', booked: false, requiresReview: true };
+      }
+      if (charge.status === ChargeStatus.PAID || charge.status === ChargeStatus.REFUNDED) {
         throw new ConflictException('Baixa anterior diverge do estado atual do provider: exige revisao financeira');
       }
       return {

@@ -6,12 +6,12 @@ const require = createRequire(import.meta.url);
 const { TenantPaymentReconciliationService } = require('../dist/src/modules/financial/tenant-payment-reconciliation.service.js');
 const { IntegrationSecretValue } = require('../dist/src/modules/integrations/secrets/integration-secret-vault.port.js');
 
-function fixture({ status = 'PAID', connection = true, chargeGym = 'gym-a', verifiedPaymentRef = 'payment-a' } = {}) {
-  const calls = { payments: [], audits: [], resolved: [], lookups: [] };
+function fixture({ status = 'PAID', connection = true, chargeGym = 'gym-a', verifiedPaymentRef = 'payment-a', chargeStatus = 'PENDING', reversalReason, reversedAmount } = {}) {
+  const calls = { payments: [], refunds: [], audits: [], resolved: [], lookups: [] };
   const charge = {
     id: 'charge-a', gymId: chargeGym, gatewayProviderCode: 'stripe',
     gatewayConnectionId: 'connection-a', gatewayChargeId: 'cs_test_a',
-    gatewayRequestId: 'request-a', status: 'PENDING', amount: 5000,
+    gatewayRequestId: 'request-a', status: chargeStatus, amount: 5000,
   };
   const service = new TenantPaymentReconciliationService(
     {
@@ -40,7 +40,7 @@ function fixture({ status = 'PAID', connection = true, chargeGym = 'gym-a', veri
           assert.equal(input.amount, 5000);
           assert.equal(input.currency, 'BRL');
           assert.equal(input.environment, 'HOMOLOG');
-          return { status, providerPaymentRef: verifiedPaymentRef, paidAt: null };
+          return { status, providerPaymentRef: verifiedPaymentRef, paidAt: null, reversalReason, reversedAmount };
         } };
       },
     },
@@ -48,6 +48,10 @@ function fixture({ status = 'PAID', connection = true, chargeGym = 'gym-a', veri
       payCharge: async (chargeId, dto, gymId, userId, evidence) => {
         calls.payments.push({ chargeId, dto, gymId, userId, evidence });
         return { idempotent: false };
+      },
+      refundVerifiedGatewayCharge: async (chargeId, gymId, userId, evidence) => {
+        calls.refunds.push({ chargeId, gymId, userId, evidence });
+        return { reversalTransactionId: 'reversal-1', idempotent: false };
       },
     },
     { record: async (entry) => calls.audits.push(entry) },
@@ -103,4 +107,37 @@ test('tenant charge read model exposes only gateway safe binding needed for reco
   assert.equal(tenantChargeReadSelect.gatewayProviderCode, true);
   assert.equal('secretReference' in tenantChargeReadSelect, false);
   assert.equal('providerSecret' in tenantChargeReadSelect, false);
+});
+
+test('full verified refund books exactly one compensating reversal with payment evidence', async () => {
+  const { service, calls } = fixture({
+    status: 'REVERSED', reversalReason: 'FULL_REFUND',
+    reversedAmount: 5000, chargeStatus: 'PAID',
+  });
+  const result = await service.reconcile('charge-a', 'account-a', 'gym-a', 'owner-a');
+  assert.equal(result.status, 'REFUNDED');
+  assert.equal(result.reversalBooked, true);
+  assert.equal(result.reversalTransactionId, 'reversal-1');
+  assert.equal(calls.payments.length, 0);
+  assert.equal(calls.refunds.length, 1);
+  assert.deepEqual(calls.refunds[0].evidence, {
+    connectionId: 'connection-a', paymentRef: 'payment-a', refundedAmount: 5000,
+  });
+});
+
+test('partial refund and chargeback require review, never book full reversal', async () => {
+  for (const [reversalReason, reversedAmount] of [
+    ['PARTIAL_REFUND', 1000], ['CHARGEBACK', 5000],
+  ]) {
+    const { service, calls } = fixture({
+      status: 'REVERSED', reversalReason, reversedAmount, chargeStatus: 'PAID',
+    });
+    const result = await service.reconcile('charge-a', 'account-a', 'gym-a', 'owner-a');
+    assert.equal(result.status, 'MANUAL_REVIEW');
+    assert.equal(result.requiresReview, true);
+    assert.equal(calls.refunds.length, 0);
+    assert.equal(calls.payments.length, 0);
+    assert.equal(calls.audits[0].action, 'FINANCIAL_GATEWAY_REVERSAL_REQUIRES_REVIEW');
+    assert.equal(calls.audits[0].next.reversalReason, reversalReason);
+  }
 });

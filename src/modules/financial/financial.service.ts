@@ -429,6 +429,98 @@ export class FinancialService {
     );
   }
 
+  /**
+   * Compensating ledger entry for a FULL provider-verified refund only.
+   * Partial refunds / disputes do not acquire this authority.
+   */
+  async refundVerifiedGatewayCharge(
+    chargeId: string,
+    gymId: string,
+    actorUserId: string,
+    evidence: {
+      connectionId: string;
+      paymentRef: string;
+      refundedAmount: number;
+    },
+  ) {
+    return this.withSerializableRetry(() =>
+      this.prisma.$transaction(async (tx) => {
+        const charge = await tx.charge.findFirst({
+          where: { id: chargeId, gymId },
+          include: { student: true },
+        });
+        if (!charge || charge.student.gymId !== gymId) {
+          throw new NotFoundException('Cobranca nao encontrada');
+        }
+        if (!charge.gatewayRequestId || !charge.gatewayChargeId ||
+            charge.gatewayConnectionId !== evidence.connectionId ||
+            !evidence.paymentRef ||
+            !Number.isSafeInteger(evidence.refundedAmount) ||
+            evidence.refundedAmount <= 0 ||
+            evidence.refundedAmount !== charge.amount) {
+          throw new ConflictException('Estorno sem comprovacao integral da operacao tenant');
+        }
+        const original = await tx.financialTransaction.findFirst({
+          where: { gymId, source: 'charge', sourceId: charge.id },
+        });
+        if (!original || original.type !== 'INCOME' || original.status !== 'PAID' ||
+            original.amount !== charge.amount || !original.accountId) {
+          throw new ConflictException('Recebimento original nao reconciliado para estorno');
+        }
+        const existing = await tx.financialTransaction.findFirst({
+          where: { gymId, source: 'charge_refund', sourceId: charge.id },
+        });
+        if (charge.status === ChargeStatus.REFUNDED && existing) {
+          return { chargeId, reversalTransactionId: existing.id, idempotent: true };
+        }
+        if (charge.status !== ChargeStatus.PAID || existing) {
+          throw new ConflictException('Estado de estorno divergente do ledger');
+        }
+        const update = await tx.charge.updateMany({
+          where: { id: charge.id, gymId, status: ChargeStatus.PAID },
+          data: { status: ChargeStatus.REFUNDED },
+        });
+        if (update.count !== 1) {
+          throw new ConflictException('Estorno concorrente, recarregue a cobranca');
+        }
+        const reversal = await tx.financialTransaction.create({
+          data: {
+            gymId,
+            type: TransactionType.EXPENSE,
+            accountId: original.accountId,
+            description: 'Estorno integral verificado da cobranca ' + charge.id,
+            amount: charge.amount,
+            paidAt: new Date(),
+            status: TransactionStatus.PAID,
+            source: 'charge_refund',
+            sourceId: charge.id,
+            studentId: charge.studentId,
+            paymentMethod: 'GATEWAY_REFUND',
+          },
+        });
+        await this.audit.record({
+          gymId, userId: actorUserId,
+          action: 'FINANCIAL_GATEWAY_FULL_REFUND_VERIFIED',
+          entity: 'Charge', entityId: charge.id,
+          previous: { status: ChargeStatus.PAID, originalTransactionId: original.id },
+          next: {
+            status: ChargeStatus.REFUNDED,
+            amount: charge.amount,
+            providerConnectionId: evidence.connectionId,
+            providerPaymentRef: evidence.paymentRef,
+            reversalTransactionId: reversal.id,
+            fiscalCancellationRequiresSeparateReconciliation: true,
+          },
+        }, tx);
+        return {
+          chargeId: charge.id,
+          reversalTransactionId: reversal.id,
+          idempotent: false,
+        };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
+    );
+  }
+
   async findAllCharges(
     gymId: string,
     filters:

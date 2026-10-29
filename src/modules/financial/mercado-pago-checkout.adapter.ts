@@ -51,12 +51,31 @@ export class MercadoPagoCheckoutAdapter implements OnModuleInit {
           !Number.isFinite(minor) || Math.abs(minor - input.amount) > 0.000001) {
         throw new ServiceUnavailableException('PAYMENT_VERIFICATION_MISMATCH');
       }
-      if (payment.status === 'approved' && payment.status_detail === 'accredited' && !(Number(payment.amount_refunded ?? 0) > 0)) {
+      const rawRefund = payment.amount_refunded ?? 0;
+      const refundMinor = typeof rawRefund === 'number' && Number.isFinite(rawRefund)
+        ? Math.round(rawRefund * 100) : NaN;
+      if (!Number.isSafeInteger(refundMinor) || refundMinor < 0 || refundMinor > input.amount ||
+          Math.abs(refundMinor - rawRefund * 100) > 0.000001) {
+        throw new ServiceUnavailableException('PAYMENT_REFUND_AMOUNT_INVALID');
+      }
+      if (payment.status === 'charged_back') {
+        return { status: 'REVERSED', reversalReason: 'CHARGEBACK',
+          reversedAmount: refundMinor, providerPaymentRef: String(payment.id), paidAt: null };
+      }
+      if (payment.status === 'refunded' || refundMinor > 0) {
+        return {
+          status: 'REVERSED',
+          reversalReason: refundMinor === input.amount ? 'FULL_REFUND' : 'PARTIAL_REFUND',
+          reversedAmount: refundMinor, providerPaymentRef: String(payment.id), paidAt: null,
+        };
+      }
+      if (payment.status === 'cancelled') {
+        return { status: 'REVERSED', reversalReason: 'CANCELLED',
+          reversedAmount: 0, providerPaymentRef: String(payment.id), paidAt: null };
+      }
+      if (payment.status === 'approved' && payment.status_detail === 'accredited') {
         const date = typeof payment.date_approved === 'string' ? new Date(payment.date_approved) : null;
         return { status: 'PAID', providerPaymentRef: String(payment.id), paidAt: date && !Number.isNaN(date.getTime()) ? date : null };
-      }
-      if (['refunded', 'charged_back', 'cancelled'].includes(String(payment.status)) || Number(payment.amount_refunded ?? 0) > 0) {
-        return { status: 'REVERSED', providerPaymentRef: String(payment.id), paidAt: null };
       }
       return { status: 'PENDING', providerPaymentRef: String(payment.id), paidAt: null };
     } catch (error) {
