@@ -29,3 +29,7 @@ As categorias `STUDENT_BILLING` e `SECURITY` são inicialmente restritas a `OWNE
 - O módulo de comunicação com alunos permanece intacto.
 - Produtores de domínio chamam `ManagerAlertsService.ingest`; não escrevem tabelas diretamente.
 - Canais externos e suas homologações podem evoluir sem alterar o contrato da inbox.
+
+## Control-plane Evolution
+
+A Evolution é uma infraestrutura central da FM: uma `IntegrationConnection` global guarda somente a referência do segredo no Vault e a configuração pública (`baseUrl`, `webhookUrl`). Cada academia recebe um `EvolutionTenantInstance` com nome determinístico e único. O tenant pode solicitar QR/status, mas nunca recebe a API key. Provisionamento, conexão, estado e logout seguem os endpoints v2 oficiais `/instance/create`, `/instance/connect/{instance}`, `/instance/connectionState/{instance}` e `/instance/logout/{instance}`. O webhook usa header autenticado, `base64=false` e atualiza somente a instância vinculada.
