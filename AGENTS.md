@@ -791,3 +791,14 @@ Atualizar este bloco a cada entrega:
 - O pipeline agora fixa o app final já integrado `41dc68d5e19247b1a4755ca4cab36bdb73575c21` para certificar também o isolamento opcional da #61. Aguardar CI completa deste HEAD da #187 antes de merge. Caso falhe, causa-raiz → corrigir → retestar.
 - A10 físico Evolution/e-mail permanece PENDING_EXTERNAL por decisão do usuário. Push DISABLED/OUT_OF_LAUNCH. Nenhum deploy ou alteração em ambiente produtivo foi executado.
 - Próximo passo: concluir CI #187 + pós-merge app #61; integrar #187 somente verde; conferir pós-merge backend. Depois seguir as próximas pendências reais do cronograma. ALERTAS-1 interno não representa GO-LIVE global.
+
+
+## Fechamento do guard de inventário — último gate pendente (29/10/2026)
+
+- App #61 pós-merge `40908511068` SUCCESS. Interface final na main `41dc68d`; 352 testes/80 suítes aprovados, sem skips.
+- O ciclo cruzado `40908652079` terminou integralmente SUCCESS, incluindo banco, HTTP dos seis perfis, navegador, ZAP, Command, restart e container.
+- A revisão final identificou que a nova mutação de estado operacional precisava validar também a capacidade comercial no servidor. PR #187 passou a incluir o guard: `TenantProductEntitlementsService.resolveFeature(gymId, 'equipment.inventory')` deve retornar FEATURE/true antes de abrir a transação. Sessão válida de OWNER/MANAGER sem essa concessão recebe 403. Reutiliza o resolver canônico; não cria autoridade paralela.
+- Testes: negação sem capability sem auditoria/mutação; preservação de tenant/CAS/replay. E2E HTTP injeta suspensão da assinatura somente no banco descartável, espera 403 e restaura o estado em finally; concessão ativa continua validada pelo serviço real. A fixture PostgreSQL de persistência fornece uma concessão sintética explícita, sem fingir que ela é homologação externa.
+- Após esse guard: lint/typecheck/build PASS e regressão completa 820/820 PASS novamente. Candidate de código/testes `4c906c2`. Nova CI do HEAD após este checkpoint é obrigatória; não usar o ciclo anterior como aprovação automática do código novo.
+- #187 permanece Draft e sem merge até CI completa verde. #186/#60/#61 já integradas e pós-merges verdes; #58 encerrada como substituída. Sem deploy; Evolution físico adiado; push fora do lançamento.
+- Próximo passo exato: verificar CI do último head da #187, corrigir se necessário, marcar pronta e integrar com expected_head_sha somente verde; consultar pós-merge e então seguir o cronograma.
