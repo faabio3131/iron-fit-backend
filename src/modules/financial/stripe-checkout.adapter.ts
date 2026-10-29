@@ -93,9 +93,21 @@ export class StripeCheckoutAdapter implements OnModuleInit {
             typeof latestCharge.id !== 'string') {
           throw new ServiceUnavailableException('STRIPE_CHARGE_NOT_VERIFIED');
         }
-        if (latestCharge.disputed === true || latestCharge.refunded === true ||
-            Number(latestCharge.amount_refunded ?? 0) > 0) {
-          return { status: 'REVERSED', providerPaymentRef: intent.id, paidAt: null };
+        const refundMinor = latestCharge.amount_refunded;
+        if (!Number.isSafeInteger(refundMinor) || refundMinor < 0 || refundMinor > input.amount) {
+          throw new ServiceUnavailableException('STRIPE_REFUND_AMOUNT_INVALID');
+        }
+        if (latestCharge.disputed === true) {
+          return { status: 'REVERSED', reversalReason: 'CHARGEBACK',
+            reversedAmount: refundMinor, providerPaymentRef: intent.id, paidAt: null };
+        }
+        if (latestCharge.refunded === true || refundMinor > 0) {
+          return {
+            status: 'REVERSED',
+            reversalReason: refundMinor === input.amount ? 'FULL_REFUND' : 'PARTIAL_REFUND',
+            reversedAmount: refundMinor,
+            providerPaymentRef: intent.id, paidAt: null,
+          };
         }
         if (latestCharge.paid !== true || latestCharge.status !== 'succeeded' ||
             latestCharge.amount !== input.amount || latestCharge.currency !== input.currency.toLowerCase()) {
@@ -103,7 +115,7 @@ export class StripeCheckoutAdapter implements OnModuleInit {
         }
         return { status: 'PAID', providerPaymentRef: intent.id, paidAt: null };
       }
-      if (data.status === 'expired') return { status: 'REVERSED', providerPaymentRef: data.id, paidAt: null };
+      if (data.status === 'expired') return { status: 'REVERSED', reversalReason: 'EXPIRED', reversedAmount: 0, providerPaymentRef: data.id, paidAt: null };
       return { status: 'PENDING', providerPaymentRef: data.id, paidAt: null };
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
