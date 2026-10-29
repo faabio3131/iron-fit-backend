@@ -8,6 +8,7 @@ const controller = readFileSync(new URL('../src/modules/manager-alerts/manager-a
 const preferenceDto = readFileSync(new URL('../src/modules/manager-alerts/dto/update-manager-alert-preference.dto.ts', import.meta.url), 'utf8');
 const producers = readFileSync(new URL('../src/modules/manager-alerts/manager-alert-producers.service.ts', import.meta.url), 'utf8');
 const dispatcher = readFileSync(new URL('../src/modules/manager-alerts/manager-alert-dispatch.service.ts', import.meta.url), 'utf8');
+const evolution = readFileSync(new URL('../src/modules/manager-alerts/evolution-tenant-instance.service.ts', import.meta.url), 'utf8');
 
 test('manager alerts use tenant-scoped deduplication and recipient boundary', () => {
   assert.match(schema, /@@unique\(\[gymId, deduplicationKey\]\)/);
@@ -43,6 +44,18 @@ test('external dispatcher uses leases, retries and explicit dead letter state', 
   assert.match(dispatcher, /resolveForExternalBoundary/);
   assert.match(dispatcher, /PUSH_ADAPTER_NOT_IMPLEMENTED/);
   assert.doesNotMatch(dispatcher, /status: ManagerAlertDeliveryStatus\.SENT[\s\S]{0,200}catch/);
+});
+
+test('Evolution control plane keeps the global key server-side and isolates instances by gym', () => {
+  assert.match(schema, /gymId\s+String\s+@unique[\s\S]*instanceName\s+String\s+@unique/);
+  assert.match(evolution, /scope: IntegrationScope\.GLOBAL/);
+  assert.match(evolution, /resolveForExternalBoundary\(connection\.id, \{ scope: 'GLOBAL' \}\)/);
+  assert.match(evolution, /`iron-\$\{gymId\.replace/);
+  assert.doesNotMatch(evolution, /return \{[^}]*credential/);
+  assert.match(evolution, /syncFullHistory: false/);
+  assert.match(evolution, /timingSafeEqual/);
+  assert.match(evolution, /events: \['CONNECTION_UPDATE', 'QRCODE_UPDATED', 'MESSAGES_UPSERT'\]/);
+  assert.doesNotMatch(evolution, /base64: true/);
 });
 
 test('individual preferences keep in-app mandatory and security non-silenceable', () => {
