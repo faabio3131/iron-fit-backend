@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ManagerAlertSourceScanService } from './manager-alert-source-scan.service';
+import { ManagerAlertBusinessScanService } from './manager-alert-business-scan.service';
 import {
   IntegrationConnectionStatus,
   IntegrationEnvironment,
@@ -55,6 +56,7 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
     private readonly emailAdapters: TransactionalEmailProviderAdapterRegistry,
     private readonly audit: AuditService,
     private readonly sourceScan: ManagerAlertSourceScanService,
+    private readonly businessScan: ManagerAlertBusinessScanService,
   ) {}
 
   onModuleInit() {
@@ -242,8 +244,8 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
     this.running = true;
     try {
       if (this.enabled('MANAGER_ALERT_SCAN_ENABLED')) {
-        try { await this.sourceScan.scanDue(); }
-        catch { this.logger.error('MANAGER_ALERT_SOURCE_SCAN_FAILED'); }
+        const results = await Promise.allSettled([this.sourceScan.scanDue(), this.businessScan.scanDue()]);
+        if (results.some((result) => result.status === 'rejected')) this.logger.error('MANAGER_ALERT_SOURCE_SCAN_FAILED');
       }
       if (this.enabled('MANAGER_ALERT_DISPATCH_ENABLED')) await this.dispatchDue();
     } finally { this.running = false; }
