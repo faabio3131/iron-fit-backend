@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { ManagerAlertSourceScanService } from './manager-alert-source-scan.service';
 import { ManagerAlertBusinessScanService } from './manager-alert-business-scan.service';
+import { managerAlertLiveAccess } from './manager-alert-authorization';
+import { managerAlertQuietUntil } from './manager-alert-quiet-hours';
 import {
   IntegrationConnectionStatus,
   IntegrationEnvironment,
@@ -72,6 +74,13 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
 
   async dispatchDue(limit = 20) {
     const now = new Date();
+    // Recover interrupted workers using the same persisted provider idempotency key.
+    for (const exhausted of [false, true]) {
+      await this.prisma.managerAlertDelivery.updateMany({
+        where: { status: ManagerAlertDeliveryStatus.SENDING, attemptCount: exhausted ? { gte: MAX_ATTEMPTS } : { lt: MAX_ATTEMPTS }, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] },
+        data: { status: exhausted ? ManagerAlertDeliveryStatus.DEAD_LETTER : ManagerAlertDeliveryStatus.FAILED, leaseOwner: null, leaseUntil: null, nextAttemptAt: exhausted ? null : now, lastErrorCode: 'DELIVERY_LEASE_EXPIRED' },
+      });
+    }
     const rows = await this.prisma.managerAlertDelivery.findMany({
       where: {
         status: { in: [ManagerAlertDeliveryStatus.PENDING, ManagerAlertDeliveryStatus.FAILED, ManagerAlertDeliveryStatus.DEFERRED] },
@@ -123,6 +132,27 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
     if (!row || row.leaseOwner !== leaseOwner) return { id, dispatched: false, reason: 'LEASE_LOST' };
 
     try {
+      const live = await this.prisma.managerAlert.findFirst({ where: { id: row.alertId, gymId: row.alert.gymId, AND: [managerAlertLiveAccess(row.alert.gymId, row.recipient.userId)] }, select: { id: true } });
+      const [policy, preference] = await Promise.all([
+        this.prisma.managerAlertPolicy.findUnique({ where: { gymId_category: { gymId: row.alert.gymId, category: row.alert.category } } }),
+        this.prisma.managerAlertPreference.findUnique({ where: { gymId_userId_category: { gymId: row.alert.gymId, userId: row.recipient.userId, category: row.alert.category } } }),
+      ]);
+      const allowed = row.channel === ManagerAlertChannel.EMAIL ? policy?.emailAllowed && preference?.emailEnabled
+        : row.channel === ManagerAlertChannel.WHATSAPP ? policy?.whatsappAllowed && preference?.whatsappEnabled
+          : policy?.pushAllowed && preference?.pushEnabled;
+      const rank = { INFO: 1, WARNING: 2, CRITICAL: 3 };
+      const filtered = policy && preference && rank[row.alert.severity] < Math.max(rank[policy.minimumSeverity], rank[preference.minimumSeverity]);
+      const skip = !live || row.recipient.alertId !== row.alertId || ['RESOLVED', 'DISMISSED'].includes(row.alert.status) || !allowed || filtered;
+      const quietUntil = !skip && preference ? managerAlertQuietUntil(now, preference) : null;
+      if (skip || quietUntil) {
+        const reason = skip ? 'DELIVERY_AUTHORITY_OR_PREFERENCE_REVOKED' : 'QUIET_HOURS';
+        const changed = await this.prisma.managerAlertDelivery.updateMany({
+          where: { id, leaseOwner, status: ManagerAlertDeliveryStatus.SENDING },
+          data: { status: skip ? ManagerAlertDeliveryStatus.SKIPPED : ManagerAlertDeliveryStatus.DEFERRED, leaseOwner: null, leaseUntil: null, nextAttemptAt: quietUntil, attemptCount: { decrement: 1 }, lastErrorCode: reason },
+        });
+        if (changed.count === 1) await this.audit.record({ gymId: row.alert.gymId, userId: row.recipient.userId, action: skip ? 'MANAGER_ALERT_DELIVERY_SKIPPED' : 'MANAGER_ALERT_DELIVERY_DEFERRED', entity: 'ManagerAlertDelivery', entityId: id, next: { reason, channel: row.channel } });
+        return { id, dispatched: false, reason };
+      }
       const result = row.channel === ManagerAlertChannel.WHATSAPP
         ? await this.sendWhatsapp(row)
         : row.channel === ManagerAlertChannel.EMAIL
@@ -145,7 +175,7 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
       return { id, dispatched: true };
     } catch (error) {
       const terminal = row.attemptCount >= MAX_ATTEMPTS;
-      await this.prisma.managerAlertDelivery.updateMany({
+      const failed = await this.prisma.managerAlertDelivery.updateMany({
         where: { id, leaseOwner, status: ManagerAlertDeliveryStatus.SENDING },
         data: {
           status: terminal ? ManagerAlertDeliveryStatus.DEAD_LETTER : ManagerAlertDeliveryStatus.FAILED,
@@ -155,6 +185,7 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
           leaseUntil: null,
         },
       });
+      if (failed.count !== 1) return { id, dispatched: false, reason: 'LEASE_LOST_OR_COMPLETED' };
       await this.audit.record({ gymId: row.alert.gymId, userId: row.recipient.userId, action: terminal ? 'MANAGER_ALERT_DELIVERY_DEAD_LETTER' : 'MANAGER_ALERT_DELIVERY_FAILED', entity: 'ManagerAlertDelivery', entityId: id, next: { channel: row.channel, errorCode: errorCode(error), attemptCount: row.attemptCount } });
       return { id, dispatched: false, reason: errorCode(error) };
     }
