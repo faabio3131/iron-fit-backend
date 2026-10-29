@@ -96,3 +96,11 @@ test('verified status with missing payment reference fails closed', async () => 
   await assert.rejects(() => service.reconcile('charge-a', 'account-a', 'gym-a', 'owner-a'), /referencia verificavel/);
   assert.equal(calls.payments.length, 0);
 });
+
+test('tenant charge read model exposes only gateway safe binding needed for reconciliation', async () => {
+  const { tenantChargeReadSelect } = await import('../dist/src/modules/financial/charge-read-model.js');
+  assert.equal(tenantChargeReadSelect.gatewayConnectionId, true);
+  assert.equal(tenantChargeReadSelect.gatewayProviderCode, true);
+  assert.equal('secretReference' in tenantChargeReadSelect, false);
+  assert.equal('providerSecret' in tenantChargeReadSelect, false);
+});
