@@ -149,6 +149,14 @@ enum ManagerAlertDeliveryStatus {
   SKIPPED
 }
 
+enum EvolutionTenantInstanceStatus {
+  PROVISIONING
+  QR_PENDING
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
 enum AggregatorConnectionStatus {
   PENDING
   ACTIVE
@@ -640,6 +648,25 @@ model ManagerAlertPolicy {
   @@index([gymId])
 }
 
+model EvolutionTenantInstance {
+  id                     String                        @id @default(uuid())
+  gymId                  String                        @unique
+  globalConnectionId     String
+  instanceName           String                        @unique
+  status                 EvolutionTenantInstanceStatus @default(PROVISIONING)
+  providerState          String?
+  lastStateCheckedAt     DateTime?
+  connectedAt            DateTime?
+  disconnectedAt         DateTime?
+  createdByUserId        String
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  gym                    Gym                           @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  globalConnection       IntegrationConnection         @relation(fields: [globalConnectionId], references: [id], onDelete: Restrict)
+
+  @@index([globalConnectionId, status])
+}
+
 
 model CommercialTrialProvisioning {
   requestId          String   @id
@@ -729,6 +756,7 @@ model Gym {
   managerAlerts ManagerAlert[]
   managerAlertPreferences ManagerAlertPreference[]
   managerAlertPolicies ManagerAlertPolicy[]
+  evolutionTenantInstance EvolutionTenantInstance?
   @@index([slug])
 }
 
