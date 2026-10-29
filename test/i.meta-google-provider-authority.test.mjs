@@ -37,7 +37,11 @@ test('I bootstraps Meta as one umbrella provider and Google as a separate OAuth 
 
   // Meta, Google and fiscal providers remain unchanged; FM-only AI providers
   // extend the catalog without granting academy control of API credentials.
-  assert.equal(registry.list().length, 10);
+  assert.equal(registry.list().length, 11);
+  const mpWebhook = registry.require('mercado_pago_webhook');
+  assert.deepEqual(mpWebhook.capabilities, ['billing.student.webhook']);
+  assert.deepEqual(mpWebhook.authModels, ['WEBHOOK_SECRET']);
+  assert.equal(mpWebhook.tenantEntitlementFeatureKey, 'billing.student.checkout');
   const stripeWebhook = registry.require('stripe_webhook');
   assert.deepEqual(stripeWebhook.capabilities, ['billing.student.webhook']);
   assert.deepEqual(stripeWebhook.authModels, ['WEBHOOK_SECRET']);
