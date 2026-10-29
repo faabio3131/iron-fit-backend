@@ -308,3 +308,25 @@ test('H2 cannot select payment connection from another tenant', async () => {
   assert.equal(fx.captured.secretCalls.length, 0);
   assert.equal(fx.captured.adapterCalls.length, 0);
 });
+
+test('H2 lists only active configured tenant gateways without exposing credential data', async () => {
+  const base = {
+    scope: 'TENANT', gymId: 'gym-a', providerCode: 'fake-pay', environment: 'HOMOLOG',
+    status: 'ACTIVE', capabilities: ['billing.student.checkout'],
+    secretReference: 'isv_' + 'A'.repeat(43), secretVersion: 1,
+    secretRevokedAt: null, secretExpiresAt: null, updatedAt: new Date(),
+  };
+  const fx = fixture({ connections: [
+    { ...base, id: 'gateway-a' },
+    { ...base, id: 'gateway-b' },
+    { ...base, id: 'foreign', gymId: 'gym-b' },
+    { ...base, id: 'revoke', secretRevokedAt: new Date() },
+    { ...base, id: 'other-capability', capabilities: ['email.transactional'] },
+  ] });
+  const choices = await fx.service.listAvailableProviders('gym-a');
+  assert.deepEqual(choices, [
+    { connectionId: 'gateway-a', providerCode: 'fake-pay' },
+    { connectionId: 'gateway-b', providerCode: 'fake-pay' },
+  ]);
+  assert.doesNotMatch(JSON.stringify(choices), /secret|credential|gymId/);
+});
