@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { FinancialService } from './financial.service';
+import { StripePaymentWebhookInboxService } from './stripe-payment-webhook-inbox.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CreateChargeDto } from './dto/create-charge.dto';
@@ -24,6 +25,7 @@ import { resolveTenantOperationGymId } from '../../common/security/tenant-operat
 export class FinancialController {
   constructor(
     private financialService: FinancialService,
+    private webhookInbox: StripePaymentWebhookInboxService,
     private tenantPaymentCheckout: TenantPaymentCheckoutService,
     private tenantPaymentReconciliation: TenantPaymentReconciliationService,
     private fiscalScopeBinding: FiscalScopeBindingService,
@@ -126,6 +128,15 @@ export class FinancialController {
       this.resolveGymId(user, requestedGymId),
       { studentId, accountId, status, type, from, to },
     );
+  }
+
+  @Get('gateway-events')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  listGatewayEvents(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.webhookInbox.listForGym(this.resolveGymId(user, requestedGymId));
   }
 
   @Get('payment-providers')
