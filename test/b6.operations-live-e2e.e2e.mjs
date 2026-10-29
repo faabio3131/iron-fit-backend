@@ -1,10 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { PrismaClient } from '@prisma/client';
 import { DAY, login, plus, request } from '../scripts/b6-e2e-lib.mjs';
 
 const prisma = new PrismaClient();
+const require = createRequire(import.meta.url);
+const { AuditService } = require('../dist/src/common/audit/audit.service.js');
+const { ManagerAlertsService } = require('../dist/src/modules/manager-alerts/manager-alerts.service.js');
+const { ManagerAlertProducersService } = require('../dist/src/modules/manager-alerts/manager-alert-producers.service.js');
 
 async function createTenant(label) {
   const suffix = randomUUID().slice(0, 8);
@@ -161,6 +166,28 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
   })).payload;
   assert.equal(selectedEquipment.length, 1);
   const equipment = selectedEquipment[0];
+  // ALERTAS-1: mutate the real equipment, then exercise the inbox over authenticated HTTP.
+  const maintenance = (await request(`/equipments/${equipment.id}/operational-status`, {
+    method: 'POST', token: manager.access_token, expected: 201, body: { status: 'MAINTENANCE' },
+  })).payload;
+  assert.equal(maintenance.operationalStatus, 'MAINTENANCE');
+  assert.equal(maintenance.gymId, a.trial.gymId);
+  await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: trainer.access_token, expected: 403, body: { status: 'OUT_OF_SERVICE' } });
+  await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: b.owner.access_token, expected: 404, body: { status: 'OUT_OF_SERVICE' } });
+  await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: a.owner.access_token, expected: 400, body: { status: 'INVALID' } });
+  const producers = new ManagerAlertProducersService(new ManagerAlertsService(prisma, new AuditService(prisma)));
+  const produced = await producers.equipmentProblem({ gymId: maintenance.gymId, eventId: `${maintenance.id}:${maintenance.operationalStatusChangedAt}`, resourceId: maintenance.id });
+  const inbox = (await request('/manager-alerts?limit=100', { token: a.owner.access_token, expected: 200 })).payload;
+  assert.ok(inbox.items.some((item) => item.id === produced.alert.id));
+  assert.ok((await request('/manager-alerts/counters', { token: manager.access_token, expected: 200 })).payload.unread >= 1);
+  await request('/manager-alerts', { token: trainer.access_token, expected: 403 });
+  await request('/manager-alerts', { token: reception.access_token, expected: 403 });
+  await request(`/manager-alerts/${produced.alert.id}/read`, { method: 'PATCH', token: b.owner.access_token, expected: 404 });
+  await request(`/manager-alerts/${produced.alert.id}/read`, { method: 'PATCH', token: manager.access_token, expected: 200 });
+  assert.equal((await request(`/manager-alerts/${produced.alert.id}/acknowledge`, { method: 'PATCH', token: manager.access_token, expected: 200 })).payload.status, 'ACKNOWLEDGED');
+  assert.equal((await request(`/manager-alerts/${produced.alert.id}/resolve`, { method: 'PATCH', token: a.owner.access_token, expected: 200 })).payload.status, 'RESOLVED');
+  await request('/manager-alerts/preferences/EQUIPMENT', { method: 'PUT', token: a.owner.access_token, expected: 400, body: { pushEnabled: true } });
+  await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: a.owner.access_token, expected: 201, body: { status: 'OPERATIONAL' } });
   const assessment = (await request(`/students/${created.id}/assessments`, {
     method: 'POST',
     token: trainer.access_token,
