@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { FinancialController } from './financial.controller';
+import { StripePaymentWebhookController } from './stripe-payment-webhook.controller';
+import { StripePaymentWebhookInboxService } from './stripe-payment-webhook-inbox.service';
 import { FinancialService } from './financial.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditService } from '../../common/audit/audit.service';
@@ -18,9 +20,10 @@ import { FiscalReconciliationCancellationService } from './fiscal-reconciliation
 
 @Module({
   imports: [PrismaModule, IntegrationsModule, AuthModule],
-  controllers: [FinancialController],
+  controllers: [FinancialController, StripePaymentWebhookController],
   providers: [
     FinancialService,
+    StripePaymentWebhookInboxService,
     TenantPaymentCheckoutService,
     TenantPaymentReconciliationService,
     TenantPaymentProviderAdapterRegistry,
