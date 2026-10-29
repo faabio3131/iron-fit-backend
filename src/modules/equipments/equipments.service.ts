@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -9,6 +9,7 @@ import { EquipmentCatalogQueryDto } from './dto/equipment-catalog-query.dto';
 import { SelectCatalogEquipmentDto } from './dto/select-catalog-equipment.dto';
 import { SubmitEquipmentCatalogCandidateDto } from './dto/submit-equipment-catalog-candidate.dto';
 import { EquipmentCatalogCandidateQueryDto } from './dto/equipment-catalog-candidate-query.dto';
+import { TenantProductEntitlementsService } from '../product-entitlements/tenant-product-entitlements.service';
 import {
   EquipmentCatalogCandidateDecision,
   ReviewEquipmentCatalogCandidateDto,
@@ -19,6 +20,7 @@ export class EquipmentsService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private entitlements: TenantProductEntitlementsService,
   ) {}
 
   async updateOperationalStatus(id: string, gymId: string, userId: string, status: string) {
@@ -26,6 +28,10 @@ export class EquipmentsService {
       throw new BadRequestException('Estado operacional invalido');
     }
     await this.ensureActiveGym(gymId);
+    const entitlement = await this.entitlements.resolveFeature(gymId, 'equipment.inventory');
+    if (entitlement.kind !== 'FEATURE' || entitlement.value !== true) {
+      throw new ForbiddenException('Inventario de equipamentos indisponivel para esta academia');
+    }
     return this.prisma.$transaction(async (tx) => {
       const equipment = await tx.equipment.findFirst({ where: { id, gymId } });
       if (!equipment) throw new NotFoundException('Equipamento nao encontrado');

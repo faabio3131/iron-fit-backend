@@ -45,7 +45,8 @@ try {
     { gymId: a.id, allowed: false, denialReason: 'Replay detectado' },
   ] });
   const equipment = await db.equipment.create({ data: { gymId: a.id, name: 'Synthetic equipment' } });
-  await new EquipmentsService(db, audit).updateOperationalStatus(equipment.id, a.id, ownerA.id, 'MAINTENANCE');
+  // This persistence fixture supplies a granted capability; real trial grants are exercised by HTTP E2E.
+  await new EquipmentsService(db, audit, { resolveFeature: async () => ({ kind: 'FEATURE', value: true }) }).updateOperationalStatus(equipment.id, a.id, ownerA.id, 'MAINTENANCE');
   await audit.record({ gymId: a.id, action: 'MEDIA_INGESTION_FAILED', entity: 'SyntheticMedia', entityId: suffix });
   const source = new ManagerAlertSourceScanService(db, producers, { current: () => 'HOMOLOG' });
   const business = new ManagerAlertBusinessScanService(db, producers, { resolveFeature: async () => { throw new Error('No trial fixture'); } }, { get: () => undefined });
