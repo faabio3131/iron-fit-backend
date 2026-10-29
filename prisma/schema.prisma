@@ -1064,6 +1064,26 @@ model FinancialCategory {
   payables     Payable[]
 }
 
+// Signed, tenant-scoped provider notifications. No raw payload or secrets are stored.
+// A webhook never has authority to mark a charge paid.
+model TenantPaymentWebhookInbox {
+  id                String   @id @default(uuid())
+  gymId             String
+  connectionId      String
+  providerCode      String
+  providerEventId   String
+  eventType         String
+  providerObjectRef String?
+  chargeId          String?
+  status            String   @default("RECEIVED")
+  receivedAt        DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([connectionId, providerEventId])
+  @@index([gymId, receivedAt])
+  @@index([gymId, status])
+}
+
 model FinancialTransaction {
   id            String            @id @default(uuid())
   gymId         String
