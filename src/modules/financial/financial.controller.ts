@@ -125,6 +125,17 @@ export class FinancialController {
     );
   }
 
+  @Get('payment-providers')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  listPaymentProviders(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.tenantPaymentCheckout.listAvailableProviders(
+      this.resolveGymId(user, requestedGymId),
+    );
+  }
+
   @Post('charges/:id/payment-session')
   @Roles('SUPER_ADMIN', 'OWNER')
   createPaymentSession(
