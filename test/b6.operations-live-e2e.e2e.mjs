@@ -182,6 +182,11 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
   assert.ok((await request('/manager-alerts/counters', { token: manager.access_token, expected: 200 })).payload.unread >= 1);
   await request('/manager-alerts', { token: trainer.access_token, expected: 403 });
   await request('/manager-alerts', { token: reception.access_token, expected: 403 });
+  await request('/manager-alerts', { token: student.access_token, expected: 403 });
+  await request('/manager-alerts', { expected: 401 });
+  const platformAdmin = await login('b6-admin@example.com', process.env.B6_ADMIN_PASSWORD);
+  await request('/manager-alerts', { token: platformAdmin.access_token, expected: 403 });
+  await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: platformAdmin.access_token, expected: 403, body: { status: 'OUT_OF_SERVICE' } });
   await request(`/manager-alerts/${produced.alert.id}/read`, { method: 'PATCH', token: b.owner.access_token, expected: 404 });
   await request(`/manager-alerts/${produced.alert.id}/read`, { method: 'PATCH', token: manager.access_token, expected: 200 });
   assert.equal((await request(`/manager-alerts/${produced.alert.id}/acknowledge`, { method: 'PATCH', token: manager.access_token, expected: 200 })).payload.status, 'ACKNOWLEDGED');
