@@ -8,6 +8,12 @@ const { ManagerAlertsService } = require('../dist/src/modules/manager-alerts/man
 
 const owner = { id: 'owner-a', roles: ['OWNER'], activeGymId: 'gym-a' };
 
+test('push cannot be enabled while device registration and adapter are outside launch', async () => {
+  const service = new ManagerAlertsService({}, {});
+  await assert.rejects(service.updatePreference('SECURITY', { pushEnabled: true }, owner), (error) => error.getStatus() === 400);
+  await assert.rejects(service.updatePolicy('SECURITY', { pushAllowed: true }, owner), (error) => error.getStatus() === 400);
+});
+
 test('manager alert financial ingestion derives OWNER recipients and persists audit atomically', async () => {
   let membershipWhere;
   let createdData;
