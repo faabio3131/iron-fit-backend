@@ -175,6 +175,14 @@ test('B6 live operational domain, RBAC, cross-tenant and student/mobile parity',
   await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: trainer.access_token, expected: 403, body: { status: 'OUT_OF_SERVICE' } });
   await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: b.owner.access_token, expected: 404, body: { status: 'OUT_OF_SERVICE' } });
   await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: a.owner.access_token, expected: 400, body: { status: 'INVALID' } });
+  // Disposable database fault injection: a valid owner session cannot bypass a revoked grant.
+  const inventorySubscription = await prisma.tenantProductSubscription.findFirstOrThrow({ where: { gymId: a.trial.gymId, status: 'ACTIVE' } });
+  await prisma.tenantProductSubscription.update({ where: { id: inventorySubscription.id }, data: { status: 'SUSPENDED' } });
+  try {
+    await request(`/equipments/${equipment.id}/operational-status`, { method: 'POST', token: a.owner.access_token, expected: 403, body: { status: 'OUT_OF_SERVICE' } });
+  } finally {
+    await prisma.tenantProductSubscription.update({ where: { id: inventorySubscription.id }, data: { status: 'ACTIVE' } });
+  }
   const producers = new ManagerAlertProducersService(new ManagerAlertsService(prisma, new AuditService(prisma)));
   const produced = await producers.equipmentProblem({ gymId: maintenance.gymId, eventId: `${maintenance.id}:${maintenance.operationalStatusChangedAt}`, resourceId: maintenance.id });
   const inbox = (await request('/manager-alerts?limit=100', { token: a.owner.access_token, expected: 200 })).payload;
