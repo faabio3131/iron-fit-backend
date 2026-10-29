@@ -23,11 +23,26 @@ export interface TenantPaymentCheckoutResult {
   expiresAt: Date | null;
 }
 
+export interface TenantPaymentVerificationInput {
+  chargeId: string;
+  providerChargeRef: string;
+  amount: number;
+  currency: string;
+  environment: 'DEV' | 'HOMOLOG' | 'PROD';
+  credential: IntegrationSecretValue;
+}
+export interface TenantPaymentVerificationResult {
+  status: 'PAID' | 'PENDING' | 'REVERSED';
+  providerPaymentRef: string | null;
+  paidAt: Date | null;
+}
+
 export interface TenantPaymentProviderAdapter {
   readonly providerCode: string;
   createCheckout(
     input: TenantPaymentCheckoutInput,
   ): Promise<TenantPaymentCheckoutResult>;
+  verifyCheckout?(input: TenantPaymentVerificationInput): Promise<TenantPaymentVerificationResult>;
 }
 
 @Injectable()
