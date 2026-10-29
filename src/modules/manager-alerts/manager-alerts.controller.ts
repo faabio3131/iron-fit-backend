@@ -6,6 +6,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { ManagerAlertQueryDto } from './dto/manager-alert-query.dto';
 import { ManagerAlertsService } from './manager-alerts.service';
 import { UpdateManagerAlertPreferenceDto } from './dto/update-manager-alert-preference.dto';
+import { UpdateManagerAlertPolicyDto } from './dto/update-manager-alert-policy.dto';
+import { StepUpGuard } from '../auth/guards/step-up.guard';
 
 @Controller('manager-alerts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,6 +37,22 @@ export class ManagerAlertsController {
     @CurrentUser() user: any,
   ) {
     return this.alerts.updatePreference(category, dto, user);
+  }
+
+  @Get('policies')
+  policies(@CurrentUser() user: any) {
+    return this.alerts.policies(user);
+  }
+
+  @Put('policies/:category')
+  @UseGuards(StepUpGuard)
+  @Roles('OWNER')
+  updatePolicy(
+    @Param('category') category: string,
+    @Body() dto: UpdateManagerAlertPolicyDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.alerts.updatePolicy(category, dto, user);
   }
 
   @Patch(':id/read')
