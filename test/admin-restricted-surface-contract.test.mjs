@@ -14,13 +14,17 @@ test('finance remains owner/admin only and class-wide step-up protected', () => 
   assert.match(text, /@Roles\('SUPER_ADMIN', 'OWNER'\)/);
 });
 
-test('IRON billing requires step-up for authenticated administrative operations', () => {
+test('IRON billing is FM Command read-only and class-wide OWNER step-up guarded', () => {
   const text = source('src/modules/saas-billing/saas-billing.controller.ts');
-  for (const route of ['prices', 'current', 'checkout', 'change-plan', 'cancel']) {
-    const escaped = route.replace('-', '\\-');
-    assert.match(text, new RegExp(`@(Get|Post)\\('${escaped}'\\)[\\s\\S]*?@UseGuards\\(JwtAuthGuard, RolesGuard, StepUpGuard\\)`));
-  }
-  assert.match(text, /@Post\('webhooks\/:providerCode'\)/);
+  assert.match(text, /@Controller\('saas-billing'\)[\s\S]*?@UseGuards\(JwtAuthGuard, RolesGuard, StepUpGuard\)/);
+  assert.match(text, /@Roles\('SUPER_ADMIN', 'OWNER'\)/);
+  assert.match(text, /billingAuthority:\s*'FM_COMMAND'/);
+  assert.match(text, /localMutationsEnabled:\s*false/);
+  assert.match(text, /providerWebhooksAccepted:\s*false/);
+  assert.match(text, /@Get\('authority'\)/);
+  assert.match(text, /@Get\('prices'\)/);
+  assert.match(text, /@Get\('current'\)/);
+  assert.doesNotMatch(text, /@Post\(|@Put\(|@Patch\(|@Delete\(/);
 });
 
 test('tenant configuration administration is owner/admin and step-up protected', () => {
