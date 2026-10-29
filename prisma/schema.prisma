@@ -867,6 +867,8 @@ model Equipment {
   contraindications Json?
   videoUrl      String?
   active        Boolean @default(true)
+  operationalStatus String @default("OPERATIONAL")
+  operationalStatusChangedAt DateTime?
   gym           Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
   catalogItem   EquipmentCatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
   workoutExercises WorkoutExercise[]
