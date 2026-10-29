@@ -5,6 +5,7 @@ import { createHmac } from 'node:crypto';
 const require = createRequire(import.meta.url);
 const { StripePaymentWebhookInboxService } = require('../dist/src/modules/financial/stripe-payment-webhook-inbox.service.js');
 const { IntegrationSecretValue } = require('../dist/src/modules/integrations/secrets/integration-secret-vault.port.js');
+const { Prisma } = require('@prisma/client');
 const secret = 'whsec_' + 'integration_fixture';
 const raw = Buffer.from(JSON.stringify({
   id: 'evt_checkout_test', type: 'checkout.session.completed', livemode: false,
@@ -15,7 +16,7 @@ function signed(body) {
   return 't=' + t + ',v1=' + createHmac('sha256', secret)
     .update(String(t)).update('.').update(body).digest('hex');
 }
-function fixture() {
+function fixture({ duplicate = false } = {}) {
   const state = { rows: [], audits: [], vault: [] };
   const service = new StripePaymentWebhookInboxService({
     integrationConnection: { findFirst: async ({ where }) => {
@@ -30,7 +31,11 @@ function fixture() {
       return { id: 'charge-a' };
     } },
     tenantPaymentWebhookInbox: {
-      create: async ({ data }) => { state.rows.push(data); return { id: 'row-a' }; },
+      create: async ({ data }) => {
+        if (duplicate) throw new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: 'test' });
+        state.rows.push(data);
+        return { id: 'row-a' };
+      },
       findMany: async ({ where }) => { assert.equal(where.gymId, 'gym-a'); return []; },
     },
   }, { current: () => 'HOMOLOG' }, {
@@ -58,6 +63,14 @@ test('HMAC verified Stripe notification persists only tenant-scoped metadata', a
 test('forged webhook does not write an inbox entry', async () => {
   const { service, state } = fixture();
   await assert.rejects(() => service.ingest('connection-a', signed(raw), Buffer.from('different')), /WEBHOOK_SIGNATURE_INVALID/);
+  assert.equal(state.rows.length, 0);
+  assert.equal(state.audits.length, 0);
+});
+
+test('provider retry is deduplicated without another ledger or audit effect', async () => {
+  const { service, state } = fixture({ duplicate: true });
+  const response = await service.ingest('connection-a', signed(raw), raw);
+  assert.deepEqual(response, { received: true, duplicate: true, status: 'DUPLICATE' });
   assert.equal(state.rows.length, 0);
   assert.equal(state.audits.length, 0);
 });
