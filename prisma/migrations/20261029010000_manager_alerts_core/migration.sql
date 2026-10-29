@@ -3,6 +3,7 @@ CREATE TYPE "ManagerAlertSeverity" AS ENUM ('INFO', 'WARNING', 'CRITICAL');
 CREATE TYPE "ManagerAlertStatus" AS ENUM ('OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED');
 CREATE TYPE "ManagerAlertChannel" AS ENUM ('IN_APP', 'EMAIL', 'PUSH', 'WHATSAPP');
 CREATE TYPE "ManagerAlertDeliveryStatus" AS ENUM ('PENDING', 'DEFERRED', 'SENDING', 'SENT', 'FAILED', 'DEAD_LETTER', 'SKIPPED');
+CREATE TYPE "EvolutionTenantInstanceStatus" AS ENUM ('PROVISIONING', 'QR_PENDING', 'CONNECTED', 'DISCONNECTED', 'ERROR');
 
 CREATE TABLE "ManagerAlert" (
   "id" TEXT NOT NULL,
@@ -93,6 +94,22 @@ CREATE TABLE "ManagerAlertPolicy" (
   CONSTRAINT "ManagerAlertPolicy_criticalEscalationMin_check" CHECK ("criticalEscalationMin" IS NULL OR ("criticalEscalationMin" >= 5 AND "criticalEscalationMin" <= 1440))
 );
 
+CREATE TABLE "EvolutionTenantInstance" (
+  "id" TEXT NOT NULL,
+  "gymId" TEXT NOT NULL,
+  "globalConnectionId" TEXT NOT NULL,
+  "instanceName" TEXT NOT NULL,
+  "status" "EvolutionTenantInstanceStatus" NOT NULL DEFAULT 'PROVISIONING',
+  "providerState" TEXT,
+  "lastStateCheckedAt" TIMESTAMP(3),
+  "connectedAt" TIMESTAMP(3),
+  "disconnectedAt" TIMESTAMP(3),
+  "createdByUserId" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "EvolutionTenantInstance_pkey" PRIMARY KEY ("id")
+);
+
 CREATE UNIQUE INDEX "ManagerAlert_gymId_deduplicationKey_key" ON "ManagerAlert"("gymId", "deduplicationKey");
 CREATE INDEX "ManagerAlert_gymId_status_severity_createdAt_idx" ON "ManagerAlert"("gymId", "status", "severity", "createdAt");
 CREATE INDEX "ManagerAlert_gymId_category_occurredAt_idx" ON "ManagerAlert"("gymId", "category", "occurredAt");
@@ -108,6 +125,9 @@ CREATE INDEX "ManagerAlertDelivery_leaseUntil_idx" ON "ManagerAlertDelivery"("le
 CREATE INDEX "ManagerAlertDelivery_alertId_channel_idx" ON "ManagerAlertDelivery"("alertId", "channel");
 CREATE UNIQUE INDEX "ManagerAlertPolicy_gymId_category_key" ON "ManagerAlertPolicy"("gymId", "category");
 CREATE INDEX "ManagerAlertPolicy_gymId_idx" ON "ManagerAlertPolicy"("gymId");
+CREATE UNIQUE INDEX "EvolutionTenantInstance_gymId_key" ON "EvolutionTenantInstance"("gymId");
+CREATE UNIQUE INDEX "EvolutionTenantInstance_instanceName_key" ON "EvolutionTenantInstance"("instanceName");
+CREATE INDEX "EvolutionTenantInstance_globalConnectionId_status_idx" ON "EvolutionTenantInstance"("globalConnectionId", "status");
 
 ALTER TABLE "ManagerAlert" ADD CONSTRAINT "ManagerAlert_gymId_fkey" FOREIGN KEY ("gymId") REFERENCES "Gym"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ManagerAlertRecipient" ADD CONSTRAINT "ManagerAlertRecipient_alertId_fkey" FOREIGN KEY ("alertId") REFERENCES "ManagerAlert"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -117,3 +137,5 @@ ALTER TABLE "ManagerAlertPreference" ADD CONSTRAINT "ManagerAlertPreference_user
 ALTER TABLE "ManagerAlertDelivery" ADD CONSTRAINT "ManagerAlertDelivery_alertId_fkey" FOREIGN KEY ("alertId") REFERENCES "ManagerAlert"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ManagerAlertDelivery" ADD CONSTRAINT "ManagerAlertDelivery_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "ManagerAlertRecipient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ManagerAlertPolicy" ADD CONSTRAINT "ManagerAlertPolicy_gymId_fkey" FOREIGN KEY ("gymId") REFERENCES "Gym"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "EvolutionTenantInstance" ADD CONSTRAINT "EvolutionTenantInstance_gymId_fkey" FOREIGN KEY ("gymId") REFERENCES "Gym"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "EvolutionTenantInstance" ADD CONSTRAINT "EvolutionTenantInstance_globalConnectionId_fkey" FOREIGN KEY ("globalConnectionId") REFERENCES "IntegrationConnection"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
