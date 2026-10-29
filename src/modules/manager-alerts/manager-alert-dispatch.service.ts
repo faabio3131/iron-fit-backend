@@ -142,7 +142,7 @@ export class ManagerAlertDispatchService implements OnModuleInit, OnModuleDestro
           : policy?.pushAllowed && preference?.pushEnabled;
       const rank = { INFO: 1, WARNING: 2, CRITICAL: 3 };
       const filtered = policy && preference && rank[row.alert.severity] < Math.max(rank[policy.minimumSeverity], rank[preference.minimumSeverity]);
-      const skip = !live || row.recipient.alertId !== row.alertId || ['RESOLVED', 'DISMISSED'].includes(row.alert.status) || !allowed || filtered;
+      const skip = row.channel === ManagerAlertChannel.PUSH || !live || row.recipient.alertId !== row.alertId || ['RESOLVED', 'DISMISSED'].includes(row.alert.status) || !allowed || filtered;
       const quietUntil = !skip && preference ? managerAlertQuietUntil(now, preference) : null;
       if (skip || quietUntil) {
         const reason = skip ? 'DELIVERY_AUTHORITY_OR_PREFERENCE_REVOKED' : 'QUIET_HOURS';
