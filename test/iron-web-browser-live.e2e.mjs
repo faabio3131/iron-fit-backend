@@ -61,9 +61,18 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
       { width: 1920, height: 1080 },
     ]) {
       await page.setViewportSize(viewport);
+      // React's useWindowDimensions reflows after the browser resize event.
+      // Keep the exact overflow assertion, but measure the settled responsive tree.
+      await page.waitForFunction(() => document.documentElement.scrollWidth <= window.innerWidth + 2, null, { timeout: 5000 }).catch(() => undefined);
       const layout = await page.evaluate(() => ({
         document: document.documentElement.scrollWidth, viewport: window.innerWidth,
       }));
+      if (layout.document > layout.viewport + 2) {
+        const overflow = await page.evaluate(() => Array.from(document.querySelectorAll('*'))
+          .map((element) => ({ tag: element.tagName, testId: element.getAttribute('data-testid'), width: element.getBoundingClientRect().width, right: element.getBoundingClientRect().right, position: getComputedStyle(element).position }))
+          .filter((item) => item.right > window.innerWidth + 2).slice(0, 20));
+        console.error('RESPONSIVE_OVERFLOW_DIAGNOSTIC', JSON.stringify(overflow));
+      }
       assert.ok(layout.document <= layout.viewport + 2,
         `Horizontal overflow at ${viewport.width}: ${JSON.stringify(layout)}`);
     }
