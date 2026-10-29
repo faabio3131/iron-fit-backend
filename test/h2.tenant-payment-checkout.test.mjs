@@ -72,7 +72,7 @@ function fixture({ connections } = {}) {
 
   const prisma = {
     integrationConnection: {
-      findMany: async ({ where }) => connectionRows.filter((row) => row.gymId === where.gymId && row.scope === where.scope && row.environment === where.environment && row.status === where.status && (!where.id || row.id === where.id)),
+      findMany: async ({ where }) => connectionRows.filter((row) => row.gymId === where.gymId && row.scope === where.scope && row.environment === where.environment && row.status === where.status && row.secretRevokedAt === null && (!where.id || row.id === where.id)),
     },
     charge: {
       findFirst: async ({ where }) => {
