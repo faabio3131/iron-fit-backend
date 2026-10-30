@@ -72,3 +72,15 @@ test('deactivation can be performed independently of vendor SDK availability', a
   assert.equal(res.active, false);
   assert.equal(h.calls[0][1].gymId, 'gym-a');
 });
+
+test('unsupported model cannot be activated even if a brand driver exists', async () => {
+  const h = make({ tokenHash: 'sha256-token' });
+  h.registry.register({
+    manufacturer: 'CONTROL_ID', transport: 'REST',
+    supportsDevice: () => false,
+    release: async () => null,
+    verifyPassage: async () => false,
+  });
+  await assert.rejects(() => h.service.setActive('gym-a', 'owner-a', 'd-a', true), /nao homologado/);
+  assert.equal(h.calls.filter(x => x[0] === 'update').length, 0);
+});
