@@ -66,7 +66,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findUnique({
       where: { id: input.deviceId },
-      select: { id: true, gymId: true, active: true, manufacturer: true, model: true, protocol: true, certificationStatus: true, certificationRef: true },
+      select: { id: true, gymId: true, active: true, manufacturer: true, model: true, firmwareVersion: true, certificationStatus: true, certificationRef: true },
     });
     if (!device || !device.active || !MANUFACTURERS.includes(device.manufacturer as AccessManufacturer)) {
       // AccessService's decision remains audited. Hardware must fail closed.
@@ -99,14 +99,14 @@ export class PhysicalAccessCoordinator {
     // The on-premise SDK is never loaded into the cloud backend. Only the
     // externally certified brand/model/firmware can use reverse polling.
     if (device.certificationStatus !== 'PRODUCTION_HOMOLOGATED' ||
-        !device.certificationRef || !device.model || !device.protocol) {
+        !device.certificationRef || !device.model || !device.firmwareVersion) {
       return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, 'Modelo de catraca nao homologado');
     }
     if (manufacturer === 'CONTROL_ID') {
       const driver = this.drivers.resolve(manufacturer);
       if (!driver.supportsDevice({
         deviceId: device.id, gymId: device.gymId,
-        manufacturer, model: device.model, protocolVersion: device.protocol,
+        manufacturer, model: device.model, protocolVersion: device.firmwareVersion,
       })) {
         return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, 'Firmware de catraca nao homologado');
       }
@@ -143,7 +143,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: attempt.deviceId, gymId: attempt.gymId, active: true },
-      select: { id: true, gymId: true, manufacturer: true, model: true, protocol: true },
+      select: { id: true, gymId: true, manufacturer: true, model: true, firmwareVersion: true },
     });
     if (!device || device.manufacturer !== attempt.manufacturer) return false;
 
@@ -162,7 +162,7 @@ export class PhysicalAccessCoordinator {
         gymId: device.gymId,
         manufacturer,
         model: device.model || '',
-        protocolVersion: device.protocol ?? undefined,
+        protocolVersion: device.firmwareVersion ?? undefined,
       }, {
         deviceId: attempt.deviceId,
         authorizationId,
@@ -200,7 +200,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: attempt.deviceId, gymId: attempt.gymId, active: true },
-      select: { id: true, gymId: true, manufacturer: true, model: true, protocol: true },
+      select: { id: true, gymId: true, manufacturer: true, model: true, firmwareVersion: true },
     });
     if (!device || device.manufacturer !== attempt.manufacturer) return false;
     const manufacturer = attempt.manufacturer as AccessManufacturer;
@@ -209,7 +209,7 @@ export class PhysicalAccessCoordinator {
       gymId: device.gymId,
       manufacturer,
       model: device.model || '',
-      protocolVersion: device.protocol ?? undefined,
+      protocolVersion: device.firmwareVersion ?? undefined,
     }, event);
     if (!verified) return false;
 
