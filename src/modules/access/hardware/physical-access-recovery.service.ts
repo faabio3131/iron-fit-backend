@@ -48,4 +48,23 @@ export class PhysicalAccessRecoveryService {
       take,
     });
   }
+  async listRecent(gymId: string, limit = 100) {
+    if (!gymId) throw new Error('Academia obrigatoria');
+    return this.prisma.physicalAccessAttempt.findMany({
+      where: { gymId },
+      select: {
+        id: true,
+        studentId: true,
+        deviceId: true,
+        manufacturer: true,
+        direction: true,
+        state: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Math.max(1, Math.min(limit, 100)),
+    });
+  }
+
 }
