@@ -43,7 +43,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findUnique({
       where: { id: input.deviceId },
-      select: { id: true, gymId: true, active: true, manufacturer: true, model: true },
+      select: { id: true, gymId: true, active: true, manufacturer: true, model: true, protocol: true },
     });
     if (!device || !device.active || !MANUFACTURERS.includes(device.manufacturer as AccessManufacturer)) {
       // AccessService's decision remains audited. Hardware must fail closed.
@@ -52,7 +52,13 @@ export class PhysicalAccessCoordinator {
 
     const manufacturer = device.manufacturer as AccessManufacturer;
     // A missing driver is an external prerequisite, NOT a permissive fallback.
-    this.drivers.resolve(manufacturer);
+    const driver = this.drivers.resolve(manufacturer);
+    if (!device.model || !driver.supportsDevice({
+      deviceId: device.id, gymId: device.gymId,
+      manufacturer, model: device.model, protocolVersion: device.protocol ?? undefined,
+    })) {
+      return { allowed: false, denialReason: 'Modelo de catraca nao homologado', authorizationId: null };
+    }
     const expiresAt = new Date(Date.now() + AUTHORIZATION_TTL_MS);
     const authorizationId = decision.eventId;
     const record = await this.prisma.physicalAccessAttempt.create({
@@ -85,7 +91,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: attempt.deviceId, gymId: attempt.gymId, active: true },
-      select: { id: true, gymId: true, manufacturer: true, model: true },
+      select: { id: true, gymId: true, manufacturer: true, model: true, protocol: true },
     });
     if (!device || device.manufacturer !== attempt.manufacturer) return false;
 
@@ -95,7 +101,8 @@ export class PhysicalAccessCoordinator {
       deviceId: device.id,
       gymId: device.gymId,
       manufacturer,
-      model: device.model || 'MODEL_UNSPECIFIED',
+      model: device.model || '',
+      protocolVersion: device.protocol ?? undefined,
     }, {
       deviceId: attempt.deviceId,
       authorizationId,
@@ -125,7 +132,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: attempt.deviceId, gymId: attempt.gymId, active: true },
-      select: { id: true, gymId: true, manufacturer: true, model: true },
+      select: { id: true, gymId: true, manufacturer: true, model: true, protocol: true },
     });
     if (!device || device.manufacturer !== attempt.manufacturer) return false;
     const manufacturer = attempt.manufacturer as AccessManufacturer;
@@ -133,7 +140,8 @@ export class PhysicalAccessCoordinator {
       deviceId: device.id,
       gymId: device.gymId,
       manufacturer,
-      model: device.model || 'MODEL_UNSPECIFIED',
+      model: device.model || '',
+      protocolVersion: device.protocol ?? undefined,
     }, event);
     if (!verified) return false;
 
