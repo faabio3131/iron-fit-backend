@@ -52,6 +52,7 @@ export interface PhysicalPassageEvent {
 export interface PhysicalAccessDriver {
   readonly manufacturer: AccessManufacturer;
   readonly transport: 'REST' | 'LOCAL_SDK' | 'PROPRIETARY';
+  supportsDevice(device: PhysicalDeviceDescriptor): boolean;
   release(device: PhysicalDeviceDescriptor, command: PhysicalReleaseCommand): Promise<PhysicalReleaseReceipt>;
   verifyPassage(device: PhysicalDeviceDescriptor, event: PhysicalPassageEvent): Promise<boolean>;
 }
