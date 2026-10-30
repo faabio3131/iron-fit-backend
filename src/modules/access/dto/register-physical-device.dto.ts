@@ -1,4 +1,4 @@
-import { IsIn, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsIn, IsString, MaxLength, MinLength } from 'class-validator';
 
 const manufacturers = ['CONTROL_ID', 'TOPDATA', 'HENRY', 'DIMEP'] as const;
 const deviceTypes = ['QR_CODE', 'BIOMETRIC', 'FACIAL', 'TAG', 'MANUAL'] as const;
@@ -19,4 +19,9 @@ export class RegisterPhysicalDeviceDto {
 
   @IsIn(deviceTypes)
   type: 'QR_CODE' | 'BIOMETRIC' | 'FACIAL' | 'TAG' | 'MANUAL';
+}
+
+export class SetPhysicalDeviceActiveDto {
+  @IsBoolean()
+  active: boolean;
 }
