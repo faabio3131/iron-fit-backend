@@ -139,7 +139,8 @@ test('new uncertified local SDK devices cannot create a physical authorization',
   });
   const d = await h.coordinator.decide(scan);
   assert.equal(d.allowed, false);
-  assert.equal(h.getAttempt(), null);
+  assert.equal(h.getAttempt().state, 'DENIED');
+  assert.match(h.getAttempt().denialReason, /homologado/);
 });
 
 test('physical access rejects nonpaying or suspended membership before any command', async () => {
@@ -148,7 +149,8 @@ test('physical access rejects nonpaying or suspended membership before any comma
   const d = await h.coordinator.decide(scan);
   assert.equal(d.allowed, false);
   assert.match(d.denialReason, /Plano/);
-  assert.equal(h.getAttempt(), null);
+  assert.equal(h.getAttempt().state, 'DENIED');
+  assert.match(h.getAttempt().denialReason, /Plano/);
 });
 
 test('physical access rejects inactive gyms independent of device and SDK status', async () => {
@@ -157,5 +159,6 @@ test('physical access rejects inactive gyms independent of device and SDK status
   const d = await h.coordinator.decide(scan);
   assert.equal(d.allowed, false);
   assert.match(d.denialReason, /Academia/);
-  assert.equal(h.getAttempt(), null);
+  assert.equal(h.getAttempt().state, 'DENIED');
+  assert.match(h.getAttempt().denialReason, /Academia/);
 });
