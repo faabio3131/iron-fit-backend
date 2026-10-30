@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 const { TenantPaymentReconciliationAutomationService } =
   require('../dist/src/modules/financial/tenant-payment-reconciliation-automation.service.js');
 
-function fixture({ accountPresent = true, policyEnabled = true, eventTenant = 'gym-a' } = {}) {
+function fixture({ accountPresent = true, policyEnabled = true, eventTenant = 'gym-a', providerCode = 'stripe' } = {}) {
   const state = { calls: [], audits: [], policies: [] };
   const policy = { gymId: 'gym-a', accountId: 'account-a', enabled: policyEnabled };
   const service = new TenantPaymentReconciliationAutomationService({
@@ -23,7 +23,7 @@ function fixture({ accountPresent = true, policyEnabled = true, eventTenant = 'g
       findMany: async ({ where }) => {
         assert.deepEqual(where.gymId.in, ['gym-a']);
         return [{
-        id: 'event-a', gymId: eventTenant, providerCode: 'stripe',
+        id: 'event-a', gymId: eventTenant, providerCode,
         chargeId: 'charge-a', status: 'RECEIVED', attemptCount: 0,
       }];
       },
@@ -82,4 +82,11 @@ test('cross-tenant event cannot inherit another gym automation policy', async ()
   const fx = fixture({ eventTenant: 'gym-other' });
   assert.equal((await fx.service.runCycle()).processed, 0);
   assert.equal(fx.state.calls.length, 0);
+});
+
+test('worker accepts matched Mercado Pago notifications under same tenant opt-in', async () => {
+  process.env.IRON_PAYMENT_AUTO_RECONCILE_ENABLED = 'true';
+  const fx = fixture({ providerCode: 'mercado_pago' });
+  assert.equal((await fx.service.runCycle()).processed, 1);
+  assert.deepEqual(fx.state.calls[0], ['event-a', 'account-a', 'gym-a', undefined]);
 });
