@@ -43,14 +43,14 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findUnique({
       where: { id: input.deviceId },
-      select: { id: true, gymId: true, active: true, protocol: true, name: true },
+      select: { id: true, gymId: true, active: true, manufacturer: true, model: true },
     });
-    if (!device || !device.active || !MANUFACTURERS.includes(device.protocol as AccessManufacturer)) {
+    if (!device || !device.active || !MANUFACTURERS.includes(device.manufacturer as AccessManufacturer)) {
       // AccessService's decision remains audited. Hardware must fail closed.
       return { allowed: false, denialReason: 'Controlador fisico nao configurado', authorizationId: null };
     }
 
-    const manufacturer = device.protocol as AccessManufacturer;
+    const manufacturer = device.manufacturer as AccessManufacturer;
     // A missing driver is an external prerequisite, NOT a permissive fallback.
     this.drivers.resolve(manufacturer);
     const expiresAt = new Date(Date.now() + AUTHORIZATION_TTL_MS);
@@ -87,7 +87,7 @@ export class PhysicalAccessCoordinator {
       where: { id: attempt.deviceId, gymId: attempt.gymId, active: true },
       select: { id: true, gymId: true, name: true, protocol: true },
     });
-    if (!device || device.protocol !== attempt.manufacturer) return false;
+    if (!device || device.manufacturer !== attempt.manufacturer) return false;
 
     const manufacturer = attempt.manufacturer as AccessManufacturer;
     const driver = this.drivers.resolve(manufacturer);
@@ -95,7 +95,7 @@ export class PhysicalAccessCoordinator {
       deviceId: device.id,
       gymId: device.gymId,
       manufacturer,
-      model: device.name,
+      model: device.model || 'MODEL_UNSPECIFIED',
     }, {
       deviceId: attempt.deviceId,
       authorizationId,
@@ -127,13 +127,13 @@ export class PhysicalAccessCoordinator {
       where: { id: attempt.deviceId, gymId: attempt.gymId, active: true },
       select: { id: true, gymId: true, name: true, protocol: true },
     });
-    if (!device || device.protocol !== attempt.manufacturer) return false;
+    if (!device || device.manufacturer !== attempt.manufacturer) return false;
     const manufacturer = attempt.manufacturer as AccessManufacturer;
     const verified = await this.drivers.resolve(manufacturer).verifyPassage({
       deviceId: device.id,
       gymId: device.gymId,
       manufacturer,
-      model: device.name,
+      model: device.model || 'MODEL_UNSPECIFIED',
     }, event);
     if (!verified) return false;
 
