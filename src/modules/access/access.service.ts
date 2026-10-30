@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -253,6 +253,11 @@ export class AccessService {
         name: true,
         type: true,
         protocol: true,
+        manufacturer: true,
+        model: true,
+        firmwareVersion: true,
+        certificationStatus: true,
+        certificationRef: true,
         active: true,
         lastSyncAt: true,
         tokenRotatedAt: true,
@@ -312,6 +317,7 @@ export class AccessService {
     deviceId: string,
     gymId: string,
     actorUserId?: string,
+    allowInactiveEnrollment = false,
   ) {
     const rawToken = randomBytes(32).toString('base64url');
     const tokenRotatedAt = new Date();
@@ -319,17 +325,20 @@ export class AccessService {
     try {
       await this.prisma.$transaction(async (tx) => {
         const device = await tx.accessDevice.findFirst({
-          where: { id: deviceId, gymId, active: true },
-          select: { id: true },
+          where: { id: deviceId, gymId, active: !allowInactiveEnrollment },
+          select: { id: true, manufacturer: true },
         });
         if (!device) {
           throw new NotFoundException('Dispositivo nao encontrado');
+        }
+        if (!allowInactiveEnrollment && device.manufacturer) {
+          throw new ForbiddenException('Token de catraca fisica exige provisionamento protegido pelo proprietario');
         }
 
         // Do not provision secrets for a device that changed tenant/status
         // after the read; rotate token and audit in one DB transaction.
         await tx.accessDevice.update({
-          where: { id: device.id, gymId, active: true },
+          where: { id: device.id, gymId, active: !allowInactiveEnrollment },
           data: {
             deviceTokenHash: this.hash(rawToken),
             tokenRotatedAt,

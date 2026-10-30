@@ -966,6 +966,11 @@ model AccessDevice {
   name            String
   type            AccessType
   protocol        String?
+  manufacturer    String?
+  model           String?
+  firmwareVersion String?
+  certificationStatus String @default("NOT_HOMOLOGATED")
+  certificationRef String?
   ipAddress       String?
   active          Boolean @default(true)
   lastSyncAt      DateTime?
@@ -974,6 +979,28 @@ model AccessDevice {
   gym             Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
   events          AccessEvent[]
   scanNonces      AccessScanNonce[]
+}
+
+// Hardware passage lifecycle is not the same as a decision AccessEvent.
+// Never count AUTHORIZED or COMMAND_ACCEPTED as confirmed attendance.
+model PhysicalAccessAttempt {
+  id                String   @id @default(uuid())
+  gymId             String
+  deviceId          String
+  studentId         String?
+  authorizationId   String   @unique
+  decisionEventId   String?
+  state             String   @default("REQUESTED")
+  denialReason      String?
+  manufacturer      String
+  direction         String
+  vendorEventId     String?
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  @@index([gymId, createdAt])
+  @@index([deviceId, state])
+  @@unique([deviceId, vendorEventId])
 }
 
 model AccessScanNonce {

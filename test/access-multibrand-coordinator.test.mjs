@@ -1,0 +1,164 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { PhysicalAccessCoordinator } = require('../dist/src/modules/access/hardware/physical-access-coordinator.js');
+const { PhysicalAccessDriverRegistry } = require('../dist/src/modules/access/hardware/physical-access-driver.js');
+
+const baseDevice = { id: 'device-a', gymId: 'gym-a', active: true, manufacturer: 'CONTROL_ID', model: 'iDBlock', firmwareVersion: 'approved-firmware', certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'verified-test-cert' };
+const scan = { qrToken: 'qr', deviceId: 'device-a', deviceToken: 'valid-device', nonce: '1234567890123456', timestamp: Date.now(), direction: 'ENTRY' };
+const validDecision = { allowed: true, eventId: 'audit-1', student: { id: 'student-a' } };
+
+function buildHarness({ decision = validDecision, driverAvailable = true } = {}) {
+  const events = [];
+  let attempt = null;
+  const prisma = {
+    gym: { findUnique: async () => ({ active: true }) },
+    subscription: { findFirst: async () => ({ id: 'membership-a' }) },
+    accessDevice: {
+      findUnique: async () => baseDevice,
+      findFirst: async () => baseDevice,
+    },
+    physicalAccessAttempt: {
+      create: async ({ data }) => { attempt = { id: 'attempt-1', createdAt: new Date(Date.now() - 1000), ...data }; events.push(['created', attempt.state]); return attempt; },
+      findUnique: async () => attempt,
+      updateMany: async ({ where, data }) => {
+        if (!attempt || attempt.state !== where.state) return { count: 0 };
+        if (where.expiresAt && attempt.expiresAt <= where.expiresAt.gt) return { count: 0 };
+        attempt = { ...attempt, ...data };
+        events.push(['updated', attempt.state]);
+        return { count: 1 };
+      },
+    },
+  };
+  const canonical = { scan: async () => decision };
+  const registry = new PhysicalAccessDriverRegistry();
+  if (driverAvailable) {
+    registry.register({
+      manufacturer: 'CONTROL_ID',
+      transport: 'REST',
+      supportsDevice: () => true,
+      release: async (_dev, cmd) => ({ accepted: true, authorizationId: cmd.authorizationId }),
+      verifyPassage: async (_dev, event) => event.vendorEventId === 'verified-1',
+    });
+  }
+  return { coordinator: new PhysicalAccessCoordinator(prisma, canonical, registry), events, getAttempt: () => attempt, prisma };
+}
+
+test('no vendor driver means no access attempt or physical command', async () => {
+  const h = buildHarness({ driverAvailable: false });
+  await assert.rejects(() => h.coordinator.decide(scan), /driver nao homologado/);
+  assert.equal(h.getAttempt(), null);
+});
+
+test('canonical authorization is necessary before any device release', async () => {
+  const h = buildHarness({ decision: { allowed: false, eventId: 'audit-denied', student: null, denialReason: 'Credencial expirada' } });
+  const result = await h.coordinator.decide(scan);
+  assert.equal(result.allowed, false);
+  assert.equal(h.getAttempt(), null);
+  assert.equal(await h.coordinator.release('nonexistent'), false);
+});
+
+test('successful decision, release acknowledgment, verified giro, replay rejection', async () => {
+  const h = buildHarness();
+  const d = await h.coordinator.decide(scan);
+  assert.equal(d.allowed, true);
+  assert.equal(h.getAttempt().state, 'AUTHORIZED');
+  assert.equal(await h.coordinator.release(d.authorizationId), true);
+  assert.equal(h.getAttempt().state, 'COMMAND_ACCEPTED');
+  assert.equal(await h.coordinator.release(d.authorizationId), false);
+  const passage = {
+    deviceId: 'device-a',
+    authorizationId: d.authorizationId,
+    vendorEventId: 'verified-1',
+    occurredAt: new Date(),
+    outcome: 'CONFIRMED',
+  };
+  assert.equal(await h.coordinator.confirmPassage(passage), true);
+  assert.equal(h.getAttempt().state, 'PASSAGE_CONFIRMED');
+  assert.equal(await h.coordinator.confirmPassage(passage), false);
+});
+
+test('untrusted passage, mismatched device, no-giro, expired command fail closed', async () => {
+  const h = buildHarness();
+  const d = await h.coordinator.decide(scan);
+  assert.equal(await h.coordinator.confirmPassage({ authorizationId: d.authorizationId, deviceId: 'device-a', vendorEventId: 'verified-1', occurredAt: new Date(), outcome: 'CONFIRMED' }), false);
+  await h.coordinator.release(d.authorizationId);
+  const event = { deviceId: 'device-a', authorizationId: d.authorizationId, vendorEventId: 'verified-1', occurredAt: new Date(), outcome: 'CONFIRMED' };
+  assert.equal(await h.coordinator.confirmPassage({ ...event, deviceId: 'device-b' }), false);
+  assert.equal(await h.coordinator.confirmPassage({ ...event, vendorEventId: 'untrusted' }), false);
+  assert.equal(await h.coordinator.confirmPassage({ ...event, outcome: 'NOT_CONFIRMED' }), false);
+  assert.equal(h.getAttempt().state, 'COMMAND_ACCEPTED');
+});
+
+test('invalid direction cannot invoke canonical scan', async () => {
+  const h = buildHarness();
+  await assert.rejects(() => h.coordinator.decide({ ...scan, direction: 'SIDEWAYS' }), /Sentido/);
+  assert.equal(h.getAttempt(), null);
+});
+
+test('simultaneous releases produce at most one vendor unlock command', async () => {
+  const h = buildHarness();
+  const decision = await h.coordinator.decide(scan);
+  let opens = 0;
+  const registryDriver = h.coordinator['drivers'].resolve('CONTROL_ID');
+  registryDriver.release = async (_d, cmd) => {
+    opens += 1;
+    await new Promise(resolve => setImmediate(resolve));
+    return { accepted: true, authorizationId: cmd.authorizationId };
+  };
+  const results = await Promise.all([
+    h.coordinator.release(decision.authorizationId),
+    h.coordinator.release(decision.authorizationId),
+    h.coordinator.release(decision.authorizationId),
+  ]);
+  assert.equal(opens, 1);
+  assert.deepEqual(results.sort(), [false, false, true]);
+});
+
+test('lost SDK ACK becomes uncertain state and cannot silently retry unlock', async () => {
+  const h = buildHarness();
+  const decision = await h.coordinator.decide(scan);
+  let opens = 0;
+  h.coordinator['drivers'].resolve('CONTROL_ID').release = async () => {
+    opens += 1;
+    throw new Error('SDK timeout after physical signal');
+  };
+  assert.equal(await h.coordinator.release(decision.authorizationId), false);
+  assert.equal(h.getAttempt().state, 'RELEASE_UNCERTAIN');
+  assert.equal(await h.coordinator.release(decision.authorizationId), false);
+  assert.equal(opens, 1);
+});
+
+test('new uncertified local SDK devices cannot create a physical authorization', async () => {
+  const h = buildHarness();
+  h.prisma.accessDevice.findUnique = async () => ({
+    ...baseDevice, manufacturer: 'HENRY', certificationStatus: 'NOT_HOMOLOGATED',
+    certificationRef: null,
+  });
+  const d = await h.coordinator.decide(scan);
+  assert.equal(d.allowed, false);
+  assert.equal(h.getAttempt().state, 'DENIED');
+  assert.match(h.getAttempt().denialReason, /homologado/);
+});
+
+test('physical access rejects nonpaying or suspended membership before any command', async () => {
+  const h = buildHarness();
+  h.prisma.subscription.findFirst = async () => null;
+  const d = await h.coordinator.decide(scan);
+  assert.equal(d.allowed, false);
+  assert.match(d.denialReason, /Plano/);
+  assert.equal(h.getAttempt().state, 'DENIED');
+  assert.match(h.getAttempt().denialReason, /Plano/);
+});
+
+test('physical access rejects inactive gyms independent of device and SDK status', async () => {
+  const h = buildHarness();
+  h.prisma.gym.findUnique = async () => ({ active: false });
+  const d = await h.coordinator.decide(scan);
+  assert.equal(d.allowed, false);
+  assert.match(d.denialReason, /Academia/);
+  assert.equal(h.getAttempt().state, 'DENIED');
+  assert.match(h.getAttempt().denialReason, /Academia/);
+});
