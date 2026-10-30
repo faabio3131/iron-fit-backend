@@ -189,7 +189,7 @@ export class MercadoPagoPaymentWebhookInboxService {
           eventType,
           providerObjectRef: dataId,
           status,
-          chargeId: null,
+          chargeId,
         },
       });
       await this.audit.record({
