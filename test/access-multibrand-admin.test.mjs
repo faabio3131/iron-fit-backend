@@ -11,7 +11,8 @@ function make({ active = false, tokenHash = null, manufacturer = 'CONTROL_ID' } 
   const calls = [];
   const device = {
     id: 'd-a', gymId: 'gym-a', active, manufacturer,
-    model: 'iDBlock', deviceTokenHash: tokenHash, type: 'QR_CODE',
+    model: 'iDBlock', deviceTokenHash: tokenHash,
+    certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'test-external-cert', type: 'QR_CODE',
   };
   const prisma = {
     accessDevice: {
@@ -114,4 +115,15 @@ test('device token can be securely provisioned while enrollment is inactive', as
   assert.equal(observed[1][2].deviceTokenHash.length, 64);
   assert.notEqual(observed[1][2].deviceTokenHash, token.deviceToken);
   assert.equal(observed[2][1], 'ACCESS_DEVICE_TOKEN_ROTATED');
+});
+
+test('an unhomologated local SDK device cannot be activated even after token provisioning', async () => {
+  const h = make({ tokenHash: 'hash', manufacturer: 'HENRY' });
+  h.service['prisma'].accessDevice.findFirst = async () => ({
+    id: 'd-a', gymId: 'gym-a', active: false, manufacturer: 'HENRY',
+    model: 'Pedestal', deviceTokenHash: 'hash', certificationStatus: 'NOT_HOMOLOGATED',
+    certificationRef: null,
+  });
+  await assert.rejects(() => h.service.setActive('gym-a', 'owner-a', 'd-a', true), /Homologacao/);
+  assert.equal(h.calls.some(x => x[0] === 'update'), false);
 });
