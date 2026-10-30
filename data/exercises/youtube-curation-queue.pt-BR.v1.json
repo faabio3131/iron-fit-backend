@@ -1535,10 +1535,11 @@
     {
       "exerciseName": "Ab wheel rollout assistido",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=vncVOEtMhpk",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Ab%20wheel%20rollout%20assistido%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=vncVOEtMhpk"
     },
     {
       "exerciseName": "Caminhada na esteira",
@@ -1680,10 +1681,11 @@
     {
       "exerciseName": "Mountain climber",
       "muscleGroup": "Funcional",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=cnyTQDSE884",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mountain%20climber%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=cnyTQDSE884"
     },
     {
       "exerciseName": "Agachamento com salto",
