@@ -1,5 +1,7 @@
 ALTER TABLE "AccessDevice" ADD COLUMN IF NOT EXISTS "manufacturer" TEXT;
 ALTER TABLE "AccessDevice" ADD COLUMN IF NOT EXISTS "model" TEXT;
+ALTER TABLE "AccessDevice" ADD COLUMN IF NOT EXISTS "certificationStatus" TEXT NOT NULL DEFAULT 'NOT_HOMOLOGATED';
+ALTER TABLE "AccessDevice" ADD COLUMN IF NOT EXISTS "certificationRef" TEXT;
 
 -- Additive passage lifecycle. Existing AccessEvent remains the canonical
 -- decision audit; this table distinguishes actual passage from decisions.
