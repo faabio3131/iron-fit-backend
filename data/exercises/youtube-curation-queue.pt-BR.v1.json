@@ -1930,10 +1930,11 @@
     {
       "exerciseName": "Cat cow",
       "muscleGroup": "Mobilidade",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=1Y0YjXS9sKI",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Cat%20cow%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=1Y0YjXS9sKI"
     },
     {
       "exerciseName": "Mobilidade de quadril 90/90",
