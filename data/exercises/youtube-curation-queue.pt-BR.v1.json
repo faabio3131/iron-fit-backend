@@ -1045,10 +1045,11 @@
     {
       "exerciseName": "Levantamento terra romeno com halteres",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=QFbZevA7dps",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Levantamento%20terra%20romeno%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=QFbZevA7dps"
     },
     {
       "exerciseName": "Good morning com barra",
