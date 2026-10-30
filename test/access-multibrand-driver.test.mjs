@@ -53,6 +53,7 @@ test('device scoping rejects foreign tenant and foreign device', () => {
 test('release requires future expiry and matching authorization acknowledgment', async () => {
   const bridge = {
     manufacturer: 'CONTROL_ID',
+    supportsModel: () => true,
     open: async (_device, cmd) => ({ authorizationId: cmd.authorizationId, accepted: true }),
     authenticatePassage: async () => true,
   };
@@ -70,12 +71,14 @@ test('release requires future expiry and matching authorization acknowledgment',
 test('failed release, false ACK, and transport exception fail closed', async () => {
   const falseAck = new VendorBridgedPhysicalDriver('CONTROL_ID', 'REST', {
     manufacturer: 'CONTROL_ID',
+    supportsModel: () => true,
     open: async () => ({ accepted: false, authorizationId: 'auth-a' }),
     authenticatePassage: async () => false,
   });
   await assert.rejects(() => falseAck.release(device, command()), PhysicalDeviceUnavailableError);
   const wrongAck = new VendorBridgedPhysicalDriver('CONTROL_ID', 'REST', {
     manufacturer: 'CONTROL_ID',
+    supportsModel: () => true,
     open: async () => ({ accepted: true, authorizationId: 'stale-auth' }),
     authenticatePassage: async () => false,
   });
@@ -85,6 +88,7 @@ test('failed release, false ACK, and transport exception fail closed', async () 
 test('passage requires matching device and verified vendor proof', async () => {
   const driver = new VendorBridgedPhysicalDriver('CONTROL_ID', 'REST', {
     manufacturer: 'CONTROL_ID',
+    supportsModel: () => true,
     open: async () => ({ accepted: true, authorizationId: 'auth-a' }),
     authenticatePassage: async (_d, e) => e.vendorEventId === 'signed-event',
   });
@@ -129,6 +133,7 @@ test('each of the four brands has a separate connector contract with correct tra
     definition.manufacturer,
     {
       manufacturer: definition.manufacturer,
+      supportsModel: () => true,
       open: async (_device, cmd) => ({ accepted: true, authorizationId: cmd.authorizationId }),
       authenticatePassage: async () => false,
     },
