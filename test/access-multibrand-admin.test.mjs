@@ -106,11 +106,11 @@ test('device token can be securely provisioned while enrollment is inactive', as
     $transaction: async (fn) => fn(prisma),
   };
   const service = new AccessService(prisma);
-  const token = await service.provisionDeviceToken('device-inactive', 'gym-a', 'owner-a');
+  const token = await service.provisionDeviceToken('device-inactive', 'gym-a', 'owner-a', true);
   assert.equal(token.deviceId, 'device-inactive');
   assert.equal(typeof token.deviceToken, 'string');
   assert.ok(token.deviceToken.length >= 32);
-  assert.deepEqual(observed[0][1], { id: 'device-inactive', gymId: 'gym-a' });
+  assert.deepEqual(observed[0][1], { id: 'device-inactive', gymId: 'gym-a', active: false });
   assert.equal(observed[1][2].deviceTokenHash.length, 64);
   assert.notEqual(observed[1][2].deviceTokenHash, token.deviceToken);
   assert.equal(observed[2][1], 'ACCESS_DEVICE_TOKEN_ROTATED');
