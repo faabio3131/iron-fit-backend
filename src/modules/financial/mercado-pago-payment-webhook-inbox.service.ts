@@ -97,7 +97,86 @@ export class MercadoPagoPaymentWebhookInboxService {
         String(payload.data?.id ?? '') !== dataId) {
       throw new BadRequestException('MP_WEBHOOK_EVENT_INVALID');
     }
-    const status = ['payment', 'chargebacks'].includes(payload.type) ? 'UNMATCHED' : 'IGNORED';
+    let status = ['payment', 'chargebacks'].includes(payload.type) ? 'UNMATCHED' : 'IGNORED';
+    let chargeId: string | null = null;
+    // A signed MP webhook says which payment changed, not which academy
+    // charge belongs to the merchant. Resolve the merchant credential from
+    // a tenant-owned webhook connection and independently verify the payment.
+    const config = connection.publicConfiguration;
+    const paymentConnectionId = config && typeof config === 'object' &&
+      !Array.isArray(config) &&
+      typeof (config as Record<string, unknown>).paymentConnectionId === 'string'
+      ? (config as Record<string, string>).paymentConnectionId : null;
+    if (payload.type === 'payment' && paymentConnectionId) {
+      const paymentConnection = await this.prisma.integrationConnection.findFirst({
+        where: {
+          id: paymentConnectionId,
+          gymId: connection.gymId,
+          scope: IntegrationScope.TENANT,
+          providerCode: 'mercado_pago',
+          environment,
+          status: IntegrationConnectionStatus.ACTIVE,
+          secretReference: { not: null },
+          secretVersion: { not: null },
+          secretRevokedAt: null,
+          OR: [{ secretExpiresAt: null }, { secretExpiresAt: { gt: new Date() } }],
+        },
+      });
+      if (!paymentConnection) throw new NotFoundException('MP_PAYMENT_CONNECTION_NOT_AVAILABLE');
+      const merchantSecret = await this.secrets.resolveForExternalBoundary(
+        paymentConnection.id, { scope: 'TENANT', gymId: connection.gymId },
+      );
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+      let payment: Record<string, unknown>;
+      try {
+        const response = await fetch(
+          'https://api.mercadopago.com/v1/payments/' + encodeURIComponent(dataId),
+          {
+            method: 'GET', redirect: 'error', signal: controller.signal,
+            headers: { authorization: 'Bearer ' + merchantSecret.reveal() },
+          },
+        );
+        if (!response.ok) throw new BadRequestException('MP_PAYMENT_LOOKUP_FAILED');
+        const raw = await response.text();
+        if (Buffer.byteLength(raw, 'utf8') > 65_536) {
+          throw new BadRequestException('MP_PAYMENT_RESPONSE_TOO_LARGE');
+        }
+        const parsed: unknown = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          throw new BadRequestException('MP_PAYMENT_RESPONSE_INVALID');
+        }
+        payment = parsed as Record<string, unknown>;
+      } catch {
+        throw new BadRequestException('MP_PAYMENT_RECONCILIATION_UNAVAILABLE');
+      } finally {
+        clearTimeout(timeout);
+      }
+      if (String(payment.id ?? '') !== dataId || payment.currency_id !== 'BRL') {
+        throw new ForbiddenException('MP_WEBHOOK_PAYMENT_MISMATCH');
+      }
+      const externalReference = payment.external_reference;
+      const amount = payment.transaction_amount;
+      const cents = typeof amount === 'number' && Number.isFinite(amount)
+        ? amount * 100 : NaN;
+      if (typeof externalReference === 'string' &&
+          /^[a-f0-9-]{36}$/i.test(externalReference) &&
+          Number.isFinite(cents) && Math.abs(cents - Math.round(cents)) < 0.000001) {
+        const charge = await this.prisma.charge.findFirst({
+          where: {
+            id: externalReference, gymId: connection.gymId,
+            gatewayProviderCode: 'mercado_pago',
+            gatewayConnectionId: paymentConnection.id,
+            amount: Math.round(cents),
+          },
+          select: { id: true },
+        });
+        if (charge) {
+          chargeId = charge.id;
+          status = 'RECEIVED';
+        }
+      }
+    }
     const eventType = typeof payload.action === 'string' &&
       payload.action.length <= 128 ? payload.action : payload.type;
     try {
