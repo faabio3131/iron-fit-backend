@@ -80,6 +80,7 @@ export class TenantPaymentReconciliationService {
             status: 'REFUNDED',
             booked: false,
             reversalBooked: true,
+            fiscalReviewRequired: true,
             idempotent: refund.idempotent,
             reversalTransactionId: refund.reversalTransactionId,
           };
@@ -100,7 +101,8 @@ export class TenantPaymentReconciliationService {
           },
         });
         return { chargeId: charge.id, providerCode: connection.providerCode,
-          status: 'MANUAL_REVIEW', booked: false, requiresReview: true };
+          status: 'MANUAL_REVIEW', booked: false, requiresReview: true,
+          fiscalReviewRequired: true };
       }
       if (charge.status === ChargeStatus.PAID || charge.status === ChargeStatus.REFUNDED) {
         throw new ConflictException('Baixa anterior diverge do estado atual do provider: exige revisao financeira');

@@ -117,6 +117,8 @@ test('full verified refund books exactly one compensating reversal with payment 
   const result = await service.reconcile('charge-a', 'account-a', 'gym-a', 'owner-a');
   assert.equal(result.status, 'REFUNDED');
   assert.equal(result.reversalBooked, true);
+  assert.equal(result.fiscalReviewRequired, true);
+  assert.equal(result.fiscalCancellationRequested, undefined);
   assert.equal(result.reversalTransactionId, 'reversal-1');
   assert.equal(calls.payments.length, 0);
   assert.equal(calls.refunds.length, 1);
@@ -135,6 +137,8 @@ test('partial refund and chargeback require review, never book full reversal', a
     const result = await service.reconcile('charge-a', 'account-a', 'gym-a', 'owner-a');
     assert.equal(result.status, 'MANUAL_REVIEW');
     assert.equal(result.requiresReview, true);
+    assert.equal(result.fiscalReviewRequired, true);
+    assert.equal(result.fiscalCancellationRequested, undefined);
     assert.equal(calls.refunds.length, 0);
     assert.equal(calls.payments.length, 0);
     assert.equal(calls.audits[0].action, 'FINANCIAL_GATEWAY_REVERSAL_REQUIRES_REVIEW');
