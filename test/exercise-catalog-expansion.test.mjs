@@ -10,7 +10,7 @@ test('exercise library covers major training families without duplications or fi
   const groups = new Set(data.exercises.map(item => item.muscleGroup));
   for (const group of ['Peito','Costas','Ombros','Quadríceps','Posteriores de coxa','Glúteos','Cardio','Funcional','Mobilidade','Alongamento','Abdômen e core']) assert.ok(groups.has(group), group);
   assert.equal(new Set(data.exercises.map(x=>x.name.toLowerCase())).size, 272);
-  assert.equal(data.exercises.filter(x=>x.videoUrl !== null).length, 100);
+  assert.equal(data.exercises.filter(x=>x.videoUrl !== null).length, 101);
   assert.equal(data.exercises.find(x=>x.name === 'Agachamento livre com barra')?.videoUrl, 'https://youtu.be/zgk71dUUt0Y');
 });
 test('sync preserves existing records, videos and contraindications', () => {
