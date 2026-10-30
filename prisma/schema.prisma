@@ -968,6 +968,8 @@ model AccessDevice {
   protocol        String?
   manufacturer    String?
   model           String?
+  certificationStatus String @default("NOT_HOMOLOGATED")
+  certificationRef String?
   ipAddress       String?
   active          Boolean @default(true)
   lastSyncAt      DateTime?
