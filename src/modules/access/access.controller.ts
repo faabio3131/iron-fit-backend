@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AccessService } from './access.service';
 import { CreateCredentialDto } from './dto/create-credential.dto';
-import { RegisterPhysicalDeviceDto, SetPhysicalDeviceActiveDto } from './dto/register-physical-device.dto';
+import { ConfigurePhysicalFirmwareDto, RegisterPhysicalDeviceDto, SetPhysicalDeviceActiveDto } from './dto/register-physical-device.dto';
 import { PhysicalDeviceAdminService } from './hardware/physical-device-admin.service';
 import { StepUpGuard } from '../auth/guards/step-up.guard';
 import { ScanDto } from './dto/scan.dto';
@@ -136,6 +136,23 @@ export class AccessController {
       isSuperAdmin: user.isSuperAdmin === true,
     });
     return this.physicalDevices.register(gymId, user.id, dto);
+  }
+
+  @Patch('devices/:deviceId/firmware')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
+  configurePhysicalFirmware(
+    @CurrentUser() user: any,
+    @Param('deviceId') deviceId: string,
+    @Body() dto: ConfigurePhysicalFirmwareDto,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.physicalDevices.configureFirmware(gymId, user.id, deviceId, dto);
   }
 
   @Patch('devices/:deviceId/active')
