@@ -253,6 +253,8 @@ export class AccessService {
         name: true,
         type: true,
         protocol: true,
+        manufacturer: true,
+        model: true,
         active: true,
         lastSyncAt: true,
         tokenRotatedAt: true,
