@@ -1,0 +1,51 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+
+/**
+ * Lifecycle recovery does not emit device commands. It only closes stale
+ * authorizations and quarantines uncertain releases for operator review.
+ */
+@Injectable()
+export class PhysicalAccessRecoveryService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async expireStale(now: Date = new Date()): Promise<{
+    expired: number;
+    uncertain: number;
+  }> {
+    if (!Number.isFinite(now.getTime())) throw new Error('Data de recuperacao invalida');
+    const uncertain = await this.prisma.physicalAccessAttempt.updateMany({
+      where: { state: 'RELEASE_IN_FLIGHT', expiresAt: { lt: now } },
+      data: { state: 'RELEASE_UNCERTAIN' },
+    });
+    const expired = await this.prisma.physicalAccessAttempt.updateMany({
+      where: {
+        state: { in: ['REQUESTED', 'AUTHORIZED', 'COMMAND_ACCEPTED'] },
+        expiresAt: { lt: now },
+      },
+      data: { state: 'EXPIRED' },
+    });
+    return { expired: expired.count, uncertain: uncertain.count };
+  }
+
+  /** Tenant-scoped operational read; excludes SDK secrets and raw credentials. */
+  async listUncertain(gymId: string, limit = 100) {
+    if (!gymId) throw new Error('Academia obrigatoria');
+    const take = Math.max(1, Math.min(limit, 100));
+    return this.prisma.physicalAccessAttempt.findMany({
+      where: { gymId, state: 'RELEASE_UNCERTAIN' },
+      select: {
+        id: true,
+        authorizationId: true,
+        deviceId: true,
+        manufacturer: true,
+        direction: true,
+        state: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+    });
+  }
+}
