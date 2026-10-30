@@ -163,10 +163,11 @@
     {
       "exerciseName": "Mergulho nas paralelas com ênfase em peito",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=sM6XUdt1rm4",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mergulho%20nas%20paralelas%20com%20%C3%AAnfase%20em%20peito%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://github.com/exercemus/exercises/blob/main/exercises.json"
     },
     {
       "exerciseName": "Pullover com halter",
@@ -415,10 +416,11 @@
     {
       "exerciseName": "Desenvolvimento Arnold",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=ris9tKqMwgU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Desenvolvimento%20Arnold%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=ris9tKqMwgU"
     },
     {
       "exerciseName": "Desenvolvimento na máquina",
@@ -502,10 +504,11 @@
     {
       "exerciseName": "Face pull na polia",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=eTCBSFlCJ_s",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Face%20pull%20na%20polia%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=eTCBSFlCJ_s"
     },
     {
       "exerciseName": "Remada alta com barra",
@@ -664,10 +667,11 @@
     {
       "exerciseName": "Rosca Zottman",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=ZrpRBgswtHs",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20Zottman%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://github.com/exercemus/exercises/blob/main/exercises.json"
     },
     {
       "exerciseName": "Tríceps na polia com barra",
@@ -814,10 +818,11 @@
     {
       "exerciseName": "Agachamento goblet",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=JO7D6GJ98wY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Agachamento%20goblet%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=JO7D6GJ98wY"
     },
     {
       "exerciseName": "Agachamento no Smith",
@@ -1043,10 +1048,11 @@
     {
       "exerciseName": "Levantamento terra romeno com halteres",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=QFbZevA7dps",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Levantamento%20terra%20romeno%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=QFbZevA7dps"
     },
     {
       "exerciseName": "Good morning com barra",
@@ -1067,10 +1073,11 @@
     {
       "exerciseName": "Nordic curl assistido",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=_e9vFU9-tkc",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Nordic%20curl%20assistido%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=_e9vFU9-tkc"
     },
     {
       "exerciseName": "Flexão de joelhos com bola suíça",
@@ -1352,10 +1359,11 @@
     {
       "exerciseName": "Abdominal supra na máquina",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=zDSvdyyxH4w",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Abdominal%20supra%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://github.com/exercemus/exercises/blob/main/exercises.json"
     },
     {
       "exerciseName": "Abdominal na polia ajoelhado",
@@ -1410,10 +1418,11 @@
     {
       "exerciseName": "Prancha lateral",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=NXr4Fw8q60o",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Prancha%20lateral%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=NXr4Fw8q60o"
     },
     {
       "exerciseName": "Prancha com apoio de antebraços e joelhos",
@@ -1450,18 +1459,20 @@
     {
       "exerciseName": "Bird dog",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=ZdAHe9_HeEw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Bird%20dog%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=ZdAHe9_HeEw"
     },
     {
       "exerciseName": "Pallof press",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=_2xWmYNnFS8",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Pallof%20press%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=_2xWmYNnFS8"
     },
     {
       "exerciseName": "Rotação russa",
@@ -1530,10 +1541,11 @@
     {
       "exerciseName": "Ab wheel rollout assistido",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=vncVOEtMhpk",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Ab%20wheel%20rollout%20assistido%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=vncVOEtMhpk"
     },
     {
       "exerciseName": "Caminhada na esteira",
@@ -1666,18 +1678,20 @@
     {
       "exerciseName": "Burpee",
       "muscleGroup": "Funcional",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=qLBImHhCXSw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Burpee%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=qLBImHhCXSw"
     },
     {
       "exerciseName": "Mountain climber",
       "muscleGroup": "Funcional",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=cnyTQDSE884",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mountain%20climber%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=cnyTQDSE884"
     },
     {
       "exerciseName": "Agachamento com salto",
@@ -1706,10 +1720,11 @@
     {
       "exerciseName": "Kettlebell swing",
       "muscleGroup": "Funcional",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=zjnRj5SRNF0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Kettlebell%20swing%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=zjnRj5SRNF0"
     },
     {
       "exerciseName": "Kettlebell clean",
@@ -1874,10 +1889,11 @@
     {
       "exerciseName": "Turkish get-up",
       "muscleGroup": "Funcional",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=JFrItinMcyQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Turkish%20get-up%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=JFrItinMcyQ"
     },
     {
       "exerciseName": "Clean and press com halteres",
@@ -1922,18 +1938,20 @@
     {
       "exerciseName": "Cat cow",
       "muscleGroup": "Mobilidade",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=1Y0YjXS9sKI",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Cat%20cow%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=1Y0YjXS9sKI"
     },
     {
       "exerciseName": "Mobilidade de quadril 90/90",
       "muscleGroup": "Mobilidade",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=6dfkYZm9tpE",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mobilidade%20de%20quadril%2090%2F90%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=6dfkYZm9tpE"
     },
     {
       "exerciseName": "Mobilidade de tornozelo na parede",
