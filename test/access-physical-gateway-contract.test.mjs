@@ -131,3 +131,15 @@ test('gateway request signed for a different gym cannot authenticate passage', a
   await assert.rejects(() => h.service.passage(request));
   assert.equal(h.getAttempt().state, 'COMMAND_ACCEPTED');
 });
+
+test('legacy active device without external certification cannot claim commands', async () => {
+  const h = harness();
+  h.service['prisma'].accessDevice.findFirst = async () => ({
+    id: deviceId, gymId, manufacturer: 'HENRY', active: true,
+    model: 'Pedestal', protocol: 'unknown-firmware',
+    certificationStatus: 'NOT_HOMOLOGATED', certificationRef: null,
+    deviceTokenHash: createHash('sha256').update(deviceToken).digest('hex'),
+  });
+  await assert.rejects(() => h.service.claim(auth()));
+  assert.equal(h.getAttempt().state, 'AUTHORIZED');
+});
