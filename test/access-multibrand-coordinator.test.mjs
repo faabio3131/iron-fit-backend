@@ -14,6 +14,8 @@ function buildHarness({ decision = validDecision, driverAvailable = true } = {})
   const events = [];
   let attempt = null;
   const prisma = {
+    gym: { findUnique: async () => ({ active: true }) },
+    subscription: { findFirst: async () => ({ id: 'membership-a' }) },
     accessDevice: {
       findUnique: async () => baseDevice,
       findFirst: async () => baseDevice,
@@ -137,5 +139,23 @@ test('new uncertified local SDK devices cannot create a physical authorization',
   });
   const d = await h.coordinator.decide(scan);
   assert.equal(d.allowed, false);
+  assert.equal(h.getAttempt(), null);
+});
+
+test('physical access rejects nonpaying or suspended membership before any command', async () => {
+  const h = buildHarness();
+  h.prisma.subscription.findFirst = async () => null;
+  const d = await h.coordinator.decide(scan);
+  assert.equal(d.allowed, false);
+  assert.match(d.denialReason, /Plano/);
+  assert.equal(h.getAttempt(), null);
+});
+
+test('physical access rejects inactive gyms independent of device and SDK status', async () => {
+  const h = buildHarness();
+  h.prisma.gym.findUnique = async () => ({ active: false });
+  const d = await h.coordinator.decide(scan);
+  assert.equal(d.allowed, false);
+  assert.match(d.denialReason, /Academia/);
   assert.equal(h.getAttempt(), null);
 });
