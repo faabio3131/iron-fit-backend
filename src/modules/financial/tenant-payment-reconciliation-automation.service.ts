@@ -91,7 +91,7 @@ export class TenantPaymentReconciliationAutomationService
       const policies = new Map(enabledPolicies.map((policy) => [policy.gymId, policy]));
       const candidates = await this.prisma.tenantPaymentWebhookInbox.findMany({
         where: {
-          providerCode: 'stripe',
+          providerCode: { in: ['stripe', 'mercado_pago'] },
           gymId: { in: [...policies.keys()] },
           chargeId: { not: null },
           status: { in: ['RECEIVED', 'RETRY'] },

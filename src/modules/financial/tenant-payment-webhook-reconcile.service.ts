@@ -29,9 +29,8 @@ export class TenantPaymentWebhookReconcileService {
     if (event.status !== 'RECEIVED' && event.status !== 'RETRY') {
       return { eventId: event.id, status: event.status, processed: false };
     }
-    // Mercado Pago events do not yet have a trusted charge association.
-    // Never infer the charge from a webhook payment reference or body.
-    if (event.providerCode !== 'stripe' || !event.chargeId) {
+    // Only prebound signed events may be reconciled, never raw webhook data.
+    if (!['stripe', 'mercado_pago'].includes(event.providerCode) || !event.chargeId) {
       return { eventId: event.id, status: 'MANUAL_REVIEW', processed: false };
     }
     const linkedCharge = await this.prisma.charge.findFirst({
@@ -39,7 +38,7 @@ export class TenantPaymentWebhookReconcileService {
         id: event.chargeId,
         gymId,
         gatewayProviderCode: event.providerCode,
-        gatewayChargeId: event.providerObjectRef,
+        ...(event.providerCode === 'stripe' ? { gatewayChargeId: event.providerObjectRef } : {}),
       },
       select: { id: true },
     });

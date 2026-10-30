@@ -87,3 +87,28 @@ test('unconfirmed payment is not marked reconciled', async () => {
   assert.equal(result.status, 'RETRY');
   assert.equal(fx.getStatus(), 'RETRY');
 });
+
+test('verified linked MP event uses canonical provider recheck instead of raw webhook status', async () => {
+  const checks = [];
+  const service = new TenantPaymentWebhookReconcileService({
+    tenantPaymentWebhookInbox: {
+      findFirst: async () => ({
+        id: 'mp-event', gymId: 'gym-a', providerCode: 'mercado_pago',
+        chargeId: 'charge-a', providerObjectRef: '12345', status: 'RECEIVED',
+      }),
+      updateMany: async () => ({ count: 1 }),
+    },
+    charge: { findFirst: async ({ where }) => {
+      assert.equal(where.gymId, 'gym-a');
+      assert.equal(where.gatewayProviderCode, 'mercado_pago');
+      assert.equal(where.gatewayChargeId, undefined);
+      return { id: 'charge-a' };
+    } },
+  }, { reconcile: async (...args) => {
+    checks.push(args);
+    return { status: 'PAID', booked: true };
+  } }, { record: async () => {} });
+  const result = await service.processEvent('mp-event', 'account-a', 'gym-a', 'owner-a');
+  assert.equal(result.status, 'RECONCILED');
+  assert.deepEqual(checks[0], ['charge-a', 'account-a', 'gym-a', 'owner-a']);
+});
