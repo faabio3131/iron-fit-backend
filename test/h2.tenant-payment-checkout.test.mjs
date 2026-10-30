@@ -72,7 +72,7 @@ function fixture({ connections } = {}) {
 
   const prisma = {
     integrationConnection: {
-      findMany: async () => connectionRows,
+      findMany: async ({ where }) => connectionRows.filter((row) => row.gymId === where.gymId && row.scope === where.scope && row.environment === where.environment && row.status === where.status && row.secretRevokedAt === null && (!where.id || row.id === where.id)),
     },
     charge: {
       findFirst: async ({ where }) => {
@@ -223,7 +223,7 @@ test('H2 fails closed on ambiguous tenant gateway authority', async () => {
         'gym-a',
         'owner-a',
       ),
-    /Gateway tenant ambiguo/,
+    /Mais de um gateway ativo/,
   );
 
   assert.equal(fx.captured.adapterCalls.length, 0);
@@ -267,4 +267,66 @@ test('H2 API and persistence expose no raw card authority or free tenant/provide
   );
   assert.match(docs, /BLOCKED_EXTERNAL/);
   assert.match(docs, /billing\.student\.checkout/);
+});
+
+test('H2 explicitly selects one tenant connection when multiple gateways exist', async () => {
+  const base = {
+    scope: 'TENANT', gymId: 'gym-a', providerCode: 'fake-pay',
+    environment: 'HOMOLOG', status: 'ACTIVE',
+    capabilities: ['billing.student.checkout'], secretReference: 'isv_' + 'A'.repeat(43),
+    secretVersion: 1, secretRevokedAt: null, secretExpiresAt: null, updatedAt: new Date(),
+  };
+  const fx = fixture({ connections: [
+    { ...base, id: 'gateway-a' },
+    { ...base, id: 'gateway-b' },
+    { ...base, id: 'foreign', gymId: 'gym-b' },
+  ] });
+  const result = await fx.service.createSession(
+    'charge-a',
+    { requestId: '77777777-7777-4777-8777-777777777777', providerConnectionId: 'gateway-b' },
+    'gym-a', 'owner-a',
+  );
+  assert.equal(result.idempotent, false);
+  assert.equal(fx.captured.secretCalls[0].connectionId, 'gateway-b');
+  assert.equal(fx.getCharge().gatewayConnectionId, 'gateway-b');
+});
+
+test('H2 cannot select payment connection from another tenant', async () => {
+  const fx = fixture({ connections: [{
+    id: 'foreign', gymId: 'gym-b', scope: 'TENANT', providerCode: 'fake-pay',
+    environment: 'HOMOLOG', status: 'ACTIVE',
+    capabilities: ['billing.student.checkout'], secretReference: 'isv_' + 'A'.repeat(43),
+    secretVersion: 1, secretRevokedAt: null, secretExpiresAt: null, updatedAt: new Date(),
+  }] });
+  await assert.rejects(
+    () => fx.service.createSession('charge-a', {
+      requestId: '88888888-8888-4888-8888-888888888888',
+      providerConnectionId: 'foreign',
+    }, 'gym-a', 'owner-a'),
+    /Gateway tenant nao configurado/,
+  );
+  assert.equal(fx.captured.secretCalls.length, 0);
+  assert.equal(fx.captured.adapterCalls.length, 0);
+});
+
+test('H2 lists only active configured tenant gateways without exposing credential data', async () => {
+  const base = {
+    scope: 'TENANT', gymId: 'gym-a', providerCode: 'fake-pay', environment: 'HOMOLOG',
+    status: 'ACTIVE', capabilities: ['billing.student.checkout'],
+    secretReference: 'isv_' + 'A'.repeat(43), secretVersion: 1,
+    secretRevokedAt: null, secretExpiresAt: null, updatedAt: new Date(),
+  };
+  const fx = fixture({ connections: [
+    { ...base, id: 'gateway-a' },
+    { ...base, id: 'gateway-b' },
+    { ...base, id: 'foreign', gymId: 'gym-b' },
+    { ...base, id: 'revoke', secretRevokedAt: new Date() },
+    { ...base, id: 'other-capability', capabilities: ['email.transactional'] },
+  ] });
+  const choices = await fx.service.listAvailableProviders('gym-a');
+  assert.deepEqual(choices, [
+    { connectionId: 'gateway-a', providerCode: 'fake-pay' },
+    { connectionId: 'gateway-b', providerCode: 'fake-pay' },
+  ]);
+  assert.doesNotMatch(JSON.stringify(choices), /secret|credential|gymId/);
 });

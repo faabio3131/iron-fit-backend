@@ -34,9 +34,11 @@ function assertSafeTenantChargeRead(args, gymId) {
   assert.equal('passwordHash' in args.select.student.select.user.select, false);
   assert.equal('mfaSecret' in args.select.student.select.user.select, false);
 
-  for (const driftedGatewayColumn of [
-    'gatewayProviderCode',
-    'gatewayConnectionId',
+  // Provider code and connection ID are nonsecret references required by
+  // the owner's verified-receipt workspace. Internal checkout ids stay hidden.
+  assert.equal(args.select.gatewayProviderCode, true);
+  assert.equal(args.select.gatewayConnectionId, true);
+    for (const driftedGatewayColumn of [
     'gatewayRequestId',
     'gatewayCheckoutExpiresAt',
   ]) {

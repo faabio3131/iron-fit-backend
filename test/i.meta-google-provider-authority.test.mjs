@@ -37,7 +37,24 @@ test('I bootstraps Meta as one umbrella provider and Google as a separate OAuth 
 
   // Meta, Google and fiscal providers remain unchanged; FM-only AI providers
   // extend the catalog without granting academy control of API credentials.
-  assert.equal(registry.list().length, 6);
+  assert.equal(registry.list().length, 11);
+  const mpWebhook = registry.require('mercado_pago_webhook');
+  assert.deepEqual(mpWebhook.capabilities, ['billing.student.webhook']);
+  assert.deepEqual(mpWebhook.authModels, ['WEBHOOK_SECRET']);
+  assert.equal(mpWebhook.tenantEntitlementFeatureKey, 'billing.student.checkout');
+  const stripeWebhook = registry.require('stripe_webhook');
+  assert.deepEqual(stripeWebhook.capabilities, ['billing.student.webhook']);
+  assert.deepEqual(stripeWebhook.authModels, ['WEBHOOK_SECRET']);
+  assert.equal(stripeWebhook.tenantEntitlementFeatureKey, 'billing.student.checkout');
+  const stripe = registry.require('stripe');
+  assert.deepEqual(stripe.capabilities, ['billing.student.checkout']);
+  assert.equal(stripe.tenantEntitlementFeatureKey, 'billing.student.checkout');
+  const email = registry.require('resend');
+  assert.deepEqual(email.capabilities, ['email.transactional']);
+  assert.equal(email.tenantEntitlementFeatureKey, undefined);
+  const payment = registry.require('mercado_pago');
+  assert.deepEqual(payment.capabilities, ['billing.student.checkout']);
+  assert.equal(payment.tenantEntitlementFeatureKey, 'billing.student.checkout');
   for (const code of ['openai_compatible', 'gemini_native']) {
     const ai = registry.require(code);
     assert.deepEqual(ai.authModels, ['API_KEY']);

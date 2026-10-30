@@ -1064,6 +1064,38 @@ model FinancialCategory {
   payables     Payable[]
 }
 
+// Signed, tenant-scoped provider notifications. No raw payload or secrets are stored.
+// A webhook never has authority to mark a charge paid.
+// Explicit OWNER-controlled automation policy. Disabled until configured.
+model TenantPaymentReconciliationPolicy {
+  gymId             String   @id
+  accountId         String
+  enabled           Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+  updatedByUserId   String?
+}
+
+model TenantPaymentWebhookInbox {
+  id                String   @id @default(uuid())
+  gymId             String
+  connectionId      String
+  providerCode      String
+  providerEventId   String
+  eventType         String
+  providerObjectRef String?
+  chargeId          String?
+  status            String   @default("RECEIVED")
+  attemptCount      Int      @default(0)
+  nextAttemptAt     DateTime @default(now())
+  receivedAt        DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([connectionId, providerEventId])
+  @@index([gymId, receivedAt])
+  @@index([gymId, status])
+  @@index([status, nextAttemptAt])
+}
+
 model FinancialTransaction {
   id            String            @id @default(uuid())
   gymId         String

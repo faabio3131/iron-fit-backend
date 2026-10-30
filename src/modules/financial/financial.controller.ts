@@ -1,11 +1,18 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { FinancialService } from './financial.service';
+import { StripePaymentWebhookInboxService } from './stripe-payment-webhook-inbox.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CreateChargeDto } from './dto/create-charge.dto';
 import { PayChargeDto } from './dto/pay-charge.dto';
 import { CreateChargePaymentSessionDto } from './dto/create-charge-payment-session.dto';
 import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
+import { TenantPaymentReconciliationService } from './tenant-payment-reconciliation.service';
+import { TenantPaymentWebhookReconcileService } from './tenant-payment-webhook-reconcile.service';
+import { TenantPaymentReconciliationAutomationService } from './tenant-payment-reconciliation-automation.service';
+import { ConfigurePaymentAutomationDto } from './dto/configure-payment-automation.dto';
+import { ReconcileWebhookEventDto } from './dto/reconcile-webhook-event.dto';
+import { ReconcileChargePaymentDto } from './dto/reconcile-charge-payment.dto';
 import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
 import { UpsertFiscalScopeBindingDto } from './dto/upsert-fiscal-scope-binding.dto';
 import { CancelFiscalHandoffDto } from './dto/cancel-fiscal-handoff.dto';
@@ -22,7 +29,11 @@ import { resolveTenantOperationGymId } from '../../common/security/tenant-operat
 export class FinancialController {
   constructor(
     private financialService: FinancialService,
+    private webhookInbox: StripePaymentWebhookInboxService,
     private tenantPaymentCheckout: TenantPaymentCheckoutService,
+    private tenantPaymentReconciliation: TenantPaymentReconciliationService,
+    private webhookReconciliation: TenantPaymentWebhookReconcileService,
+    private paymentAutomation: TenantPaymentReconciliationAutomationService,
     private fiscalScopeBinding: FiscalScopeBindingService,
     private fiscalLifecycle: FiscalReconciliationCancellationService,
   ) {}
@@ -122,6 +133,73 @@ export class FinancialController {
     return this.financialService.findTransactions(
       this.resolveGymId(user, requestedGymId),
       { studentId, accountId, status, type, from, to },
+    );
+  }
+
+  @Get('automation-policy')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  getPaymentAutomationPolicy(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.paymentAutomation.getPolicy(this.resolveGymId(user, requestedGymId));
+  }
+
+  @Post('automation-policy')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  configurePaymentAutomation(
+    @Body() dto: ConfigurePaymentAutomationDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.paymentAutomation.configure(
+      this.resolveGymId(user, requestedGymId), dto.accountId, dto.enabled, user.id,
+    );
+  }
+
+  @Post('gateway-events/:id/reconcile')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  reconcileWebhookEvent(
+    @Param('id') eventId: string,
+    @Body() dto: ReconcileWebhookEventDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.webhookReconciliation.processEvent(
+      eventId, dto.accountId, this.resolveGymId(user, requestedGymId), user.id,
+    );
+  }
+
+  @Get('gateway-events')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  listGatewayEvents(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.webhookInbox.listForGym(this.resolveGymId(user, requestedGymId));
+  }
+
+  @Get('payment-providers')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  listPaymentProviders(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.tenantPaymentCheckout.listAvailableProviders(
+      this.resolveGymId(user, requestedGymId),
+    );
+  }
+
+  @Post('charges/:id/reconcile-payment')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  reconcileProviderPayment(
+    @Param('id') id: string,
+    @Body() dto: ReconcileChargePaymentDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.tenantPaymentReconciliation.reconcile(
+      id, dto.accountId, this.resolveGymId(user, requestedGymId), user.id,
     );
   }
 

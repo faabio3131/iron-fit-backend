@@ -8,6 +8,8 @@ export const tenantChargeReadSelect = {
   paidAt: true,
   status: true,
   paymentMethod: true,
+  gatewayConnectionId: true,
+  gatewayProviderCode: true,
   student: {
     select: {
       id: true,

@@ -28,6 +28,56 @@ export class IntegrationProviderBootstrapService implements OnModuleInit {
     }
 
     this.providers.register({
+      providerCode: 'resend',
+      capabilities: ['email.transactional'],
+      authModels: ['API_KEY'],
+      environments: ['DEV', 'HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+    });
+
+    // Separate tenant signing secret from the Stripe API payment token.
+    this.providers.register({
+      providerCode: 'stripe_webhook',
+      capabilities: ['billing.student.webhook'],
+      authModels: ['WEBHOOK_SECRET'],
+      environments: ['DEV', 'HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+      tenantEntitlementFeatureKey: 'billing.student.checkout',
+    });
+
+    this.providers.register({
+      providerCode: 'stripe',
+      capabilities: ['billing.student.checkout'],
+      authModels: ['API_KEY'],
+      environments: ['DEV', 'HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+      tenantEntitlementFeatureKey: 'billing.student.checkout',
+    });
+
+    this.providers.register({
+      providerCode: 'mercado_pago_webhook',
+      capabilities: ['billing.student.webhook'],
+      authModels: ['WEBHOOK_SECRET'],
+      environments: ['DEV', 'HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+      tenantEntitlementFeatureKey: 'billing.student.checkout',
+    });
+
+    this.providers.register({
+      providerCode: 'mercado_pago',
+      capabilities: ['billing.student.checkout'],
+      authModels: ['ACCESS_TOKEN'],
+      environments: ['DEV', 'HOMOLOG', 'PROD'],
+      supportsWebhook: true,
+      supportsOAuth: false,
+      tenantEntitlementFeatureKey: 'billing.student.checkout',
+    });
+
+    this.providers.register({
       providerCode: 'meta',
       capabilities: [
         'meta.facebook',

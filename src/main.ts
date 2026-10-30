@@ -34,6 +34,7 @@ async function bootstrap() {
   const runtimeIdentity = assertRuntimeStartupConfiguration();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
+    rawBody: true, // Required for exact-byte Stripe signature verification.
   });
 
   const trustProxyHops = resolveTrustProxyHops();
