@@ -11,7 +11,7 @@ function make({ active = false, tokenHash = null, manufacturer = 'CONTROL_ID' } 
   const calls = [];
   const device = {
     id: 'd-a', gymId: 'gym-a', active, manufacturer,
-    model: 'iDBlock', deviceTokenHash: tokenHash,
+    model: 'iDBlock', firmwareVersion: 'approved-firmware', deviceTokenHash: tokenHash,
     certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'test-external-cert', type: 'QR_CODE',
   };
   const prisma = {
@@ -121,7 +121,7 @@ test('an unhomologated local SDK device cannot be activated even after token pro
   const h = make({ tokenHash: 'hash', manufacturer: 'HENRY' });
   h.service['prisma'].accessDevice.findFirst = async () => ({
     id: 'd-a', gymId: 'gym-a', active: false, manufacturer: 'HENRY',
-    model: 'Pedestal', deviceTokenHash: 'hash', certificationStatus: 'NOT_HOMOLOGATED',
+    model: 'Pedestal', firmwareVersion: 'approved-firmware', deviceTokenHash: 'hash', certificationStatus: 'NOT_HOMOLOGATED',
     certificationRef: null,
   });
   await assert.rejects(() => h.service.setActive('gym-a', 'owner-a', 'd-a', true), /Homologacao/);
