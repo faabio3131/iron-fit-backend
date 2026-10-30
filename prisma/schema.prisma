@@ -1093,6 +1093,7 @@ model TenantPaymentWebhookInbox {
   @@unique([connectionId, providerEventId])
   @@index([gymId, receivedAt])
   @@index([gymId, status])
+  @@index([status, nextAttemptAt])
 }
 
 model FinancialTransaction {
