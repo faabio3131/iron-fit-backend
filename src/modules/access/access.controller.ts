@@ -1,6 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AccessService } from './access.service';
 import { CreateCredentialDto } from './dto/create-credential.dto';
+import { RegisterPhysicalDeviceDto, SetPhysicalDeviceActiveDto } from './dto/register-physical-device.dto';
+import { PhysicalDeviceAdminService } from './hardware/physical-device-admin.service';
+import { StepUpGuard } from '../auth/guards/step-up.guard';
 import { ScanDto } from './dto/scan.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -10,7 +13,7 @@ import { resolveTenantOperationGymId } from '../../common/security/tenant-operat
 
 @Controller('access')
 export class AccessController {
-  constructor(private accessService: AccessService) {}
+  constructor(private accessService: AccessService, private physicalDevices: PhysicalDeviceAdminService) {}
 
   @Get('events')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -117,6 +120,39 @@ export class AccessController {
       isSuperAdmin: user.isSuperAdmin === true,
     });
     return this.accessService.provisionDeviceToken(deviceId, gymId, user.id);
+  }
+
+  @Post('devices')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
+  registerPhysicalDevice(
+    @CurrentUser() user: any,
+    @Body() dto: RegisterPhysicalDeviceDto,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.physicalDevices.register(gymId, user.id, dto);
+  }
+
+  @Patch('devices/:deviceId/active')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
+  setPhysicalDeviceActive(
+    @CurrentUser() user: any,
+    @Param('deviceId') deviceId: string,
+    @Body() dto: SetPhysicalDeviceActiveDto,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.physicalDevices.setActive(gymId, user.id, deviceId, dto.active);
   }
 
   @Post('scan')
