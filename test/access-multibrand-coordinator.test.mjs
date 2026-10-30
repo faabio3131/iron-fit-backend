@@ -36,6 +36,7 @@ function buildHarness({ decision = validDecision, driverAvailable = true } = {})
     registry.register({
       manufacturer: 'CONTROL_ID',
       transport: 'REST',
+      supportsDevice: () => true,
       release: async (_dev, cmd) => ({ accepted: true, authorizationId: cmd.authorizationId }),
       verifyPassage: async (_dev, event) => event.vendorEventId === 'verified-1',
     });
