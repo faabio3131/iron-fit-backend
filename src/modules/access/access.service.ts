@@ -255,6 +255,7 @@ export class AccessService {
         protocol: true,
         manufacturer: true,
         model: true,
+        firmwareVersion: true,
         certificationStatus: true,
         certificationRef: true,
         active: true,
