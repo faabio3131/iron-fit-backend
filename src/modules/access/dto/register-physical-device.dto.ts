@@ -25,3 +25,10 @@ export class SetPhysicalDeviceActiveDto {
   @IsBoolean()
   active: boolean;
 }
+
+export class ConfigurePhysicalFirmwareDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  firmwareVersion: string;
+}
