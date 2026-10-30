@@ -1413,10 +1413,11 @@
     {
       "exerciseName": "Prancha lateral",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=NXr4Fw8q60o",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Prancha%20lateral%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=NXr4Fw8q60o"
     },
     {
       "exerciseName": "Prancha com apoio de antebraços e joelhos",
@@ -1670,10 +1671,11 @@
     {
       "exerciseName": "Burpee",
       "muscleGroup": "Funcional",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=qLBImHhCXSw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Burpee%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=qLBImHhCXSw"
     },
     {
       "exerciseName": "Mountain climber",
