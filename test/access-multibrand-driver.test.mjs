@@ -123,3 +123,31 @@ test('denials, failed passages, timeouts and replays are terminal', () => {
   }
   assert.throws(() => nextPhysicalAccessState('REQUESTED', 'CONFIRM_PASSAGE'));
 });
+
+test('each of the four brands has a separate connector contract with correct transport', async () => {
+  const connectorByBrand = Object.fromEntries(SUPPORTED_PHYSICAL_MANUFACTURERS.map((definition) => [
+    definition.manufacturer,
+    {
+      manufacturer: definition.manufacturer,
+      open: async (_device, cmd) => ({ accepted: true, authorizationId: cmd.authorizationId }),
+      authenticatePassage: async () => false,
+    },
+  ]));
+  const drivers = createPhysicalVendorDrivers(connectorByBrand);
+  assert.equal(drivers.length, 4);
+  for (const definition of SUPPORTED_PHYSICAL_MANUFACTURERS) {
+    const driver = drivers.find((item) => item.manufacturer === definition.manufacturer);
+    assert.ok(driver);
+    assert.equal(driver.transport, definition.transport);
+    const perVendor = { ...device, manufacturer: definition.manufacturer };
+    const ack = await driver.release(perVendor, command());
+    assert.equal(ack.accepted, true);
+    assert.equal(await driver.verifyPassage(perVendor, {
+      deviceId: perVendor.deviceId,
+      authorizationId: 'auth-a',
+      vendorEventId: 'vendor-event',
+      occurredAt: new Date(),
+      outcome: 'CONFIRMED',
+    }), false);
+  }
+});
