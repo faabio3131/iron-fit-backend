@@ -26,7 +26,7 @@ function harness() {
         ? { id: deviceId, gymId, manufacturer: 'HENRY',
           deviceTokenHash: createHash('sha256').update(deviceToken).digest('hex'), active: true }
         : null },
-    accessScanNonce: { create: async ({ data }) => {
+    accessScanNonce: { deleteMany: async () => ({ count: 0 }), create: async ({ data }) => {
       if (knownNonce.has(data.nonce)) throw new Error('reused nonce');
       knownNonce.add(data.nonce);
       return { id: data.nonce };
