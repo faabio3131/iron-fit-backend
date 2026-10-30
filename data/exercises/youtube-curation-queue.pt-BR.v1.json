@@ -163,10 +163,11 @@
     {
       "exerciseName": "Mergulho nas paralelas com ênfase em peito",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=sM6XUdt1rm4",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mergulho%20nas%20paralelas%20com%20%C3%AAnfase%20em%20peito%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://github.com/exercemus/exercises/blob/main/exercises.json"
     },
     {
       "exerciseName": "Pullover com halter",
@@ -665,10 +666,11 @@
     {
       "exerciseName": "Rosca Zottman",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=ZrpRBgswtHs",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20Zottman%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://github.com/exercemus/exercises/blob/main/exercises.json"
     },
     {
       "exerciseName": "Tríceps na polia com barra",
@@ -1356,10 +1358,11 @@
     {
       "exerciseName": "Abdominal supra na máquina",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=zDSvdyyxH4w",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Abdominal%20supra%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://github.com/exercemus/exercises/blob/main/exercises.json"
     },
     {
       "exerciseName": "Abdominal na polia ajoelhado",
