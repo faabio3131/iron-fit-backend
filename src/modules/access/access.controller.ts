@@ -107,8 +107,8 @@ export class AccessController {
   }
 
   @Post('devices/:deviceId/token')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
   provisionDeviceToken(
     @Param('deviceId') deviceId: string,
     @CurrentUser() user: any,
