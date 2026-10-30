@@ -42,7 +42,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findUnique({
       where: { id: input.deviceId },
-      select: { id: true, gymId: true, active: true, manufacturer: true, model: true, protocol: true },
+      select: { id: true, gymId: true, active: true, manufacturer: true, model: true, protocol: true, certificationStatus: true, certificationRef: true },
     });
     if (!device || !device.active || !MANUFACTURERS.includes(device.manufacturer as AccessManufacturer)) {
       // AccessService's decision remains audited. Hardware must fail closed.
@@ -50,13 +50,20 @@ export class PhysicalAccessCoordinator {
     }
 
     const manufacturer = device.manufacturer as AccessManufacturer;
-    // A missing driver is an external prerequisite, NOT a permissive fallback.
-    const driver = this.drivers.resolve(manufacturer);
-    if (!device.model || !driver.supportsDevice({
-      deviceId: device.id, gymId: device.gymId,
-      manufacturer, model: device.model, protocolVersion: device.protocol ?? undefined,
-    })) {
+    // The on-premise SDK is never loaded into the cloud backend. Only the
+    // externally certified brand/model/firmware can use reverse polling.
+    if (device.certificationStatus !== 'PRODUCTION_HOMOLOGATED' ||
+        !device.certificationRef || !device.model || !device.protocol) {
       return { allowed: false, denialReason: 'Modelo de catraca nao homologado', authorizationId: null };
+    }
+    if (manufacturer === 'CONTROL_ID') {
+      const driver = this.drivers.resolve(manufacturer);
+      if (!driver.supportsDevice({
+        deviceId: device.id, gymId: device.gymId,
+        manufacturer, model: device.model, protocolVersion: device.protocol,
+      })) {
+        return { allowed: false, denialReason: 'Firmware de catraca nao homologado', authorizationId: null };
+      }
     }
     const expiresAt = new Date(Date.now() + AUTHORIZATION_TTL_MS);
     const authorizationId = decision.eventId;
