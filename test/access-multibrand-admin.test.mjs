@@ -52,7 +52,7 @@ test('device activation remains blocked without installed protocol driver', asyn
 
 test('device activation requires real registered driver and scoped write', async () => {
   const h = make({ tokenHash: 'sha256-token' });
-  h.registry.register({ manufacturer: 'CONTROL_ID', transport: 'REST', release: async () => null, verifyPassage: async () => false });
+  h.registry.register({ manufacturer: 'CONTROL_ID', transport: 'REST', supportsDevice: () => true, release: async () => null, verifyPassage: async () => false });
   const res = await h.service.setActive('gym-a', 'owner-a', 'd-a', true);
   assert.equal(res.active, true);
   assert.equal(h.calls[0][1].gymId, 'gym-a');
