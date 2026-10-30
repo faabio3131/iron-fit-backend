@@ -3,12 +3,14 @@ import { AccessController } from './access.controller';
 import { AccessService } from './access.service';
 import { PhysicalAccessCoordinator } from './hardware/physical-access-coordinator';
 import { PhysicalAccessDriverRegistry } from './hardware/physical-access-driver';
+import { AuthModule } from '../auth/auth.module';
+import { PhysicalDeviceAdminService } from './hardware/physical-device-admin.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [AccessController],
-  providers: [AccessService, PhysicalAccessDriverRegistry, PhysicalAccessCoordinator],
+  providers: [AccessService, PhysicalAccessDriverRegistry, PhysicalAccessCoordinator, PhysicalDeviceAdminService],
   exports: [AccessService, PhysicalAccessCoordinator, PhysicalAccessDriverRegistry],
 })
 export class AccessModule {}
