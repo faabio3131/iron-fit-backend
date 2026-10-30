@@ -110,6 +110,8 @@ export class PhysicalGatewayService {
         authorizationId: next.authorizationId,
         deviceId: next.deviceId,
         manufacturer: next.manufacturer,
+        model: device.model,
+        firmwareVersion: device.firmwareVersion,
         direction: next.direction,
         expiresAt: next.expiresAt,
       },
