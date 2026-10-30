@@ -83,9 +83,16 @@ export class TenantPaymentReconciliationAutomationService
         },
         data: { status: 'RETRY', nextAttemptAt: now },
       });
+      const enabledPolicies = await this.prisma.tenantPaymentReconciliationPolicy.findMany({
+        where: { enabled: true },
+        select: { gymId: true, accountId: true },
+      });
+      if (!enabledPolicies.length) return { processed: 0, disabled: false };
+      const policies = new Map(enabledPolicies.map((policy) => [policy.gymId, policy]));
       const candidates = await this.prisma.tenantPaymentWebhookInbox.findMany({
         where: {
           providerCode: 'stripe',
+          gymId: { in: [...policies.keys()] },
           chargeId: { not: null },
           status: { in: ['RECEIVED', 'RETRY'] },
           nextAttemptAt: { lte: now },
@@ -95,10 +102,8 @@ export class TenantPaymentReconciliationAutomationService
         orderBy: [{ receivedAt: 'asc' }],
       });
       for (const event of candidates) {
-        const policy = await this.prisma.tenantPaymentReconciliationPolicy.findUnique({
-          where: { gymId: event.gymId },
-        });
-        if (!policy?.enabled) continue;
+        const policy = policies.get(event.gymId);
+        if (!policy) continue;
         const account = await this.prisma.financialAccount.findFirst({
           where: { id: policy.accountId, gymId: event.gymId, active: true },
         });
