@@ -1,55 +1,61 @@
 {
   "version": 1,
   "reviewStatus": "PENDING_HUMAN_REVIEW",
-  "description": "Curation queue: directVideoUrl only when researched; youtubeSearchUrl is a search, NEVER a direct video.",
+  "description": "These URLs are candidate external YouTube references; they are NOT medically/professionally validated. Exact list names were matched against the public source PDF, with human review required.",
   "items": [
     {
       "exerciseName": "Supino reto com barra",
       "muscleGroup": "Peito",
-      "directVideoUrl": "https://www.youtube.com/watch?v=x5cAnDj3sVc",
+      "directVideoUrl": "https://youtu.be/EZMYCLKuGow",
       "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Supino%20reto%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Supino reto com halteres",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/EZMYCLKuGow",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Supino%20reto%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Supino inclinado com barra",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/WP1VLAt8hbM",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Supino%20inclinado%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Supino inclinado com halteres",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/WP1VLAt8hbM",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Supino%20inclinado%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Supino declinado com barra",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/J2g6qPBJfqo",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Supino%20declinado%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Supino declinado com halteres",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/J2g6qPBJfqo",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Supino%20declinado%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Supino máquina horizontal",
@@ -70,58 +76,65 @@
     {
       "exerciseName": "Crucifixo reto com halteres",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/uDMmccuPVPQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Crucifixo%20reto%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Crucifixo inclinado com halteres",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/uy9Xk3SVrms",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Crucifixo%20inclinado%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Crucifixo na máquina",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/FzCnfD0gOXo",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Crucifixo%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Crossover alto para baixo",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/jqTlJt3JXzQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Crossover%20alto%20para%20baixo%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Crossover baixo para cima",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/jqTlJt3JXzQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Crossover%20baixo%20para%20cima%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Crossover na linha do peito",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/jqTlJt3JXzQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Crossover%20na%20linha%20do%20peito%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Flexão de braços tradicional",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/dHgoYiCraCw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Flex%C3%A3o%20de%20bra%C3%A7os%20tradicional%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Flexão de braços inclinada",
@@ -158,10 +171,11 @@
     {
       "exerciseName": "Pullover com halter",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/-KaMXMMIVrU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Pullover%20com%20halter%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Chest press unilateral na máquina",
@@ -174,26 +188,29 @@
     {
       "exerciseName": "Puxada frontal pegada aberta",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/pJM_rHhluK8",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Puxada%20frontal%20pegada%20aberta%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Puxada frontal pegada neutra",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/pJM_rHhluK8",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Puxada%20frontal%20pegada%20neutra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Puxada frontal pegada supinada",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/pJM_rHhluK8",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Puxada%20frontal%20pegada%20supinada%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Puxada unilateral na polia",
@@ -206,26 +223,29 @@
     {
       "exerciseName": "Barra fixa pronada",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/thg6cGXSlvY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Barra%20fixa%20pronada%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Barra fixa supinada",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/thg6cGXSlvY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Barra%20fixa%20supinada%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Barra fixa neutra",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/thg6cGXSlvY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Barra%20fixa%20neutra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Barra fixa assistida",
@@ -238,34 +258,38 @@
     {
       "exerciseName": "Remada curvada com barra",
       "muscleGroup": "Costas",
-      "directVideoUrl": "https://www.youtube.com/watch?v=_vO2dAnz__c",
+      "directVideoUrl": "https://youtu.be/TfxJMertfsw",
       "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Remada%20curvada%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Remada curvada supinada",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/TfxJMertfsw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Remada%20curvada%20supinada%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Remada unilateral com halter",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/m4h4jT9patY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Remada%20unilateral%20com%20halter%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Remada baixa pegada neutra",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/HpWWreyaBN0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Remada%20baixa%20pegada%20neutra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Remada baixa pegada aberta",
@@ -278,18 +302,20 @@
     {
       "exerciseName": "Remada articulada na máquina",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/QyvIEdEHzHc",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Remada%20articulada%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Remada cavalinho",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/TfxJMertfsw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Remada%20cavalinho%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Remada serrote apoiada",
@@ -318,10 +344,11 @@
     {
       "exerciseName": "Pulldown com braços estendidos",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/v6-QIOY0nW0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Pulldown%20com%20bra%C3%A7os%20estendidos%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Pullover na polia",
@@ -334,50 +361,56 @@
     {
       "exerciseName": "Encolhimento com barra",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/RhGjwIUe16E",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Encolhimento%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Encolhimento com halteres",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/RhGjwIUe16E",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Encolhimento%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Extensão lombar no banco romano",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/z0rx9swRDR0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Extens%C3%A3o%20lombar%20no%20banco%20romano%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Desenvolvimento com barra em pé",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/EuQAfhXBEvs",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Desenvolvimento%20com%20barra%20em%20p%C3%A9%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Desenvolvimento com barra sentado",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/EuQAfhXBEvs",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Desenvolvimento%20com%20barra%20sentado%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Desenvolvimento com halteres sentado",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/EuQAfhXBEvs",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Desenvolvimento%20com%20halteres%20sentado%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Desenvolvimento Arnold",
@@ -390,26 +423,29 @@
     {
       "exerciseName": "Desenvolvimento na máquina",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/EuQAfhXBEvs",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Desenvolvimento%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Elevação lateral com halteres",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/IwWvZ0rlNXs",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Eleva%C3%A7%C3%A3o%20lateral%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Elevação lateral unilateral na polia",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/sKPJdvVvHuI",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Eleva%C3%A7%C3%A3o%20lateral%20unilateral%20na%20polia%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Elevação lateral na máquina",
@@ -422,34 +458,38 @@
     {
       "exerciseName": "Elevação frontal com halteres",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/NxSuojHZa8k",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Eleva%C3%A7%C3%A3o%20frontal%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Elevação frontal com barra",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/_ZQhDiONpZA",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Eleva%C3%A7%C3%A3o%20frontal%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Elevação frontal na polia",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/S7B5LwWrLA0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Eleva%C3%A7%C3%A3o%20frontal%20na%20polia%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Crucifixo inverso com halteres",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/5HDkxzxe400",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Crucifixo%20inverso%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Crucifixo inverso na máquina",
@@ -470,10 +510,11 @@
     {
       "exerciseName": "Remada alta com barra",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/tm0IywBhIYM",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Remada%20alta%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rotação externa do ombro com elástico",
@@ -502,66 +543,74 @@
     {
       "exerciseName": "Rosca direta com barra reta",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/Q8TqfD8E7BU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20direta%20com%20barra%20reta%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca direta com barra W",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/Q8TqfD8E7BU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20direta%20com%20barra%20W%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca alternada com halteres",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/S1HAcTVQVYE",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20alternada%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca martelo com halteres",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/0qkQy8V2FC0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20martelo%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca martelo na corda",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/0qkQy8V2FC0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20martelo%20na%20corda%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca concentrada",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/EEpvOQAAtRo",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20concentrada%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca Scott com barra W",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/zpTK6eihdSA",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20Scott%20com%20barra%20W%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca Scott na máquina",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/zpTK6eihdSA",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20Scott%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca inclinada com halteres",
@@ -590,10 +639,11 @@
     {
       "exerciseName": "Rosca inversa com barra",
       "muscleGroup": "Bíceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/jbSr9CzJPmA",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Rosca%20inversa%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Rosca 21",
@@ -622,74 +672,83 @@
     {
       "exerciseName": "Tríceps na polia com barra",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/dTqDKC0D6P4",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20na%20polia%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps na polia com corda",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/dTqDKC0D6P4",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20na%20polia%20com%20corda%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps na polia pegada inversa",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/dTqDKC0D6P4",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20na%20polia%20pegada%20inversa%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps francês unilateral com halter",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/YJ4kGE3eemY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20franc%C3%AAs%20unilateral%20com%20halter%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps francês bilateral com halter",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/YJ4kGE3eemY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20franc%C3%AAs%20bilateral%20com%20halter%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps testa com barra W",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/zznCYBVZOVA",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20testa%20com%20barra%20W%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps testa com halteres",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/SbAykzCE-xk",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20testa%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps coice com halter",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/PyKv23F-fVM",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20coice%20com%20halter%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps acima da cabeça na polia",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/YJ4kGE3eemY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Tr%C3%ADceps%20acima%20da%20cabe%C3%A7a%20na%20polia%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Tríceps na máquina",
@@ -702,26 +761,29 @@
     {
       "exerciseName": "Supino fechado com barra",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/ZiemT4r4DcU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Supino%20fechado%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Mergulho em banco",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/TCVj8cliLNo",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mergulho%20em%20banco%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Mergulho nas paralelas com ênfase em tríceps",
       "muscleGroup": "Tríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/LJz40nTE_sI",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mergulho%20nas%20paralelas%20com%20%C3%AAnfase%20em%20tr%C3%ADceps%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Extensão unilateral de tríceps na polia",
@@ -734,18 +796,20 @@
     {
       "exerciseName": "Agachamento livre com barra",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": "https://www.youtube.com/watch?v=kOgcM3NCYA0",
+      "directVideoUrl": "https://youtu.be/zgk71dUUt0Y",
       "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Agachamento%20livre%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Agachamento frontal com barra",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/syfDrU220FU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Agachamento%20frontal%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Agachamento goblet",
@@ -758,18 +822,20 @@
     {
       "exerciseName": "Agachamento no Smith",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/zgk71dUUt0Y",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Agachamento%20no%20Smith%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Agachamento hack",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/zgk71dUUt0Y",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Agachamento%20hack%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Agachamento sumô com halter",
@@ -798,10 +864,11 @@
     {
       "exerciseName": "Leg press 45 graus",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/nY8UsiAqwds",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Leg%20press%2045%20graus%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Leg press horizontal",
@@ -830,10 +897,11 @@
     {
       "exerciseName": "Cadeira extensora",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": "https://www.youtube.com/watch?v=5fQFvhbr4cs",
+      "directVideoUrl": "https://youtu.be/el3oHblB5DM",
       "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Cadeira%20extensora%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Cadeira extensora unilateral",
@@ -846,10 +914,11 @@
     {
       "exerciseName": "Afundo estacionário",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/Umzor-_g-tQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Afundo%20estacion%C3%A1rio%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Afundo reverso",
@@ -862,26 +931,29 @@
     {
       "exerciseName": "Avanço caminhando",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/XBJtM2phDDM",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Avan%C3%A7o%20caminhando%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Passada com halteres",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/sQ5RjbpPirY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Passada%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Agachamento búlgaro",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/IGf9fR4Y7Iw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Agachamento%20b%C3%BAlgaro%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Step-up no banco",
@@ -910,26 +982,29 @@
     {
       "exerciseName": "Mesa flexora deitada",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/2-ULaRrQa7c",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mesa%20flexora%20deitada%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Cadeira flexora sentada",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/Zss6E3VU6X0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Cadeira%20flexora%20sentada%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Flexora em pé unilateral",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/KomsEmm5oxA",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Flexora%20em%20p%C3%A9%20unilateral%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Flexora unilateral deitada",
@@ -942,18 +1017,20 @@
     {
       "exerciseName": "Stiff com barra",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/u1E3_u2gJYE",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Stiff%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Stiff com halteres",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/u1E3_u2gJYE",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Stiff%20com%20halteres%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Levantamento terra romeno com barra",
@@ -1006,10 +1083,11 @@
     {
       "exerciseName": "Terra convencional",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/50AkPBZwACQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Terra%20convencional%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Terra sumô",
@@ -1030,18 +1108,20 @@
     {
       "exerciseName": "Elevação pélvica com barra",
       "muscleGroup": "Glúteos",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/ptK0azwOXwM",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Eleva%C3%A7%C3%A3o%20p%C3%A9lvica%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Elevação pélvica na máquina",
       "muscleGroup": "Glúteos",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/ptK0azwOXwM",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Eleva%C3%A7%C3%A3o%20p%C3%A9lvica%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Elevação pélvica unilateral",
@@ -1062,26 +1142,29 @@
     {
       "exerciseName": "Coice na polia",
       "muscleGroup": "Glúteos",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/JdHbXlggr6Q",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Coice%20na%20polia%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Coice na máquina",
       "muscleGroup": "Glúteos",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/JhodVO0l1vw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Coice%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Abdução de quadril na máquina",
       "muscleGroup": "Glúteos",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/e2gmqTG1OgQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Abdu%C3%A7%C3%A3o%20de%20quadril%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Abdução de quadril com miniband",
@@ -1110,10 +1193,11 @@
     {
       "exerciseName": "Agachamento sumô com barra",
       "muscleGroup": "Glúteos",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/O6Cmxez6D0k",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Agachamento%20sum%C3%B4%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Passada lateral com miniband",
@@ -1150,10 +1234,11 @@
     {
       "exerciseName": "Cadeira adutora",
       "muscleGroup": "Adutores",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/Wf602gn_9zU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Cadeira%20adutora%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Adução de quadril na polia",
@@ -1190,26 +1275,29 @@
     {
       "exerciseName": "Panturrilha em pé na máquina",
       "muscleGroup": "Panturrilhas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/824pMjvGXgc",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Panturrilha%20em%20p%C3%A9%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Panturrilha sentada na máquina",
       "muscleGroup": "Panturrilhas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/jMWs_p-W9gY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Panturrilha%20sentada%20na%20m%C3%A1quina%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Panturrilha no leg press",
       "muscleGroup": "Panturrilhas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/wCXvfH_-BLg",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Panturrilha%20no%20leg%20press%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Panturrilha em pé com halteres",
@@ -1230,10 +1318,11 @@
     {
       "exerciseName": "Panturrilha no Smith",
       "muscleGroup": "Panturrilhas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/824pMjvGXgc",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Panturrilha%20no%20Smith%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Panturrilha no hack",
@@ -1254,10 +1343,11 @@
     {
       "exerciseName": "Abdominal tradicional",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/7YxVRiATugo",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Abdominal%20tradicional%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Abdominal supra na máquina",
@@ -1278,10 +1368,11 @@
     {
       "exerciseName": "Abdominal reverso",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/ixJcUH8AlL8",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Abdominal%20reverso%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Elevação de pernas deitado",
@@ -1310,10 +1401,11 @@
     {
       "exerciseName": "Prancha frontal",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://youtu.be/qNRqGqESAWU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Prancha%20frontal%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.leandrotwin.com.br/assessoria/lista-de-videos-de-exercicios.pdf"
     },
     {
       "exerciseName": "Prancha lateral",
