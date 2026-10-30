@@ -59,6 +59,8 @@ function createCase(options = {}) {
         ? { command: {
           authorizationId: options.wrongAuthorization ? 'other-auth' : authId,
           deviceId, manufacturer: options.manufacturer || 'HENRY',
+          model: options.wrongModel ? 'foreign-model' : 'certified-model',
+          firmwareVersion: 'approved-firmware',
           direction: 'ENTRY', expiresAt: new Date(Date.now() + 15000).toISOString(),
         } }
         : op === 'ack' ? { accepted: true }
@@ -117,4 +119,11 @@ test('passage signature changes on tenant or event tampering', () => {
   assert.equal(good.length, 64);
   assert.notEqual(good, passageSignature({ ...event, gymId: 'gym-b' }, token));
   assert.notEqual(good, passageSignature({ ...event, vendorEventId: 'giro2' }, token));
+});
+
+test('local SDK refuses authorization intended for a different certified model', async () => {
+  const t = createCase({ wrongModel: true });
+  const result = await t.client.processOnce();
+  assert.deepEqual(result, { handled: true, allowed: false });
+  assert.equal(t.getReleases(), 0);
 });
