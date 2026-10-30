@@ -64,7 +64,7 @@ test('release requires future expiry and matching authorization acknowledgment',
   assert.throws(() => assertFreshPhysicalCommand({ ...command(), expiresAt: new Date(0) }));
   await assert.rejects(() => driver.release(device, { ...command(), deviceId: 'device-b' }));
   await assert.rejects(() => driver.release({ ...device, manufacturer: 'HENRY' }, command()));
-  await assert.rejects(() => new VendorBridgedPhysicalDriver('TOPDATA', 'LOCAL_SDK', bridge));
+  assert.throws(() => new VendorBridgedPhysicalDriver('TOPDATA', 'LOCAL_SDK', bridge));
 });
 
 test('failed release, false ACK, and transport exception fail closed', async () => {
