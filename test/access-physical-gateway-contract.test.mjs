@@ -24,7 +24,8 @@ function harness() {
     accessDevice: { findFirst: async ({ where }) =>
       where.id === deviceId && where.active === true
         ? { id: deviceId, gymId, manufacturer: 'HENRY',
-          deviceTokenHash: createHash('sha256').update(deviceToken).digest('hex'), active: true }
+          deviceTokenHash: createHash('sha256').update(deviceToken).digest('hex'), active: true,
+          certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'official-test-evidence', model: 'Pedestal', protocol: 'approved-firmware' }
         : null },
     accessScanNonce: { deleteMany: async () => ({ count: 0 }), create: async ({ data }) => {
       if (knownNonce.has(data.nonce)) throw new Error('reused nonce');
