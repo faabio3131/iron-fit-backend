@@ -25,7 +25,7 @@ function harness() {
       where.id === deviceId && where.active === true
         ? { id: deviceId, gymId, manufacturer: 'HENRY',
           deviceTokenHash: createHash('sha256').update(deviceToken).digest('hex'), active: true,
-          certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'official-test-evidence', model: 'Pedestal', protocol: 'approved-firmware' }
+          certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'official-test-evidence', model: 'Pedestal', firmwareVersion: 'approved-firmware' }
         : null },
     accessScanNonce: { deleteMany: async () => ({ count: 0 }), create: async ({ data }) => {
       if (knownNonce.has(data.nonce)) throw new Error('reused nonce');
@@ -136,7 +136,7 @@ test('legacy active device without external certification cannot claim commands'
   const h = harness();
   h.service['prisma'].accessDevice.findFirst = async () => ({
     id: deviceId, gymId, manufacturer: 'HENRY', active: true,
-    model: 'Pedestal', protocol: 'unknown-firmware',
+    model: 'Pedestal', firmwareVersion: 'unknown-firmware',
     certificationStatus: 'NOT_HOMOLOGATED', certificationRef: null,
     deviceTokenHash: createHash('sha256').update(deviceToken).digest('hex'),
   });
