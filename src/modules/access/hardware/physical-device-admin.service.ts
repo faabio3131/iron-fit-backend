@@ -1,7 +1,8 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditService } from '../../../common/audit/audit.service';
-import { RegisterPhysicalDeviceDto } from '../dto/register-physical-device.dto';
+import { ConfigurePhysicalFirmwareDto, RegisterPhysicalDeviceDto } from '../dto/register-physical-device.dto';
 import { PhysicalAccessDriverRegistry, AccessManufacturer } from './physical-access-driver';
 
 /**
@@ -41,6 +42,41 @@ export class PhysicalDeviceAdminService {
     return device;
   }
 
+  async configureFirmware(
+    gymId: string,
+    actorId: string,
+    deviceId: string,
+    dto: ConfigurePhysicalFirmwareDto,
+  ) {
+    if (!gymId || !actorId) throw new ConflictException('Identidade/academia obrigatoria');
+    const firmwareVersion = dto.firmwareVersion.trim();
+    if (!firmwareVersion) throw new ConflictException('Versao do firmware obrigatoria');
+    return this.prisma.$transaction(async (tx) => {
+      const device = await tx.accessDevice.findFirst({
+        where: { id: deviceId, gymId, active: false },
+        select: { id: true, firmwareVersion: true },
+      });
+      if (!device) throw new NotFoundException('Dispositivo inativo nao encontrado');
+      if (device.firmwareVersion === firmwareVersion) return { id: device.id, firmwareVersion };
+      const updated = await tx.accessDevice.updateMany({
+        where: { id: device.id, gymId, active: false },
+        data: {
+          firmwareVersion,
+          certificationStatus: 'NOT_HOMOLOGATED',
+          certificationRef: null,
+        },
+      });
+      if (updated.count !== 1) throw new ConflictException('Dispositivo alterado durante a configuracao');
+      await this.audit.record({
+        gymId, userId: actorId, action: 'ACCESS_DEVICE_FIRMWARE_CONFIGURED',
+        entity: 'AccessDevice', entityId: device.id,
+        previous: { firmwareVersion: device.firmwareVersion },
+        next: { firmwareVersion, certificationStatus: 'NOT_HOMOLOGATED' },
+      }, tx);
+      return { id: device.id, firmwareVersion, certificationStatus: 'NOT_HOMOLOGATED' };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
   async setActive(gymId: string, actorId: string, deviceId: string, active: boolean) {
     if (!gymId || !actorId) throw new ConflictException('Identidade/academia obrigatoria');
     const device = await this.prisma.accessDevice.findFirst({
@@ -49,7 +85,7 @@ export class PhysicalDeviceAdminService {
     if (!device) throw new NotFoundException('Dispositivo nao encontrado');
     if (device.active === active) return { id: device.id, active };
     if (active) {
-      if (!device.deviceTokenHash || !device.manufacturer || !device.model) {
+      if (!device.deviceTokenHash || !device.manufacturer || !device.model || !device.firmwareVersion) {
         throw new ConflictException('Dispositivo ainda nao provisionado');
       }
       // No tenant may activate unverified hardware by merely selecting a brand.
@@ -66,7 +102,7 @@ export class PhysicalDeviceAdminService {
         gymId: device.gymId,
         manufacturer: device.manufacturer as AccessManufacturer,
         model: device.model,
-        protocolVersion: device.protocol ?? undefined,
+        protocolVersion: device.firmwareVersion,
       })) {
         throw new ConflictException('Modelo ou firmware de catraca nao homologado');
       }
