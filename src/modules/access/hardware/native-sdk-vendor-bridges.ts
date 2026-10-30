@@ -68,7 +68,7 @@ export function verifySdkPassage(event: SignedSdkPassage, signingKey: Buffer): b
 
 export class NativeSdkVendorBridge implements VendorProtocolBridge {
   readonly manufacturer: AccessManufacturer;
-  private readonly usedEventIds = new Set<string>();
+  private readonly usedEventIds = new Map<string, number>();
 
   constructor(
     manufacturer: 'TOPDATA' | 'HENRY' | 'DIMEP',
@@ -135,7 +135,13 @@ export class NativeSdkVendorBridge implements VendorProtocolBridge {
     // cross-worker replay protection in PhysicalAccessAttempt.
     const replayKey = device.deviceId + ':' + event.vendorEventId;
     if (this.usedEventIds.has(replayKey)) return false;
-    this.usedEventIds.add(replayKey);
+    // Only a bounded hot replay cache. Durable uniqueness belongs to the
+    // PhysicalAccessAttempt SQL index across all workers and restarts.
+    if (this.usedEventIds.size >= 4096) {
+      const oldest = this.usedEventIds.keys().next().value;
+      if (oldest) this.usedEventIds.delete(oldest);
+    }
+    this.usedEventIds.set(replayKey, Date.now());
     return true;
   }
 }
