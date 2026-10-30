@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS "PhysicalAccessAttempt" (
   "authorizationId" TEXT NOT NULL,
   "decisionEventId" TEXT,
   "state" TEXT NOT NULL DEFAULT 'REQUESTED',
+  "denialReason" TEXT,
   "manufacturer" TEXT NOT NULL,
   "direction" TEXT NOT NULL,
   "vendorEventId" TEXT,
