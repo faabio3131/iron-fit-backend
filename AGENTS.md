@@ -802,3 +802,40 @@ Atualizar este bloco a cada entrega:
 - Após esse guard: lint/typecheck/build PASS e regressão completa 820/820 PASS novamente. Candidate de código/testes `4c906c2`. Nova CI do HEAD após este checkpoint é obrigatória; não usar o ciclo anterior como aprovação automática do código novo.
 - #187 permanece Draft e sem merge até CI completa verde. #186/#60/#61 já integradas e pós-merges verdes; #58 encerrada como substituída. Sem deploy; Evolution físico adiado; push fora do lançamento.
 - Próximo passo exato: verificar CI do último head da #187, corrigir se necessário, marcar pronta e integrar com expected_head_sha somente verde; consultar pós-merge e então seguir o cronograma.
+
+
+---
+
+## CURRENT OFICIAL — RECONCILIAÇÃO PÓS-FECHAMENTO INTERNO (29/10/2026; última CI observada 30/10 UTC)
+
+**PREVALÊNCIA OPERACIONAL:** este checkpoint substitui, para retomada, qualquer "próximo passo", estado IN_PROGRESS, Draft ou PR aberta citado em checkpoints anteriores neste arquivo. Os registros precedentes são histórico, não backlog. O CURRENT reproduzível do GitHub sempre prevalece. Não reconstruir nem reabrir blocos concluídos.
+
+### Baseline remoto verificado
+
+- Backend `faabio3131/iron-fit-backend`: `main` **`1315ae852265c63313c2fdc492a647aa12978d42`**, PR **#206 MERGED**.
+- Backend #206: CI pré-merge **`40988669933` SUCCESS**; CI pós-merge da main **`40989167122` SUCCESS**, 57 etapas do job concluídas sem falha, cobrindo migrations, lint/typecheck, build, regressão, HTTP/E2E com PostgreSQL descartável, seis perfis, Web/browser, OWASP ZAP passivo, Command, recuperação pós-restart, comunicação/LGPD e container.
+- App `faabio3131/iron-fit-app`: `main` **`fe89fae6bcc1fde9da73a49003b709d46809ec71`**; CI app **`40984368361` SUCCESS** (evidência de consulta anterior).
+- **Zero PRs abertas** em ambos os repositórios no momento desta reconciliação. Não confundir com a PR específica deste checkpoint documental.
+
+### Matriz de capacidades — não repetir implementação
+
+| Capacidade | CURRENT interno comprovado | Evidência | Fronteira restante |
+| --- | --- | --- | --- |
+| IRON Intelligence / geração de candidatos e revisão governada | Adapters AI centralizados, Vault, multiprovedor/fallback e orçamento integrados; fluxo de revisão humana preservado | backend PRs #178, #179; testes no gate integrado | Homologação externa de modelos/credenciais não inferida de adapter nem de CI |
+| Comunicação academia→aluno | Adapter Evolution WhatsApp e recuperação de leases SENDING integrados; comunicação/consentimento preservados | backend #184, #191 e #175; E2E CI #40989167122 | Envio/recebimento físico externo e credenciais de tenant: não homologados apenas por CI |
+| Alertas OWNER/MANAGER | Dez fontes canônicas, inbox, RBAC por tenant, outbox, quiet hours, retry/DLQ e Evolution por academia integrados | backend #186, #187; app #60, #61, #62; CI #40989167122 | Homologação física Evolution/e-mail pendente; push DISABLED/OUT_OF_LAUNCH |
+| Integração visual/QR WhatsApp | Configuração QR/status e controles governados incluídos no produto real; ausências não mascaradas | app #62, #63 e #66; backend #184 | QR real, webhook e envio físico exigem ambiente/provider autorizado; não proclamar live |
+| Financeiro academia→aluno | Checkout por tenant Stripe e Mercado Pago, confirmação por API do provider, webhooks assinados, conciliação opt-in, retry limitado, estorno integral e revisão chargeback | backend #193–#206, especialmente #196, #199–#206; app #67–#73; CI #40989167122 | Provas de transação/settlement reais e homologação do gateway continuam externas |
+| Revisão fiscal de estornos | Retorno `fiscalReviewRequired` integrado; cancelamento NFS-e não é automático | backend #206 com CI antes/depois do merge | Cancelamento fiscal externo deve ser explicitamente autorizado, confirmado e reconciliado |
+| Segurança interna e Commercial E2E | Adversarial HTTP, tenant/RBAC, step-up, carga controlada, ZAP passivo, navegador/API/PostgreSQL e Command exercitados | backend #171, #174, #175, #176; CI #40989167122 | CI descartável não prova pentest ativo autenticado, capacidade produtiva nem GO-LIVE |
+| UI financeira existente | Web academia com checkout, verificação, eventos, estorno e conciliação | app #67–#73 | Não presumir que backend/API/UI estejam publicados em produção sem observar deploy |
+
+### Classificação e próximos gates
+
+- **DONE_INTERNAL/CERTIFIED**: blocos anteriores com PR integrada e CI verde. Não reabrir apenas por texto de checkpoint antigo.
+- **IMPLEMENTED/EXTERNAL BLOCKER**: provider real, pagamentos/estornos reais, e-mail domínio/SPF/DKIM/DMARC, Evolution QR/envio físico, fiscal município/certificado/protocolo; evidência externa obrigatória.
+- **DISABLED/OUT OF LAUNCH**: push sem adapter/dispositivos homologados.
+- **NOT YET CERTIFIED FOR GO-LIVE**: Macro P/Q/R/S/T como *certificação global e/ou evidência externa*, sem afirmar que sua implementação interna está faltando. Antes de abrir WP, produzir matriz requisito→código→teste→CI→ambiente→gap real; se coberto, marcar DONE e avançar.
+- **Sem deploy nem homologação externa executados nesta reconciliação.** A existência de PR de promoção não prova operação efetiva do provider.
+
+**Próxima ação permitida:** reconciliar o critério formal de prontidão R, a matriz dos providers e evidências de ambientes/serviços efetivamente observáveis. Só programar gaps internos reproduzíveis. Não abrir um novo bloco genérico P ou Q sem falha específica.
