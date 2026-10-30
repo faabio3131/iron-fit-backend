@@ -1,3 +1,6 @@
+ALTER TABLE "AccessDevice" ADD COLUMN IF NOT EXISTS "manufacturer" TEXT;
+ALTER TABLE "AccessDevice" ADD COLUMN IF NOT EXISTS "model" TEXT;
+
 -- Additive passage lifecycle. Existing AccessEvent remains the canonical
 -- decision audit; this table distinguishes actual passage from decisions.
 CREATE TABLE IF NOT EXISTS "PhysicalAccessAttempt" (
