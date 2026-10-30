@@ -15,14 +15,18 @@ function fixture({ accountPresent = true, policyEnabled = true, eventTenant = 'g
     } },
     tenantPaymentReconciliationPolicy: {
       findUnique: async ({ where }) => where.gymId === 'gym-a' ? policy : null,
+      findMany: async ({ where }) => where.enabled && policy.enabled ? [policy] : [],
       upsert: async ({ create }) => { state.policies.push(create); return create; },
     },
     tenantPaymentWebhookInbox: {
       updateMany: async () => ({ count: 0 }),
-      findMany: async () => [{
+      findMany: async ({ where }) => {
+        assert.deepEqual(where.gymId.in, ['gym-a']);
+        return [{
         id: 'event-a', gymId: eventTenant, providerCode: 'stripe',
         chargeId: 'charge-a', status: 'RECEIVED', attemptCount: 0,
-      }],
+      }];
+      },
     },
   }, {
     processEvent: async (...args) => { state.calls.push(args); return { processed: true }; },
