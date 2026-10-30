@@ -157,3 +157,20 @@ test('firmware configuration is tenant-scoped, transactional and revokes stale d
   assert.equal(calls[1][2].certificationRef, null);
   assert.equal(calls[2][1], 'ACCESS_DEVICE_FIRMWARE_CONFIGURED');
 });
+
+test('legacy manager token rotation refuses physical catraca and requires owner provision route', async () => {
+  let writes = 0;
+  const tx = {
+    accessDevice: {
+      findFirst: async () => ({ id: 'd-a', manufacturer: 'TOPDATA' }),
+      update: async () => { writes++; return { id: 'd-a' }; },
+    },
+    auditLog: { create: async () => { writes++; } },
+  };
+  const service = new AccessService({ $transaction: async (fn) => fn(tx) });
+  await assert.rejects(
+    () => service.provisionDeviceToken('d-a', 'gym-a', 'manager-a'),
+    error => error?.getStatus?.() === 403,
+  );
+  assert.equal(writes, 0);
+});
