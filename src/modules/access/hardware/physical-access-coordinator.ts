@@ -9,7 +9,7 @@ import {
 } from './physical-access-driver';
 import { nextPhysicalAccessState } from './physical-access-lifecycle';
 
-const AUTHORIZATION_TTL_MS = 5000;
+const AUTHORIZATION_TTL_MS = 15_000;
 const MANUFACTURERS: ReadonlyArray<AccessManufacturer> = ['CONTROL_ID', 'TOPDATA', 'HENRY', 'DIMEP'];
 
 @Injectable()
