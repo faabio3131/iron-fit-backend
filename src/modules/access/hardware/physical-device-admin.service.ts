@@ -53,7 +53,16 @@ export class PhysicalDeviceAdminService {
         throw new ConflictException('Dispositivo ainda nao provisionado');
       }
       // Never make unimplemented brands active by setting a DB flag.
-      this.registry.resolve(device.manufacturer as AccessManufacturer);
+      const driver = this.registry.resolve(device.manufacturer as AccessManufacturer);
+      if (!driver.supportsDevice({
+        deviceId: device.id,
+        gymId: device.gymId,
+        manufacturer: device.manufacturer as AccessManufacturer,
+        model: device.model,
+        protocolVersion: device.protocol ?? undefined,
+      })) {
+        throw new ConflictException('Modelo ou firmware de catraca nao homologado');
+      }
     }
     const updated = await this.prisma.accessDevice.updateMany({
       where: { id: device.id, gymId, active: !active },
