@@ -1452,10 +1452,11 @@
     {
       "exerciseName": "Bird dog",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=ZdAHe9_HeEw",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Bird%20dog%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=ZdAHe9_HeEw"
     },
     {
       "exerciseName": "Pallof press",
@@ -1877,10 +1878,11 @@
     {
       "exerciseName": "Turkish get-up",
       "muscleGroup": "Funcional",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=JFrItinMcyQ",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Turkish%20get-up%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=JFrItinMcyQ"
     },
     {
       "exerciseName": "Clean and press com halteres",
