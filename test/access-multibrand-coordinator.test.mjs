@@ -95,3 +95,36 @@ test('invalid direction cannot invoke canonical scan', async () => {
   await assert.rejects(() => h.coordinator.decide({ ...scan, direction: 'SIDEWAYS' }), /Sentido/);
   assert.equal(h.getAttempt(), null);
 });
+
+test('simultaneous releases produce at most one vendor unlock command', async () => {
+  const h = buildHarness();
+  const decision = await h.coordinator.decide(scan);
+  let opens = 0;
+  const registryDriver = h.coordinator['drivers'].resolve('CONTROL_ID');
+  registryDriver.release = async (_d, cmd) => {
+    opens += 1;
+    await new Promise(resolve => setImmediate(resolve));
+    return { accepted: true, authorizationId: cmd.authorizationId };
+  };
+  const results = await Promise.all([
+    h.coordinator.release(decision.authorizationId),
+    h.coordinator.release(decision.authorizationId),
+    h.coordinator.release(decision.authorizationId),
+  ]);
+  assert.equal(opens, 1);
+  assert.deepEqual(results.sort(), [false, false, true]);
+});
+
+test('lost SDK ACK becomes uncertain state and cannot silently retry unlock', async () => {
+  const h = buildHarness();
+  const decision = await h.coordinator.decide(scan);
+  let opens = 0;
+  h.coordinator['drivers'].resolve('CONTROL_ID').release = async () => {
+    opens += 1;
+    throw new Error('SDK timeout after physical signal');
+  };
+  assert.equal(await h.coordinator.release(decision.authorizationId), false);
+  assert.equal(h.getAttempt().state, 'RELEASE_UNCERTAIN');
+  assert.equal(await h.coordinator.release(decision.authorizationId), false);
+  assert.equal(opens, 1);
+});
