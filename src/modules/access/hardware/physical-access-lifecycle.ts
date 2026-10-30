@@ -7,6 +7,8 @@ export type PhysicalAccessState =
   | 'REQUESTED'
   | 'DENIED'
   | 'AUTHORIZED'
+  | 'RELEASE_IN_FLIGHT'
+  | 'RELEASE_UNCERTAIN'
   | 'COMMAND_ACCEPTED'
   | 'PASSAGE_CONFIRMED'
   | 'PASSAGE_NOT_CONFIRMED'
@@ -15,7 +17,9 @@ export type PhysicalAccessState =
 export type PhysicalAccessAction =
   | 'DENY'
   | 'AUTHORIZE'
+  | 'RESERVE_RELEASE'
   | 'ACK_RELEASE'
+  | 'UNKNOWN_RELEASE'
   | 'CONFIRM_PASSAGE'
   | 'REJECT_PASSAGE'
   | 'EXPIRE';
@@ -23,7 +27,9 @@ export type PhysicalAccessAction =
 const transitions: Record<PhysicalAccessState, Partial<Record<PhysicalAccessAction, PhysicalAccessState>>> = {
   REQUESTED: { DENY: 'DENIED', AUTHORIZE: 'AUTHORIZED', EXPIRE: 'EXPIRED' },
   DENIED: {},
-  AUTHORIZED: { ACK_RELEASE: 'COMMAND_ACCEPTED', EXPIRE: 'EXPIRED' },
+  AUTHORIZED: { RESERVE_RELEASE: 'RELEASE_IN_FLIGHT', EXPIRE: 'EXPIRED' },
+  RELEASE_IN_FLIGHT: { ACK_RELEASE: 'COMMAND_ACCEPTED', UNKNOWN_RELEASE: 'RELEASE_UNCERTAIN' },
+  RELEASE_UNCERTAIN: {},
   COMMAND_ACCEPTED: { CONFIRM_PASSAGE: 'PASSAGE_CONFIRMED', REJECT_PASSAGE: 'PASSAGE_NOT_CONFIRMED', EXPIRE: 'EXPIRED' },
   PASSAGE_CONFIRMED: {},
   PASSAGE_NOT_CONFIRMED: {},
@@ -46,5 +52,5 @@ export function isVerifiedPhysicalPresence(state: PhysicalAccessState): boolean 
 }
 
 export function isTerminalPhysicalAccessState(state: PhysicalAccessState): boolean {
-  return ['DENIED', 'PASSAGE_CONFIRMED', 'PASSAGE_NOT_CONFIRMED', 'EXPIRED'].includes(state);
+  return ['DENIED', 'PASSAGE_CONFIRMED', 'PASSAGE_NOT_CONFIRMED', 'EXPIRED', 'RELEASE_UNCERTAIN'].includes(state);
 }
