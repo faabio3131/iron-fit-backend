@@ -22,6 +22,7 @@
  * Vendor-specific DLL signatures and protocol bytes are never guessed here.
  */
 import { createHmac, randomBytes } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 const API_PATH = '/access/hardware/';
 const SUPPORTED = new Set(['TOPDATA', 'HENRY', 'DIMEP']);
@@ -183,7 +184,7 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1].replaceAll('\\', '/')).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(() => {
     process.stderr.write('Gateway nao iniciado: configuracao/SDK indisponivel.\n');
     process.exitCode = 1;
