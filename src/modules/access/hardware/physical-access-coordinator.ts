@@ -20,6 +20,30 @@ export class PhysicalAccessCoordinator {
     private readonly drivers: PhysicalAccessDriverRegistry,
   ) {}
 
+  private async denyPhysical(
+    device: { id: string; gymId: string; manufacturer: string | null },
+    eventId: string,
+    studentId: string,
+    direction: PhysicalDirection,
+    reason: string,
+  ) {
+    await this.prisma.physicalAccessAttempt.create({
+      data: {
+        gymId: device.gymId,
+        deviceId: device.id,
+        studentId,
+        decisionEventId: eventId,
+        authorizationId: eventId,
+        manufacturer: device.manufacturer || 'UNKNOWN',
+        direction,
+        denialReason: reason,
+        state: 'DENIED',
+        expiresAt: new Date(),
+      },
+    });
+    return { allowed: false, denialReason: reason, authorizationId: null };
+  }
+
   /**
    * Every request first passes through the existing canonical device-token,
    * nonce, tenant and credential checks. No hardware command is sent here.
@@ -57,7 +81,7 @@ export class PhysicalAccessCoordinator {
       select: { active: true },
     });
     if (!gym?.active) {
-      return { allowed: false, denialReason: 'Academia inativa', authorizationId: null };
+      return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, 'Academia inativa');
     }
     const activeMembership = await this.prisma.subscription.findFirst({
       where: {
@@ -68,7 +92,7 @@ export class PhysicalAccessCoordinator {
       select: { id: true },
     });
     if (!activeMembership) {
-      return { allowed: false, denialReason: 'Plano do aluno nao elegivel', authorizationId: null };
+      return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, 'Plano do aluno nao elegivel');
     }
 
     const manufacturer = device.manufacturer as AccessManufacturer;
@@ -76,7 +100,7 @@ export class PhysicalAccessCoordinator {
     // externally certified brand/model/firmware can use reverse polling.
     if (device.certificationStatus !== 'PRODUCTION_HOMOLOGATED' ||
         !device.certificationRef || !device.model || !device.protocol) {
-      return { allowed: false, denialReason: 'Modelo de catraca nao homologado', authorizationId: null };
+      return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, 'Modelo de catraca nao homologado');
     }
     if (manufacturer === 'CONTROL_ID') {
       const driver = this.drivers.resolve(manufacturer);
@@ -84,7 +108,7 @@ export class PhysicalAccessCoordinator {
         deviceId: device.id, gymId: device.gymId,
         manufacturer, model: device.model, protocolVersion: device.protocol,
       })) {
-        return { allowed: false, denialReason: 'Firmware de catraca nao homologado', authorizationId: null };
+        return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, 'Firmware de catraca nao homologado');
       }
     }
     const expiresAt = new Date(Date.now() + AUTHORIZATION_TTL_MS);
