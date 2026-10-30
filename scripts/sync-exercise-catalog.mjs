@@ -14,7 +14,7 @@ for (const row of data.exercises) {
     throw new Error('Invalid or duplicate exercise name');
   }
   names.add(row.name.trim().toLocaleLowerCase('pt-BR'));
-  if (row.videoUrl !== null) throw new Error('External video references require individual verification');
+  if (row.videoUrl !== null && !/^https:\/\/(www\.)?(youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}|youtu\.be\/[A-Za-z0-9_-]{11})$/.test(row.videoUrl)) throw new Error('Invalid YouTube candidate URL');
 }
 const prisma = new PrismaClient();
 try {
@@ -24,7 +24,7 @@ try {
       const existing = await tx.exercise.findUnique({ where: { name: row.name } });
       if (existing) continue; // preserve existing videos, contraindications and training references
       await tx.exercise.create({ data: {
-        name: row.name, muscleGroup: row.muscleGroup,
+        name: row.name, muscleGroup: row.muscleGroup, videoUrl: row.videoUrl,
         movement: row.movement, level: row.level,
       } });
       created++;
