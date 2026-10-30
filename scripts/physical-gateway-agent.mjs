@@ -101,6 +101,7 @@ export class IronPhysicalGatewayClient {
     const { command } = await this.call('claim');
     if (!command || command.authorizationId !== decision.authorizationId ||
         command.deviceId !== this.deviceId || command.manufacturer !== this.sdk.manufacturer ||
+        command.model !== this.sdk.model || command.firmwareVersion !== this.sdk.firmware ||
         Date.parse(command.expiresAt) <= Date.now()) {
       // Never guess a command, and never retry an uncertain authorization.
       return { handled: true, allowed: false };
