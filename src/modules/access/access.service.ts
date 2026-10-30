@@ -255,6 +255,8 @@ export class AccessService {
         protocol: true,
         manufacturer: true,
         model: true,
+        certificationStatus: true,
+        certificationRef: true,
         active: true,
         lastSyncAt: true,
         tokenRotatedAt: true,
