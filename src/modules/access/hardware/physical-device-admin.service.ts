@@ -52,7 +52,14 @@ export class PhysicalDeviceAdminService {
       if (!device.deviceTokenHash || !device.manufacturer || !device.model) {
         throw new ConflictException('Dispositivo ainda nao provisionado');
       }
-      // Never make unimplemented brands active by setting a DB flag.
+      // No tenant may activate unverified hardware by merely selecting a brand.
+      if (device.certificationStatus !== 'PRODUCTION_HOMOLOGATED' || !device.certificationRef) {
+        throw new ConflictException('Homologacao externa do modelo/firmware obrigatoria');
+      }
+      if (['TOPDATA', 'HENRY', 'DIMEP'].includes(device.manufacturer)) {
+        // The SDK runs in the gym LAN; its reverse-poll client does not exist
+        // inside the cloud runtime. External certification is authoritative.
+      } else {
       const driver = this.registry.resolve(device.manufacturer as AccessManufacturer);
       if (!driver.supportsDevice({
         deviceId: device.id,
@@ -62,6 +69,7 @@ export class PhysicalDeviceAdminService {
         protocolVersion: device.protocol ?? undefined,
       })) {
         throw new ConflictException('Modelo ou firmware de catraca nao homologado');
+      }
       }
     }
     const updated = await this.prisma.accessDevice.updateMany({
