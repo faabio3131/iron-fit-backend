@@ -85,7 +85,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: attempt.deviceId, gymId: attempt.gymId, active: true },
-      select: { id: true, gymId: true, name: true, protocol: true },
+      select: { id: true, gymId: true, manufacturer: true, model: true },
     });
     if (!device || device.manufacturer !== attempt.manufacturer) return false;
 
@@ -125,7 +125,7 @@ export class PhysicalAccessCoordinator {
 
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: attempt.deviceId, gymId: attempt.gymId, active: true },
-      select: { id: true, gymId: true, name: true, protocol: true },
+      select: { id: true, gymId: true, manufacturer: true, model: true },
     });
     if (!device || device.manufacturer !== attempt.manufacturer) return false;
     const manufacturer = attempt.manufacturer as AccessManufacturer;
