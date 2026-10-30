@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
+const { AccessService } = require('../dist/src/modules/access/access.service.js');
 const { PhysicalDeviceAdminService } = require('../dist/src/modules/access/hardware/physical-device-admin.service.js');
 const { PhysicalAccessDriverRegistry } = require('../dist/src/modules/access/hardware/physical-access-driver.js');
 
@@ -83,4 +84,34 @@ test('unsupported model cannot be activated even if a brand driver exists', asyn
   });
   await assert.rejects(() => h.service.setActive('gym-a', 'owner-a', 'd-a', true), /nao homologado/);
   assert.equal(h.calls.filter(x => x[0] === 'update').length, 0);
+});
+
+test('device token can be securely provisioned while enrollment is inactive', async () => {
+  const observed = [];
+  const prisma = {
+    accessDevice: {
+      findFirst: async ({ where }) => {
+        observed.push(['lookup', where]);
+        return { id: 'device-inactive', gymId: 'gym-a', active: false };
+      },
+      update: async ({ where, data }) => {
+        observed.push(['update', where, data]);
+        return { id: 'device-inactive' };
+      },
+    },
+    auditLog: { create: async ({ data }) => {
+      observed.push(['audit', data.action]);
+      return { id: 'audit' };
+    } },
+    $transaction: async (fn) => fn(prisma),
+  };
+  const service = new AccessService(prisma);
+  const token = await service.provisionDeviceToken('device-inactive', 'gym-a', 'owner-a');
+  assert.equal(token.deviceId, 'device-inactive');
+  assert.equal(typeof token.deviceToken, 'string');
+  assert.ok(token.deviceToken.length >= 32);
+  assert.deepEqual(observed[0][1], { id: 'device-inactive', gymId: 'gym-a' });
+  assert.equal(observed[1][2].deviceTokenHash.length, 64);
+  assert.notEqual(observed[1][2].deviceTokenHash, token.deviceToken);
+  assert.equal(observed[2][1], 'ACCESS_DEVICE_TOKEN_ROTATED');
 });
