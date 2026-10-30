@@ -502,10 +502,11 @@
     {
       "exerciseName": "Face pull na polia",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=eTCBSFlCJ_s",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Face%20pull%20na%20polia%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=eTCBSFlCJ_s"
     },
     {
       "exerciseName": "Remada alta com barra",
@@ -814,10 +815,11 @@
     {
       "exerciseName": "Agachamento goblet",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=JO7D6GJ98wY",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Agachamento%20goblet%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=JO7D6GJ98wY"
     },
     {
       "exerciseName": "Agachamento no Smith",
@@ -1706,10 +1708,11 @@
     {
       "exerciseName": "Kettlebell swing",
       "muscleGroup": "Funcional",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=zjnRj5SRNF0",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Kettlebell%20swing%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=zjnRj5SRNF0"
     },
     {
       "exerciseName": "Kettlebell clean",
