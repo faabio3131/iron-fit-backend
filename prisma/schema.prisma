@@ -976,6 +976,27 @@ model AccessDevice {
   scanNonces      AccessScanNonce[]
 }
 
+// Hardware passage lifecycle is not the same as a decision AccessEvent.
+// Never count AUTHORIZED or COMMAND_ACCEPTED as confirmed attendance.
+model PhysicalAccessAttempt {
+  id                String   @id @default(uuid())
+  gymId             String
+  deviceId          String
+  studentId         String?
+  authorizationId   String   @unique
+  decisionEventId   String?
+  state             String   @default("REQUESTED")
+  manufacturer      String
+  direction         String
+  vendorEventId     String?
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  @@index([gymId, createdAt])
+  @@index([deviceId, state])
+  @@unique([deviceId, vendorEventId])
+}
+
 model AccessScanNonce {
   id        String   @id @default(uuid())
   deviceId  String
