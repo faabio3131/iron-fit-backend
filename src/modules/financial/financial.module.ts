@@ -10,6 +10,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
 import { TenantPaymentReconciliationService } from './tenant-payment-reconciliation.service';
+import { TenantPaymentWebhookReconcileService } from './tenant-payment-webhook-reconcile.service';
 import { TenantPaymentProviderAdapterRegistry } from './tenant-payment-provider-adapter';
 import { MercadoPagoCheckoutAdapter } from './mercado-pago-checkout.adapter';
 import { StripeCheckoutAdapter } from './stripe-checkout.adapter';
@@ -29,6 +30,7 @@ import { FiscalReconciliationCancellationService } from './fiscal-reconciliation
     MercadoPagoPaymentWebhookInboxService,
     TenantPaymentCheckoutService,
     TenantPaymentReconciliationService,
+    TenantPaymentWebhookReconcileService,
     TenantPaymentProviderAdapterRegistry,
     MercadoPagoCheckoutAdapter,
     StripeCheckoutAdapter,
