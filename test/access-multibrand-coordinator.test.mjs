@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url);
 const { PhysicalAccessCoordinator } = require('../dist/src/modules/access/hardware/physical-access-coordinator.js');
 const { PhysicalAccessDriverRegistry } = require('../dist/src/modules/access/hardware/physical-access-driver.js');
 
-const baseDevice = { id: 'device-a', gymId: 'gym-a', active: true, manufacturer: 'CONTROL_ID', model: 'iDBlock' };
+const baseDevice = { id: 'device-a', gymId: 'gym-a', active: true, manufacturer: 'CONTROL_ID', model: 'iDBlock', protocol: 'approved-firmware', certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'verified-test-cert' };
 const scan = { qrToken: 'qr', deviceId: 'device-a', deviceToken: 'valid-device', nonce: '1234567890123456', timestamp: Date.now(), direction: 'ENTRY' };
 const validDecision = { allowed: true, eventId: 'audit-1', student: { id: 'student-a' } };
 
@@ -127,4 +127,15 @@ test('lost SDK ACK becomes uncertain state and cannot silently retry unlock', as
   assert.equal(h.getAttempt().state, 'RELEASE_UNCERTAIN');
   assert.equal(await h.coordinator.release(decision.authorizationId), false);
   assert.equal(opens, 1);
+});
+
+test('new uncertified local SDK devices cannot create a physical authorization', async () => {
+  const h = buildHarness();
+  h.prisma.accessDevice.findUnique = async () => ({
+    ...baseDevice, manufacturer: 'HENRY', certificationStatus: 'NOT_HOMOLOGATED',
+    certificationRef: null,
+  });
+  const d = await h.coordinator.decide(scan);
+  assert.equal(d.allowed, false);
+  assert.equal(h.getAttempt(), null);
 });
