@@ -107,8 +107,8 @@ export class AccessController {
   }
 
   @Post('devices/:deviceId/token')
-  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
-  @Roles('SUPER_ADMIN', 'OWNER')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER')
   provisionDeviceToken(
     @Param('deviceId') deviceId: string,
     @CurrentUser() user: any,
@@ -153,6 +153,22 @@ export class AccessController {
       isSuperAdmin: user.isSuperAdmin === true,
     });
     return this.physicalDevices.setActive(gymId, user.id, deviceId, dto.active);
+  }
+
+  @Post('devices/:deviceId/provision')
+  @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
+  @Roles('SUPER_ADMIN', 'OWNER')
+  provisionInactivePhysicalDevice(
+    @Param('deviceId') deviceId: string,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.accessService.provisionDeviceToken(deviceId, gymId, user.id, true);
   }
 
   @Post('scan')
