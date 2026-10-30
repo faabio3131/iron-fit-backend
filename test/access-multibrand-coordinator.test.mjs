@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url);
 const { PhysicalAccessCoordinator } = require('../dist/src/modules/access/hardware/physical-access-coordinator.js');
 const { PhysicalAccessDriverRegistry } = require('../dist/src/modules/access/hardware/physical-access-driver.js');
 
-const baseDevice = { id: 'device-a', gymId: 'gym-a', active: true, manufacturer: 'CONTROL_ID', model: 'iDBlock', protocol: 'approved-firmware', certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'verified-test-cert' };
+const baseDevice = { id: 'device-a', gymId: 'gym-a', active: true, manufacturer: 'CONTROL_ID', model: 'iDBlock', firmwareVersion: 'approved-firmware', certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'verified-test-cert' };
 const scan = { qrToken: 'qr', deviceId: 'device-a', deviceToken: 'valid-device', nonce: '1234567890123456', timestamp: Date.now(), direction: 'ENTRY' };
 const validDecision = { allowed: true, eventId: 'audit-1', student: { id: 'student-a' } };
 
