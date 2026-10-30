@@ -73,7 +73,7 @@ export class VendorBridgedPhysicalDriver implements PhysicalAccessDriver {
   }
 
   async verifyPassage(device: PhysicalDeviceDescriptor, event: PhysicalPassageEvent): Promise<boolean> {
-    if (device.manufacturer !== this.manufacturer || event.deviceId !== device.deviceId) return false;
+    if (!this.supportsDevice(device) || event.deviceId !== device.deviceId) return false;
     if (!event.vendorEventId || !event.authorizationId || !Number.isFinite(event.occurredAt.getTime())) return false;
     try {
       return (await this.bridge.authenticatePassage(device, event)) === true;
