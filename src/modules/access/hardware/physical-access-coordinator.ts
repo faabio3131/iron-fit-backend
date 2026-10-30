@@ -49,6 +49,28 @@ export class PhysicalAccessCoordinator {
       return { allowed: false, denialReason: 'Controlador fisico nao configurado', authorizationId: null };
     }
 
+    // Reuse the academy's canonical financial subscription status. Do not
+    // invent a grace period, calculate balances, or allow a mere ACTIVE
+    // student profile to bypass membership/payment authority.
+    const gym = await this.prisma.gym.findUnique({
+      where: { id: device.gymId },
+      select: { active: true },
+    });
+    if (!gym?.active) {
+      return { allowed: false, denialReason: 'Academia inativa', authorizationId: null };
+    }
+    const activeMembership = await this.prisma.subscription.findFirst({
+      where: {
+        gymId: device.gymId,
+        studentId: decision.student.id,
+        status: { in: ['ACTIVE', 'TRIALING'] },
+      },
+      select: { id: true },
+    });
+    if (!activeMembership) {
+      return { allowed: false, denialReason: 'Plano do aluno nao elegivel', authorizationId: null };
+    }
+
     const manufacturer = device.manufacturer as AccessManufacturer;
     // The on-premise SDK is never loaded into the cloud backend. Only the
     // externally certified brand/model/firmware can use reverse polling.
