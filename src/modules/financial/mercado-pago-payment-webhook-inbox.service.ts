@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import {
   IntegrationConnectionStatus, IntegrationEnvironment, IntegrationScope, Prisma,
@@ -137,7 +137,7 @@ export class MercadoPagoPaymentWebhookInboxService {
             headers: { authorization: 'Bearer ' + merchantSecret.reveal() },
           },
         );
-        if (!response.ok) throw new BadRequestException('MP_PAYMENT_LOOKUP_FAILED');
+        if (!response.ok) throw new ServiceUnavailableException('MP_PAYMENT_LOOKUP_FAILED');
         const raw = await response.text();
         if (Buffer.byteLength(raw, 'utf8') > 65_536) {
           throw new BadRequestException('MP_PAYMENT_RESPONSE_TOO_LARGE');
@@ -148,7 +148,7 @@ export class MercadoPagoPaymentWebhookInboxService {
         }
         payment = parsed as Record<string, unknown>;
       } catch {
-        throw new BadRequestException('MP_PAYMENT_RECONCILIATION_UNAVAILABLE');
+        throw new ServiceUnavailableException('MP_PAYMENT_RECONCILIATION_UNAVAILABLE');
       } finally {
         clearTimeout(timeout);
       }
