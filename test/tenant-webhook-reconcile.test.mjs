@@ -112,3 +112,14 @@ test('verified linked MP event uses canonical provider recheck instead of raw we
   assert.equal(result.status, 'RECONCILED');
   assert.deepEqual(checks[0], ['charge-a', 'account-a', 'gym-a', 'owner-a']);
 });
+
+test('provider retry backoff grows exponentially and is capped at one hour', () => {
+  const { nextGatewayRetryAt } = require('../dist/src/modules/financial/tenant-payment-webhook-reconcile.service.js');
+  const now = new Date('2026-10-29T20:00:00.000Z');
+  assert.equal(nextGatewayRetryAt(1, now).getTime() - now.getTime(), 60_000);
+  assert.equal(nextGatewayRetryAt(2, now).getTime() - now.getTime(), 120_000);
+  assert.equal(nextGatewayRetryAt(3, now).getTime() - now.getTime(), 240_000);
+  assert.equal(nextGatewayRetryAt(8, now).getTime() - now.getTime(), 3_600_000);
+  assert.equal(nextGatewayRetryAt(99, now).getTime() - now.getTime(), 3_600_000);
+  assert.equal(nextGatewayRetryAt(-1, now).getTime() - now.getTime(), 60_000);
+});

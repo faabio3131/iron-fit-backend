@@ -5,6 +5,17 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { TenantPaymentReconciliationService } from './tenant-payment-reconciliation.service';
 
+// The first retry waits one minute. Repeated failures back off to at most an hour.
+// attemptCount is tenant-inbox-owned and incremented by the atomic claim.
+export function nextGatewayRetryAt(
+  attemptCount: number,
+  now: Date = new Date(),
+): Date {
+  const retries = Number.isSafeInteger(attemptCount) && attemptCount > 0
+    ? Math.min(attemptCount - 1, 6) : 0;
+  return new Date(now.getTime() + Math.min(3_600_000, 60_000 * 2 ** retries));
+}
+
 /**
  * A signed webhook is a notification only. Reconciliation uses the canonical
  * tenant-bound checkout credential and queries the payment provider directly.
@@ -62,7 +73,7 @@ export class TenantPaymentWebhookReconcileService {
         : 'RETRY';
       await this.prisma.tenantPaymentWebhookInbox.updateMany({
         where: { id: event.id, gymId, status: 'PROCESSING' },
-        data: { status: terminal, nextAttemptAt: new Date(Date.now() + 60_000) },
+        data: { status: terminal, nextAttemptAt: nextGatewayRetryAt(event.attemptCount + 1) },
       });
       await this.audit.record({
         gymId, userId: actorId,
@@ -74,7 +85,7 @@ export class TenantPaymentWebhookReconcileService {
     } catch (error) {
       await this.prisma.tenantPaymentWebhookInbox.updateMany({
         where: { id: event.id, gymId, status: 'PROCESSING' },
-        data: { status: 'RETRY', nextAttemptAt: new Date(Date.now() + 60_000) },
+        data: { status: 'RETRY', nextAttemptAt: nextGatewayRetryAt(event.attemptCount + 1) },
       });
       throw error;
     }
