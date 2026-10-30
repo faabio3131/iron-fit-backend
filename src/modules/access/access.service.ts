@@ -314,6 +314,7 @@ export class AccessService {
     deviceId: string,
     gymId: string,
     actorUserId?: string,
+    allowInactiveEnrollment = false,
   ) {
     const rawToken = randomBytes(32).toString('base64url');
     const tokenRotatedAt = new Date();
@@ -321,7 +322,7 @@ export class AccessService {
     try {
       await this.prisma.$transaction(async (tx) => {
         const device = await tx.accessDevice.findFirst({
-          where: { id: deviceId, gymId },
+          where: { id: deviceId, gymId, active: !allowInactiveEnrollment },
           select: { id: true },
         });
         if (!device) {
@@ -331,7 +332,7 @@ export class AccessService {
         // Do not provision secrets for a device that changed tenant/status
         // after the read; rotate token and audit in one DB transaction.
         await tx.accessDevice.update({
-          where: { id: device.id, gymId },
+          where: { id: device.id, gymId, active: !allowInactiveEnrollment },
           data: {
             deviceTokenHash: this.hash(rawToken),
             tokenRotatedAt,
