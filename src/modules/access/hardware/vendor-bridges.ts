@@ -17,6 +17,7 @@ import {
  */
 export interface VendorProtocolBridge {
   readonly manufacturer: AccessManufacturer;
+  supportsModel(model: string, firmware?: string): boolean;
   open(device: PhysicalDeviceDescriptor, command: PhysicalReleaseCommand): Promise<PhysicalReleaseReceipt>;
   authenticatePassage(device: PhysicalDeviceDescriptor, event: PhysicalPassageEvent): Promise<boolean>;
 }
@@ -49,10 +50,17 @@ export class VendorBridgedPhysicalDriver implements PhysicalAccessDriver {
     this.transport = transport;
   }
 
+  supportsDevice(device: PhysicalDeviceDescriptor): boolean {
+    return device.manufacturer === this.manufacturer &&
+      !!device.model.trim() &&
+      this.bridge.supportsModel(device.model, device.protocolVersion);
+  }
+
   async release(device: PhysicalDeviceDescriptor, command: PhysicalReleaseCommand): Promise<PhysicalReleaseReceipt> {
     assertPhysicalDeviceScope(device, command.deviceId, device.gymId);
     if (device.manufacturer !== this.manufacturer) throw new Error('Fabricante do dispositivo divergente');
     assertFreshPhysicalCommand(command);
+    if (!this.supportsDevice(device)) throw new PhysicalDeviceUnavailableError(this.manufacturer, 'modelo/firmware nao homologado');
     try {
       const receipt = await this.bridge.open(device, command);
       if (!receipt || receipt.authorizationId !== command.authorizationId || receipt.accepted !== true) {
