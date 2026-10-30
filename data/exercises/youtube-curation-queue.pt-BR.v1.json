@@ -1070,10 +1070,11 @@
     {
       "exerciseName": "Nordic curl assistido",
       "muscleGroup": "Posteriores de coxa",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=_e9vFU9-tkc",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Nordic%20curl%20assistido%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=_e9vFU9-tkc"
     },
     {
       "exerciseName": "Flexão de joelhos com bola suíça",
