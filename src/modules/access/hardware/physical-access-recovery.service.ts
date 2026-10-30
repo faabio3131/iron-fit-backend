@@ -76,6 +76,7 @@ export class PhysicalAccessRecoveryService implements OnModuleInit, OnModuleDest
         manufacturer: true,
         direction: true,
         state: true,
+        denialReason: true,
         createdAt: true,
         updatedAt: true,
       },
