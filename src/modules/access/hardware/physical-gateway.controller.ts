@@ -1,4 +1,10 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { resolveTenantOperationGymId } from '../../../common/security/tenant-operation-scope';
+import { PhysicalAccessRecoveryService } from './physical-access-recovery.service';
 import {
   GatewayAckDto, GatewayClaimDto, GatewayIdentifyDto, GatewayPassageDto,
 } from '../dto/physical-gateway.dto';
@@ -11,7 +17,22 @@ import { PhysicalGatewayService } from './physical-gateway.service';
  */
 @Controller('access/hardware')
 export class PhysicalGatewayController {
-  constructor(private readonly gateway: PhysicalGatewayService) {}
+  constructor(private readonly gateway: PhysicalGatewayService, private readonly recovery: PhysicalAccessRecoveryService) {}
+
+  @Get('attempts')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
+  listAttempts(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    const gymId = resolveTenantOperationGymId({
+      activeGymId: user.activeGymId ?? user.gymId,
+      requestedGymId,
+      isSuperAdmin: user.isSuperAdmin === true,
+    });
+    return this.recovery.listRecent(gymId);
+  }
 
   @Post('identify')
   identify(@Body() dto: GatewayIdentifyDto) {
