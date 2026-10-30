@@ -127,3 +127,33 @@ test('an unhomologated local SDK device cannot be activated even after token pro
   await assert.rejects(() => h.service.setActive('gym-a', 'owner-a', 'd-a', true), /Homologacao/);
   assert.equal(h.calls.some(x => x[0] === 'update'), false);
 });
+
+test('firmware configuration is tenant-scoped, transactional and revokes stale device certification', async () => {
+  const calls = [];
+  const prisma = {
+    accessDevice: {
+      findFirst: async ({ where }) => {
+        calls.push(['read', where]);
+        return { id: 'd-a', firmwareVersion: 'old-firmware' };
+      },
+      updateMany: async ({ where, data }) => {
+        calls.push(['write', where, data]);
+        return { count: 1 };
+      },
+    },
+    auditLog: { create: async ({ data }) => {
+      calls.push(['audit', data.action]);
+      return { id: 'audit-a' };
+    } },
+    $transaction: async (fn) => fn(prisma),
+  };
+  const service = new PhysicalDeviceAdminService(prisma, new PhysicalAccessDriverRegistry());
+  const result = await service.configureFirmware('gym-a', 'owner-a', 'd-a', { firmwareVersion: 'vendor-2.0' });
+  assert.equal(result.firmwareVersion, 'vendor-2.0');
+  assert.equal(result.certificationStatus, 'NOT_HOMOLOGATED');
+  assert.deepEqual(calls[0][1], { id: 'd-a', gymId: 'gym-a', active: false });
+  assert.equal(calls[1][2].firmwareVersion, 'vendor-2.0');
+  assert.equal(calls[1][2].certificationStatus, 'NOT_HOMOLOGATED');
+  assert.equal(calls[1][2].certificationRef, null);
+  assert.equal(calls[2][1], 'ACCESS_DEVICE_FIRMWARE_CONFIGURED');
+});
