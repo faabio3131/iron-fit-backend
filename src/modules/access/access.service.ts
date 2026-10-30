@@ -321,7 +321,7 @@ export class AccessService {
     try {
       await this.prisma.$transaction(async (tx) => {
         const device = await tx.accessDevice.findFirst({
-          where: { id: deviceId, gymId, active: true },
+          where: { id: deviceId, gymId },
           select: { id: true },
         });
         if (!device) {
@@ -331,7 +331,7 @@ export class AccessService {
         // Do not provision secrets for a device that changed tenant/status
         // after the read; rotate token and audit in one DB transaction.
         await tx.accessDevice.update({
-          where: { id: device.id, gymId, active: true },
+          where: { id: device.id, gymId },
           data: {
             deviceTokenHash: this.hash(rawToken),
             tokenRotatedAt,
