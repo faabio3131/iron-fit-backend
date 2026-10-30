@@ -6,8 +6,8 @@
     {
       "exerciseName": "Supino reto com barra",
       "muscleGroup": "Peito",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=x5cAnDj3sVc",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Supino%20reto%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
       "status": "PENDING_HUMAN_REVIEW"
     },
@@ -238,8 +238,8 @@
     {
       "exerciseName": "Remada curvada com barra",
       "muscleGroup": "Costas",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=_vO2dAnz__c",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Remada%20curvada%20com%20barra%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
       "status": "PENDING_HUMAN_REVIEW"
     },
@@ -830,8 +830,8 @@
     {
       "exerciseName": "Cadeira extensora",
       "muscleGroup": "Quadríceps",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=5fQFvhbr4cs",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Cadeira%20extensora%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
       "status": "PENDING_HUMAN_REVIEW"
     },
