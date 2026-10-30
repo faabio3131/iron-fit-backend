@@ -6,7 +6,6 @@ import {
   PhysicalAccessDriverRegistry,
   PhysicalDirection,
   PhysicalPassageEvent,
-  PhysicalDeviceUnavailableError,
 } from './physical-access-driver';
 import { nextPhysicalAccessState } from './physical-access-lifecycle';
 
@@ -97,25 +96,41 @@ export class PhysicalAccessCoordinator {
 
     const manufacturer = attempt.manufacturer as AccessManufacturer;
     const driver = this.drivers.resolve(manufacturer);
-    const receipt = await driver.release({
-      deviceId: device.id,
-      gymId: device.gymId,
-      manufacturer,
-      model: device.model || '',
-      protocolVersion: device.protocol ?? undefined,
-    }, {
-      deviceId: attempt.deviceId,
-      authorizationId,
-      direction: attempt.direction as PhysicalDirection,
-      expiresAt: attempt.expiresAt,
-    });
-    if (!receipt.accepted || receipt.authorizationId !== authorizationId) return false;
-
-    const updated = await this.prisma.physicalAccessAttempt.updateMany({
+    // Reserve once in PostgreSQL BEFORE any external command. A lost ACK is
+    // uncertain, never an invitation to send a second unlock command.
+    const reserved = await this.prisma.physicalAccessAttempt.updateMany({
       where: { id: attempt.id, gymId: attempt.gymId, state: 'AUTHORIZED', expiresAt: { gt: new Date() } },
-      data: { state: nextPhysicalAccessState('AUTHORIZED', 'ACK_RELEASE') },
+      data: { state: nextPhysicalAccessState('AUTHORIZED', 'RESERVE_RELEASE') },
     });
-    return updated.count === 1;
+    if (reserved.count !== 1) return false;
+    try {
+      const receipt = await driver.release({
+        deviceId: device.id,
+        gymId: device.gymId,
+        manufacturer,
+        model: device.model || '',
+        protocolVersion: device.protocol ?? undefined,
+      }, {
+        deviceId: attempt.deviceId,
+        authorizationId,
+        direction: attempt.direction as PhysicalDirection,
+        expiresAt: attempt.expiresAt,
+      });
+      if (!receipt.accepted || receipt.authorizationId !== authorizationId) {
+        throw new Error('ACK fisico invalido');
+      }
+      const updated = await this.prisma.physicalAccessAttempt.updateMany({
+        where: { id: attempt.id, gymId: attempt.gymId, state: 'RELEASE_IN_FLIGHT' },
+        data: { state: nextPhysicalAccessState('RELEASE_IN_FLIGHT', 'ACK_RELEASE') },
+      });
+      return updated.count === 1;
+    } catch {
+      await this.prisma.physicalAccessAttempt.updateMany({
+        where: { id: attempt.id, gymId: attempt.gymId, state: 'RELEASE_IN_FLIGHT' },
+        data: { state: nextPhysicalAccessState('RELEASE_IN_FLIGHT', 'UNKNOWN_RELEASE') },
+      });
+      return false;
+    }
   }
 
   /**
