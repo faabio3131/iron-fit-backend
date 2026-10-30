@@ -436,7 +436,7 @@ export class FinancialService {
   async refundVerifiedGatewayCharge(
     chargeId: string,
     gymId: string,
-    actorUserId: string,
+    actorUserId: string | undefined,
     evidence: {
       connectionId: string;
       paymentRef: string;
@@ -499,7 +499,7 @@ export class FinancialService {
           },
         });
         await this.audit.record({
-          gymId, userId: actorUserId,
+          gymId, userId: actorUserId ?? null,
           action: 'FINANCIAL_GATEWAY_FULL_REFUND_VERIFIED',
           entity: 'Charge', entityId: charge.id,
           previous: { status: ChargeStatus.PAID, originalTransactionId: original.id },
