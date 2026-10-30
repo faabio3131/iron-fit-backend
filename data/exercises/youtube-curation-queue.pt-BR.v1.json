@@ -416,10 +416,11 @@
     {
       "exerciseName": "Desenvolvimento Arnold",
       "muscleGroup": "Ombros",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=ris9tKqMwgU",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Desenvolvimento%20Arnold%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=ris9tKqMwgU"
     },
     {
       "exerciseName": "Desenvolvimento na máquina",
@@ -1467,10 +1468,11 @@
     {
       "exerciseName": "Pallof press",
       "muscleGroup": "Abdômen e core",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=_2xWmYNnFS8",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Pallof%20press%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=_2xWmYNnFS8"
     },
     {
       "exerciseName": "Rotação russa",
@@ -1945,10 +1947,11 @@
     {
       "exerciseName": "Mobilidade de quadril 90/90",
       "muscleGroup": "Mobilidade",
-      "directVideoUrl": null,
-      "source": "SEARCH_ONLY",
+      "directVideoUrl": "https://www.youtube.com/watch?v=6dfkYZm9tpE",
+      "source": "DIRECT_CANDIDATE",
       "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Mobilidade%20de%20quadril%2090%2F90%20execu%C3%A7%C3%A3o%20correta%20exerc%C3%ADcio",
-      "status": "PENDING_HUMAN_REVIEW"
+      "status": "PENDING_HUMAN_REVIEW",
+      "sourceDocument": "https://www.youtube.com/watch?v=6dfkYZm9tpE"
     },
     {
       "exerciseName": "Mobilidade de tornozelo na parede",
