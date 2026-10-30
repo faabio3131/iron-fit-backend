@@ -18,7 +18,7 @@ export class TenantPaymentWebhookReconcileService {
     private readonly audit: AuditService,
   ) {}
 
-  async processEvent(eventId: string, accountId: string, gymId: string, actorId: string) {
+  async processEvent(eventId: string, accountId: string, gymId: string, actorId?: string) {
     const event = await this.prisma.tenantPaymentWebhookInbox.findFirst({
       where: { id: eventId, gymId },
     });
@@ -48,7 +48,7 @@ export class TenantPaymentWebhookReconcileService {
     }
     const claimed = await this.prisma.tenantPaymentWebhookInbox.updateMany({
       where: { id: event.id, gymId, status: event.status },
-      data: { status: 'PROCESSING' },
+      data: { status: 'PROCESSING', attemptCount: { increment: 1 } },
     });
     if (claimed.count !== 1) {
       return { eventId: event.id, status: 'CONCURRENT', processed: false };
@@ -63,7 +63,7 @@ export class TenantPaymentWebhookReconcileService {
         : 'RETRY';
       await this.prisma.tenantPaymentWebhookInbox.updateMany({
         where: { id: event.id, gymId, status: 'PROCESSING' },
-        data: { status: terminal },
+        data: { status: terminal, nextAttemptAt: new Date(Date.now() + 60_000) },
       });
       await this.audit.record({
         gymId, userId: actorId,
@@ -75,7 +75,7 @@ export class TenantPaymentWebhookReconcileService {
     } catch (error) {
       await this.prisma.tenantPaymentWebhookInbox.updateMany({
         where: { id: event.id, gymId, status: 'PROCESSING' },
-        data: { status: 'RETRY' },
+        data: { status: 'RETRY', nextAttemptAt: new Date(Date.now() + 60_000) },
       });
       throw error;
     }

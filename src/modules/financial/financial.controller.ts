@@ -9,6 +9,8 @@ import { CreateChargePaymentSessionDto } from './dto/create-charge-payment-sessi
 import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
 import { TenantPaymentReconciliationService } from './tenant-payment-reconciliation.service';
 import { TenantPaymentWebhookReconcileService } from './tenant-payment-webhook-reconcile.service';
+import { TenantPaymentReconciliationAutomationService } from './tenant-payment-reconciliation-automation.service';
+import { ConfigurePaymentAutomationDto } from './dto/configure-payment-automation.dto';
 import { ReconcileWebhookEventDto } from './dto/reconcile-webhook-event.dto';
 import { ReconcileChargePaymentDto } from './dto/reconcile-charge-payment.dto';
 import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
@@ -31,6 +33,7 @@ export class FinancialController {
     private tenantPaymentCheckout: TenantPaymentCheckoutService,
     private tenantPaymentReconciliation: TenantPaymentReconciliationService,
     private webhookReconciliation: TenantPaymentWebhookReconcileService,
+    private paymentAutomation: TenantPaymentReconciliationAutomationService,
     private fiscalScopeBinding: FiscalScopeBindingService,
     private fiscalLifecycle: FiscalReconciliationCancellationService,
   ) {}
@@ -130,6 +133,27 @@ export class FinancialController {
     return this.financialService.findTransactions(
       this.resolveGymId(user, requestedGymId),
       { studentId, accountId, status, type, from, to },
+    );
+  }
+
+  @Get('automation-policy')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  getPaymentAutomationPolicy(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.paymentAutomation.getPolicy(this.resolveGymId(user, requestedGymId));
+  }
+
+  @Post('automation-policy')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  configurePaymentAutomation(
+    @Body() dto: ConfigurePaymentAutomationDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.paymentAutomation.configure(
+      this.resolveGymId(user, requestedGymId), dto.accountId, dto.enabled, user.id,
     );
   }
 
