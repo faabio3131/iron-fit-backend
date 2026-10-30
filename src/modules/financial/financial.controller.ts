@@ -8,6 +8,8 @@ import { PayChargeDto } from './dto/pay-charge.dto';
 import { CreateChargePaymentSessionDto } from './dto/create-charge-payment-session.dto';
 import { TenantPaymentCheckoutService } from './tenant-payment-checkout.service';
 import { TenantPaymentReconciliationService } from './tenant-payment-reconciliation.service';
+import { TenantPaymentWebhookReconcileService } from './tenant-payment-webhook-reconcile.service';
+import { ReconcileWebhookEventDto } from './dto/reconcile-webhook-event.dto';
 import { ReconcileChargePaymentDto } from './dto/reconcile-charge-payment.dto';
 import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
 import { UpsertFiscalScopeBindingDto } from './dto/upsert-fiscal-scope-binding.dto';
@@ -28,6 +30,7 @@ export class FinancialController {
     private webhookInbox: StripePaymentWebhookInboxService,
     private tenantPaymentCheckout: TenantPaymentCheckoutService,
     private tenantPaymentReconciliation: TenantPaymentReconciliationService,
+    private webhookReconciliation: TenantPaymentWebhookReconcileService,
     private fiscalScopeBinding: FiscalScopeBindingService,
     private fiscalLifecycle: FiscalReconciliationCancellationService,
   ) {}
@@ -127,6 +130,19 @@ export class FinancialController {
     return this.financialService.findTransactions(
       this.resolveGymId(user, requestedGymId),
       { studentId, accountId, status, type, from, to },
+    );
+  }
+
+  @Post('gateway-events/:id/reconcile')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  reconcileWebhookEvent(
+    @Param('id') eventId: string,
+    @Body() dto: ReconcileWebhookEventDto,
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.webhookReconciliation.processEvent(
+      eventId, dto.accountId, this.resolveGymId(user, requestedGymId), user.id,
     );
   }
 
