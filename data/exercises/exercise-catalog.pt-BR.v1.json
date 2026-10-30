@@ -1,0 +1,1366 @@
+{
+  "version": 1,
+  "source": "IRON curated exercise names; pending professional validation per movement",
+  "exercises": [
+    {
+      "name": "Supino reto com barra",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/EZMYCLKuGow"
+    },
+    {
+      "name": "Supino reto com halteres",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/EZMYCLKuGow"
+    },
+    {
+      "name": "Supino inclinado com barra",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/WP1VLAt8hbM"
+    },
+    {
+      "name": "Supino inclinado com halteres",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/WP1VLAt8hbM"
+    },
+    {
+      "name": "Supino declinado com barra",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/J2g6qPBJfqo"
+    },
+    {
+      "name": "Supino declinado com halteres",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/J2g6qPBJfqo"
+    },
+    {
+      "name": "Supino máquina horizontal",
+      "muscleGroup": "Peito",
+      "videoUrl": null
+    },
+    {
+      "name": "Supino máquina inclinado",
+      "muscleGroup": "Peito",
+      "videoUrl": null
+    },
+    {
+      "name": "Crucifixo reto com halteres",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/uDMmccuPVPQ"
+    },
+    {
+      "name": "Crucifixo inclinado com halteres",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/uy9Xk3SVrms"
+    },
+    {
+      "name": "Crucifixo na máquina",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/FzCnfD0gOXo"
+    },
+    {
+      "name": "Crossover alto para baixo",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/jqTlJt3JXzQ"
+    },
+    {
+      "name": "Crossover baixo para cima",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/jqTlJt3JXzQ"
+    },
+    {
+      "name": "Crossover na linha do peito",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/jqTlJt3JXzQ"
+    },
+    {
+      "name": "Flexão de braços tradicional",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/dHgoYiCraCw"
+    },
+    {
+      "name": "Flexão de braços inclinada",
+      "muscleGroup": "Peito",
+      "videoUrl": null
+    },
+    {
+      "name": "Flexão de braços declinada",
+      "muscleGroup": "Peito",
+      "videoUrl": null
+    },
+    {
+      "name": "Flexão de braços com mãos fechadas",
+      "muscleGroup": "Peito",
+      "videoUrl": null
+    },
+    {
+      "name": "Mergulho nas paralelas com ênfase em peito",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://www.youtube.com/watch?v=sM6XUdt1rm4"
+    },
+    {
+      "name": "Pullover com halter",
+      "muscleGroup": "Peito",
+      "videoUrl": "https://youtu.be/-KaMXMMIVrU"
+    },
+    {
+      "name": "Chest press unilateral na máquina",
+      "muscleGroup": "Peito",
+      "videoUrl": null
+    },
+    {
+      "name": "Puxada frontal pegada aberta",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/pJM_rHhluK8"
+    },
+    {
+      "name": "Puxada frontal pegada neutra",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/pJM_rHhluK8"
+    },
+    {
+      "name": "Puxada frontal pegada supinada",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/pJM_rHhluK8"
+    },
+    {
+      "name": "Puxada unilateral na polia",
+      "muscleGroup": "Costas",
+      "videoUrl": null
+    },
+    {
+      "name": "Barra fixa pronada",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/thg6cGXSlvY"
+    },
+    {
+      "name": "Barra fixa supinada",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/thg6cGXSlvY"
+    },
+    {
+      "name": "Barra fixa neutra",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/thg6cGXSlvY"
+    },
+    {
+      "name": "Barra fixa assistida",
+      "muscleGroup": "Costas",
+      "videoUrl": null
+    },
+    {
+      "name": "Remada curvada com barra",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/TfxJMertfsw"
+    },
+    {
+      "name": "Remada curvada supinada",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/TfxJMertfsw"
+    },
+    {
+      "name": "Remada unilateral com halter",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/m4h4jT9patY"
+    },
+    {
+      "name": "Remada baixa pegada neutra",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/HpWWreyaBN0"
+    },
+    {
+      "name": "Remada baixa pegada aberta",
+      "muscleGroup": "Costas",
+      "videoUrl": null
+    },
+    {
+      "name": "Remada articulada na máquina",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/QyvIEdEHzHc"
+    },
+    {
+      "name": "Remada cavalinho",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/TfxJMertfsw"
+    },
+    {
+      "name": "Remada serrote apoiada",
+      "muscleGroup": "Costas",
+      "videoUrl": null
+    },
+    {
+      "name": "Remada no banco inclinado",
+      "muscleGroup": "Costas",
+      "videoUrl": null
+    },
+    {
+      "name": "Remada invertida",
+      "muscleGroup": "Costas",
+      "videoUrl": null
+    },
+    {
+      "name": "Pulldown com braços estendidos",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/v6-QIOY0nW0"
+    },
+    {
+      "name": "Pullover na polia",
+      "muscleGroup": "Costas",
+      "videoUrl": null
+    },
+    {
+      "name": "Encolhimento com barra",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/RhGjwIUe16E"
+    },
+    {
+      "name": "Encolhimento com halteres",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/RhGjwIUe16E"
+    },
+    {
+      "name": "Extensão lombar no banco romano",
+      "muscleGroup": "Costas",
+      "videoUrl": "https://youtu.be/z0rx9swRDR0"
+    },
+    {
+      "name": "Desenvolvimento com barra em pé",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/EuQAfhXBEvs"
+    },
+    {
+      "name": "Desenvolvimento com barra sentado",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/EuQAfhXBEvs"
+    },
+    {
+      "name": "Desenvolvimento com halteres sentado",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/EuQAfhXBEvs"
+    },
+    {
+      "name": "Desenvolvimento Arnold",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://www.youtube.com/watch?v=ris9tKqMwgU"
+    },
+    {
+      "name": "Desenvolvimento na máquina",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/EuQAfhXBEvs"
+    },
+    {
+      "name": "Elevação lateral com halteres",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/IwWvZ0rlNXs"
+    },
+    {
+      "name": "Elevação lateral unilateral na polia",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/sKPJdvVvHuI"
+    },
+    {
+      "name": "Elevação lateral na máquina",
+      "muscleGroup": "Ombros",
+      "videoUrl": null
+    },
+    {
+      "name": "Elevação frontal com halteres",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/NxSuojHZa8k"
+    },
+    {
+      "name": "Elevação frontal com barra",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/_ZQhDiONpZA"
+    },
+    {
+      "name": "Elevação frontal na polia",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/S7B5LwWrLA0"
+    },
+    {
+      "name": "Crucifixo inverso com halteres",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/5HDkxzxe400"
+    },
+    {
+      "name": "Crucifixo inverso na máquina",
+      "muscleGroup": "Ombros",
+      "videoUrl": null
+    },
+    {
+      "name": "Face pull na polia",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://www.youtube.com/watch?v=eTCBSFlCJ_s"
+    },
+    {
+      "name": "Remada alta com barra",
+      "muscleGroup": "Ombros",
+      "videoUrl": "https://youtu.be/tm0IywBhIYM"
+    },
+    {
+      "name": "Rotação externa do ombro com elástico",
+      "muscleGroup": "Ombros",
+      "videoUrl": null
+    },
+    {
+      "name": "Rotação interna do ombro com elástico",
+      "muscleGroup": "Ombros",
+      "videoUrl": null
+    },
+    {
+      "name": "Elevação em Y no banco inclinado",
+      "muscleGroup": "Ombros",
+      "videoUrl": null
+    },
+    {
+      "name": "Rosca direta com barra reta",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/Q8TqfD8E7BU"
+    },
+    {
+      "name": "Rosca direta com barra W",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/Q8TqfD8E7BU"
+    },
+    {
+      "name": "Rosca alternada com halteres",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/S1HAcTVQVYE"
+    },
+    {
+      "name": "Rosca martelo com halteres",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/0qkQy8V2FC0"
+    },
+    {
+      "name": "Rosca martelo na corda",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/0qkQy8V2FC0"
+    },
+    {
+      "name": "Rosca concentrada",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/EEpvOQAAtRo"
+    },
+    {
+      "name": "Rosca Scott com barra W",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/zpTK6eihdSA"
+    },
+    {
+      "name": "Rosca Scott na máquina",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/zpTK6eihdSA"
+    },
+    {
+      "name": "Rosca inclinada com halteres",
+      "muscleGroup": "Bíceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Rosca na polia baixa",
+      "muscleGroup": "Bíceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Rosca unilateral na polia",
+      "muscleGroup": "Bíceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Rosca inversa com barra",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://youtu.be/jbSr9CzJPmA"
+    },
+    {
+      "name": "Rosca 21",
+      "muscleGroup": "Bíceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Rosca spider com halteres",
+      "muscleGroup": "Bíceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Rosca Zottman",
+      "muscleGroup": "Bíceps",
+      "videoUrl": "https://www.youtube.com/watch?v=ZrpRBgswtHs"
+    },
+    {
+      "name": "Tríceps na polia com barra",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/dTqDKC0D6P4"
+    },
+    {
+      "name": "Tríceps na polia com corda",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/dTqDKC0D6P4"
+    },
+    {
+      "name": "Tríceps na polia pegada inversa",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/dTqDKC0D6P4"
+    },
+    {
+      "name": "Tríceps francês unilateral com halter",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/YJ4kGE3eemY"
+    },
+    {
+      "name": "Tríceps francês bilateral com halter",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/YJ4kGE3eemY"
+    },
+    {
+      "name": "Tríceps testa com barra W",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/zznCYBVZOVA"
+    },
+    {
+      "name": "Tríceps testa com halteres",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/SbAykzCE-xk"
+    },
+    {
+      "name": "Tríceps coice com halter",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/PyKv23F-fVM"
+    },
+    {
+      "name": "Tríceps acima da cabeça na polia",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/YJ4kGE3eemY"
+    },
+    {
+      "name": "Tríceps na máquina",
+      "muscleGroup": "Tríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Supino fechado com barra",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/ZiemT4r4DcU"
+    },
+    {
+      "name": "Mergulho em banco",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/TCVj8cliLNo"
+    },
+    {
+      "name": "Mergulho nas paralelas com ênfase em tríceps",
+      "muscleGroup": "Tríceps",
+      "videoUrl": "https://youtu.be/LJz40nTE_sI"
+    },
+    {
+      "name": "Extensão unilateral de tríceps na polia",
+      "muscleGroup": "Tríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Agachamento livre com barra",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/zgk71dUUt0Y"
+    },
+    {
+      "name": "Agachamento frontal com barra",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/syfDrU220FU"
+    },
+    {
+      "name": "Agachamento goblet",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://www.youtube.com/watch?v=JO7D6GJ98wY"
+    },
+    {
+      "name": "Agachamento no Smith",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/zgk71dUUt0Y"
+    },
+    {
+      "name": "Agachamento hack",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/zgk71dUUt0Y"
+    },
+    {
+      "name": "Agachamento sumô com halter",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Agachamento na máquina pendular",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Agachamento com peso corporal",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Leg press 45 graus",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/nY8UsiAqwds"
+    },
+    {
+      "name": "Leg press horizontal",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Leg press vertical",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Leg press unilateral",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Cadeira extensora",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/el3oHblB5DM"
+    },
+    {
+      "name": "Cadeira extensora unilateral",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Afundo estacionário",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/Umzor-_g-tQ"
+    },
+    {
+      "name": "Afundo reverso",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Avanço caminhando",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/XBJtM2phDDM"
+    },
+    {
+      "name": "Passada com halteres",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/sQ5RjbpPirY"
+    },
+    {
+      "name": "Agachamento búlgaro",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": "https://youtu.be/IGf9fR4Y7Iw"
+    },
+    {
+      "name": "Step-up no banco",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Sissy squat assistido",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Wall sit isométrico",
+      "muscleGroup": "Quadríceps",
+      "videoUrl": null
+    },
+    {
+      "name": "Mesa flexora deitada",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": "https://youtu.be/2-ULaRrQa7c"
+    },
+    {
+      "name": "Cadeira flexora sentada",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": "https://youtu.be/Zss6E3VU6X0"
+    },
+    {
+      "name": "Flexora em pé unilateral",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": "https://youtu.be/KomsEmm5oxA"
+    },
+    {
+      "name": "Flexora unilateral deitada",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": null
+    },
+    {
+      "name": "Stiff com barra",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": "https://youtu.be/u1E3_u2gJYE"
+    },
+    {
+      "name": "Stiff com halteres",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": "https://youtu.be/u1E3_u2gJYE"
+    },
+    {
+      "name": "Levantamento terra romeno com barra",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": null
+    },
+    {
+      "name": "Levantamento terra romeno com halteres",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": "https://www.youtube.com/watch?v=QFbZevA7dps"
+    },
+    {
+      "name": "Good morning com barra",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": null
+    },
+    {
+      "name": "Glute ham raise assistido",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": null
+    },
+    {
+      "name": "Nordic curl assistido",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": "https://www.youtube.com/watch?v=_e9vFU9-tkc"
+    },
+    {
+      "name": "Flexão de joelhos com bola suíça",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": null
+    },
+    {
+      "name": "Terra convencional",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": "https://youtu.be/50AkPBZwACQ"
+    },
+    {
+      "name": "Terra sumô",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": null
+    },
+    {
+      "name": "Pull-through na polia",
+      "muscleGroup": "Posteriores de coxa",
+      "videoUrl": null
+    },
+    {
+      "name": "Elevação pélvica com barra",
+      "muscleGroup": "Glúteos",
+      "videoUrl": "https://youtu.be/ptK0azwOXwM"
+    },
+    {
+      "name": "Elevação pélvica na máquina",
+      "muscleGroup": "Glúteos",
+      "videoUrl": "https://youtu.be/ptK0azwOXwM"
+    },
+    {
+      "name": "Elevação pélvica unilateral",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Ponte de glúteos no solo",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Coice na polia",
+      "muscleGroup": "Glúteos",
+      "videoUrl": "https://youtu.be/JdHbXlggr6Q"
+    },
+    {
+      "name": "Coice na máquina",
+      "muscleGroup": "Glúteos",
+      "videoUrl": "https://youtu.be/JhodVO0l1vw"
+    },
+    {
+      "name": "Abdução de quadril na máquina",
+      "muscleGroup": "Glúteos",
+      "videoUrl": "https://youtu.be/e2gmqTG1OgQ"
+    },
+    {
+      "name": "Abdução de quadril com miniband",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Abdução de quadril na polia",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Extensão de quadril no banco",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Agachamento sumô com barra",
+      "muscleGroup": "Glúteos",
+      "videoUrl": "https://youtu.be/O6Cmxez6D0k"
+    },
+    {
+      "name": "Passada lateral com miniband",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Clamshell com miniband",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Frog pump",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Hiperextensão com ênfase em glúteos",
+      "muscleGroup": "Glúteos",
+      "videoUrl": null
+    },
+    {
+      "name": "Cadeira adutora",
+      "muscleGroup": "Adutores",
+      "videoUrl": "https://youtu.be/Wf602gn_9zU"
+    },
+    {
+      "name": "Adução de quadril na polia",
+      "muscleGroup": "Adutores",
+      "videoUrl": null
+    },
+    {
+      "name": "Adução de quadril deitado",
+      "muscleGroup": "Adutores",
+      "videoUrl": null
+    },
+    {
+      "name": "Agachamento lateral",
+      "muscleGroup": "Adutores",
+      "videoUrl": null
+    },
+    {
+      "name": "Copenhagen plank assistida",
+      "muscleGroup": "Adutores",
+      "videoUrl": null
+    },
+    {
+      "name": "Panturrilha em pé na máquina",
+      "muscleGroup": "Panturrilhas",
+      "videoUrl": "https://youtu.be/824pMjvGXgc"
+    },
+    {
+      "name": "Panturrilha sentada na máquina",
+      "muscleGroup": "Panturrilhas",
+      "videoUrl": "https://youtu.be/jMWs_p-W9gY"
+    },
+    {
+      "name": "Panturrilha no leg press",
+      "muscleGroup": "Panturrilhas",
+      "videoUrl": "https://youtu.be/wCXvfH_-BLg"
+    },
+    {
+      "name": "Panturrilha em pé com halteres",
+      "muscleGroup": "Panturrilhas",
+      "videoUrl": null
+    },
+    {
+      "name": "Panturrilha unilateral no degrau",
+      "muscleGroup": "Panturrilhas",
+      "videoUrl": null
+    },
+    {
+      "name": "Panturrilha no Smith",
+      "muscleGroup": "Panturrilhas",
+      "videoUrl": "https://youtu.be/824pMjvGXgc"
+    },
+    {
+      "name": "Panturrilha no hack",
+      "muscleGroup": "Panturrilhas",
+      "videoUrl": null
+    },
+    {
+      "name": "Elevação de tibial anterior",
+      "muscleGroup": "Panturrilhas",
+      "videoUrl": null
+    },
+    {
+      "name": "Abdominal tradicional",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": "https://youtu.be/7YxVRiATugo"
+    },
+    {
+      "name": "Abdominal supra na máquina",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": "https://www.youtube.com/watch?v=zDSvdyyxH4w"
+    },
+    {
+      "name": "Abdominal na polia ajoelhado",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Abdominal reverso",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": "https://youtu.be/ixJcUH8AlL8"
+    },
+    {
+      "name": "Elevação de pernas deitado",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Elevação de joelhos na barra",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Elevação de pernas na barra",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Prancha frontal",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": "https://youtu.be/qNRqGqESAWU"
+    },
+    {
+      "name": "Prancha lateral",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": "https://www.youtube.com/watch?v=NXr4Fw8q60o"
+    },
+    {
+      "name": "Prancha com apoio de antebraços e joelhos",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Prancha com toque nos ombros",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Prancha dinâmica",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Dead bug",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Bird dog",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": "https://www.youtube.com/watch?v=ZdAHe9_HeEw"
+    },
+    {
+      "name": "Pallof press",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": "https://www.youtube.com/watch?v=_2xWmYNnFS8"
+    },
+    {
+      "name": "Rotação russa",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Abdominal bicicleta",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Abdominal canivete",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Crunch na bola suíça",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Woodchopper na polia",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Farmer carry",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Suitcase carry",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Hollow body hold",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": null
+    },
+    {
+      "name": "Ab wheel rollout assistido",
+      "muscleGroup": "Abdômen e core",
+      "videoUrl": "https://www.youtube.com/watch?v=vncVOEtMhpk"
+    },
+    {
+      "name": "Caminhada na esteira",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Corrida na esteira",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Corrida intervalada na esteira",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Caminhada inclinada na esteira",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Bicicleta ergométrica vertical",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Bicicleta ergométrica horizontal",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Spinning",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Elíptico",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Remo ergométrico",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Escada ergométrica",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Pular corda",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Corrida estacionária",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Polichinelos",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Caminhada ao ar livre",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Corrida ao ar livre",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Simulador de esqui ergométrico",
+      "muscleGroup": "Cardio",
+      "videoUrl": null
+    },
+    {
+      "name": "Burpee",
+      "muscleGroup": "Funcional",
+      "videoUrl": "https://www.youtube.com/watch?v=qLBImHhCXSw"
+    },
+    {
+      "name": "Mountain climber",
+      "muscleGroup": "Funcional",
+      "videoUrl": "https://www.youtube.com/watch?v=cnyTQDSE884"
+    },
+    {
+      "name": "Agachamento com salto",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Salto na caixa",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Step lateral",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Kettlebell swing",
+      "muscleGroup": "Funcional",
+      "videoUrl": "https://www.youtube.com/watch?v=zjnRj5SRNF0"
+    },
+    {
+      "name": "Kettlebell clean",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Kettlebell snatch",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Kettlebell goblet squat",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Kettlebell deadlift",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Thruster com halteres",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Thruster com barra",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Battle rope ondas alternadas",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Battle rope ondas simultâneas",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Medicine ball slam",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Medicine ball arremesso na parede",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Bear crawl",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Crab walk",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Farmer walk com kettlebell",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Sled push",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Sled pull",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Lunge com rotação",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "TRX remada",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "TRX agachamento",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "TRX flexão",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "TRX prancha",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Turkish get-up",
+      "muscleGroup": "Funcional",
+      "videoUrl": "https://www.youtube.com/watch?v=JFrItinMcyQ"
+    },
+    {
+      "name": "Clean and press com halteres",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Landmine press",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Landmine rotation",
+      "muscleGroup": "Funcional",
+      "videoUrl": null
+    },
+    {
+      "name": "Mobilidade torácica em quatro apoios",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Rotação torácica deitado",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Cat cow",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": "https://www.youtube.com/watch?v=1Y0YjXS9sKI"
+    },
+    {
+      "name": "Mobilidade de quadril 90/90",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": "https://www.youtube.com/watch?v=6dfkYZm9tpE"
+    },
+    {
+      "name": "Mobilidade de tornozelo na parede",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Mobilidade de ombro com bastão",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento dinâmico de flexores de quadril",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "World's greatest stretch",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Agachamento profundo sustentado",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Rotação cervical controlada",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Circundução de quadril",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Mobilidade de punhos em quatro apoios",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento dinâmico de posteriores",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Rotação externa de quadril sentado",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Mobilidade escapular na parede",
+      "muscleGroup": "Mobilidade",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento estático de peitoral",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento estático de dorsal",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de tríceps",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de bíceps",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de deltoide posterior",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de trapézio",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de quadríceps em pé",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de posteriores sentado",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de flexores do quadril",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de glúteos deitado",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de piriforme",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de panturrilha na parede",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de adutores borboleta",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Postura da criança",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Cobra para abdômen",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Alongamento de flexores do punho",
+      "muscleGroup": "Alongamento",
+      "videoUrl": null
+    },
+    {
+      "name": "Pistol squat assistido",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Flexão diamante",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Flexão arqueiro assistida",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Barra australiana",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Prancha com deslocamento",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Agachamento isométrico",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Afundo com salto",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Ponte unilateral",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Superman no solo",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Good morning com peso corporal",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Subida na ponta dos pés",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Marcha com joelhos altos",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Skater jump",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Salto horizontal",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    },
+    {
+      "name": "Prancha lateral com elevação de quadril",
+      "muscleGroup": "Treinamento com peso corporal",
+      "videoUrl": null
+    }
+  ]
+}
