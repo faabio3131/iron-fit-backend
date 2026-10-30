@@ -80,7 +80,7 @@ export class PhysicalAccessCoordinator {
         expiresAt,
       },
     });
-    return { allowed: true, authorizationId: record.authorizationId, expiresAt };
+    return { allowed: true, authorizationId: record.authorizationId, expiresAt, gymId: device.gymId };
   }
 
   /**
