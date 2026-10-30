@@ -990,6 +990,7 @@ model PhysicalAccessAttempt {
   authorizationId   String   @unique
   decisionEventId   String?
   state             String   @default("REQUESTED")
+  denialReason      String?
   manufacturer      String
   direction         String
   vendorEventId     String?
