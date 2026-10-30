@@ -109,6 +109,8 @@ test('authorization and command ACK cannot be confused with physical attendance'
   let state = 'REQUESTED';
   state = nextPhysicalAccessState(state, 'AUTHORIZE');
   assert.equal(isVerifiedPhysicalPresence(state), false);
+  state = nextPhysicalAccessState(state, 'RESERVE_RELEASE');
+  assert.equal(isVerifiedPhysicalPresence(state), false);
   state = nextPhysicalAccessState(state, 'ACK_RELEASE');
   assert.equal(isVerifiedPhysicalPresence(state), false);
   state = nextPhysicalAccessState(state, 'CONFIRM_PASSAGE');
