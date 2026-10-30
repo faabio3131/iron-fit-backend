@@ -45,6 +45,9 @@ export class PhysicalGatewayService {
         !this.equalHex(createHash('sha256').update(input.deviceToken).digest('hex'), device.deviceTokenHash)) {
       throw new UnauthorizedException('Credencial ou timestamp de gateway inválido');
     }
+    await this.prisma.accessScanNonce.deleteMany({
+      where: { deviceId: device.id, expiresAt: { lt: new Date(now) } },
+    });
     try {
       await this.prisma.accessScanNonce.create({
         data: {
