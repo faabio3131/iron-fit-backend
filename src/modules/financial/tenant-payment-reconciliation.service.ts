@@ -22,7 +22,7 @@ export class TenantPaymentReconciliationService {
     private readonly audit: AuditService,
   ) {}
 
-  async reconcile(chargeId: string, accountId: string, gymId: string, actorUserId: string) {
+  async reconcile(chargeId: string, accountId: string, gymId: string, actorUserId?: string) {
     const charge = await this.prisma.charge.findFirst({ where: { id: chargeId, gymId } });
     if (!charge) throw new NotFoundException('Cobranca nao encontrada');
     if (!charge.gatewayProviderCode || !charge.gatewayConnectionId || !charge.gatewayChargeId ||
@@ -87,7 +87,7 @@ export class TenantPaymentReconciliationService {
         // Do not book partial refunds or chargebacks as a full reversal.
         // Leave a tenant-scoped audit trail for owner/fiscal review.
         await this.audit.record({
-          gymId, userId: actorUserId,
+          gymId, userId: actorUserId ?? null,
           action: 'FINANCIAL_GATEWAY_REVERSAL_REQUIRES_REVIEW',
           entity: 'Charge', entityId: charge.id,
           next: {
