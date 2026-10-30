@@ -39,10 +39,10 @@ export class PhysicalGatewayService {
     }
     const device = await this.prisma.accessDevice.findFirst({
       where: { id: input.deviceId, active: true },
-      select: { id: true, gymId: true, manufacturer: true, deviceTokenHash: true, active: true, certificationStatus: true, certificationRef: true, model: true, protocol: true },
+      select: { id: true, gymId: true, manufacturer: true, deviceTokenHash: true, active: true, certificationStatus: true, certificationRef: true, model: true, firmwareVersion: true },
     });
     if (!device || !device.deviceTokenHash || !SUPPORTED.has(device.manufacturer || '') ||
-        (!device.model || !device.protocol || device.certificationStatus !== 'PRODUCTION_HOMOLOGATED' || !device.certificationRef) ||
+        (!device.model || !device.firmwareVersion || device.certificationStatus !== 'PRODUCTION_HOMOLOGATED' || !device.certificationRef) ||
         !this.equalHex(createHash('sha256').update(input.deviceToken).digest('hex'), device.deviceTokenHash)) {
       throw new UnauthorizedException('Credencial ou timestamp de gateway inválido');
     }
