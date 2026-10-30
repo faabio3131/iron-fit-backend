@@ -966,6 +966,8 @@ model AccessDevice {
   name            String
   type            AccessType
   protocol        String?
+  manufacturer    String?
+  model           String?
   ipAddress       String?
   active          Boolean @default(true)
   lastSyncAt      DateTime?
