@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 /**
@@ -6,7 +6,24 @@ import { PrismaService } from '../../../prisma/prisma.service';
  * authorizations and quarantines uncertain releases for operator review.
  */
 @Injectable()
-export class PhysicalAccessRecoveryService {
+export class PhysicalAccessRecoveryService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PhysicalAccessRecoveryService.name);
+  private interval: ReturnType<typeof setInterval> | null = null;
+
+  onModuleInit() {
+    this.interval = setInterval(() => {
+      void this.expireStale().catch(() => {
+        this.logger.warn('Falha na reconciliação de liberações físicas; acesso não será reaberto');
+      });
+    }, 60_000);
+    this.interval.unref?.();
+  }
+
+  onModuleDestroy() {
+    if (this.interval) clearInterval(this.interval);
+    this.interval = null;
+  }
+
   constructor(private readonly prisma: PrismaService) {}
 
   async expireStale(now: Date = new Date()): Promise<{
