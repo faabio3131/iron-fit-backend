@@ -15,6 +15,10 @@ test('pilot reception: official trial, owner opt-in, atomic enrollment, four pay
     return { gymId: payload.gymId, session: await login(email, password) };
   }
   try {
+    assert.equal(process.env.NODE_ENV, 'test');
+    assert.equal(process.env.IRON_RUNTIME_ENV, 'HOMOLOG');
+    assert.ok(['localhost', '127.0.0.1'].includes(new URL(process.env.DATABASE_URL).hostname));
+    await db.authRateLimitBucket.deleteMany({ where: { scope: { in: ['AUTH_SIGNUP_IP', 'AUTH_LOGIN_REQUEST_IP', 'AUTH_LOGIN_FAILURE_IP'] } } });
     const a = await tenant('a'), b = await tenant('b');
     const owner = a.session.access_token;
     const receptionEmail = `desk-reception-${id}@example.com`;
@@ -34,6 +38,8 @@ test('pilot reception: official trial, owner opt-in, atomic enrollment, four pay
     await request('/financial/accounts', { token, expected: 403 });
     const students = [];
     for (let index = 0; index < 4; index++) students.push((await request('/students', { token, method: 'POST', expected: 201, body: { name: `Desk Student ${index}`, email: `desk-student-${index}-${id}@example.com`, ...(index === 0 ? { cpf: '529.982.247-25', birthDate: '2000-01-31', photoUrl: 'https://example.invalid/avatar.png' } : {}) } })).payload);
+    assert.equal((await request(`/students/${students[0].id}`, { token: trainer.access_token, expected: 200 })).payload.cpf, null);
+    assert.equal((await request(`/students/${students[0].id}`, { token, expected: 200 })).payload.cpf, '52998224725');
     const otherStudent = (await request('/students', { token: b.session.access_token, method: 'POST', expected: 201, body: { name: 'Other tenant student', email: `desk-other-${id}@example.com` } })).payload;
     const dueDate = new Date().toISOString().slice(0, 10);
     const first = { requestId: randomUUID(), studentId: students[0].id, planId: plan.id, dueDate, paymentMethod: 'CASH', receivedConfirmed: true };
@@ -45,7 +51,9 @@ test('pilot reception: official trial, owner opt-in, atomic enrollment, four pay
     await request('/reception/enroll', { token, method: 'POST', expected: 400, body: { ...first, receivedConfirmed: false } });
     for (const [index, method] of ['CASH', 'PIX', 'CREDIT_CARD', 'DEBIT_CARD'].entries()) {
       const body = index === 0 ? first : { ...first, requestId: randomUUID(), studentId: students[index].id, planId: index === 1 ? quarterly.id : plan.id, paymentMethod: method };
-      const sale = (await request('/reception/enroll', { token, method: 'POST', expected: 201, body })).payload;
+      const sales = await Promise.all(Array.from({ length: index === 0 ? 2 : 1 }, () => request('/reception/enroll', { token, method: 'POST', expected: 201, body })));
+      const sale = sales[0].payload;
+      for (const concurrent of sales) assert.equal(concurrent.payload.id, sale.id);
       assert.equal(sale.charge.status, 'PAID'); assert.equal(sale.subscription.status, 'ACTIVE');
       assert.equal(sale.charge.amount, index === 1 ? 39900 : 15990);
       const replay = (await request('/reception/enroll', { token, method: 'POST', expected: 201, body })).payload;

@@ -28,3 +28,13 @@ test('unconfirmed receipts fail before opening a transaction or calling finance'
   await assert.rejects(service.enroll('gym-a', 'actor', { receivedConfirmed: false, paymentMethod: 'CASH' }), /recebimento/);
   await assert.rejects(service.receive('gym-a', 'actor', 'charge', { receivedConfirmed: true, paymentMethod: 'GATEWAY_SUCCESS' }), /recebimento/);
 });
+
+test('CPF disclosure requires an explicit authorized projection and is hidden by default', async () => {
+  const { StudentsService } = require('../dist/src/modules/students/students.service.js');
+  const row = { id: 'student', cpf: '52998224725', user: { name: 'Ana', email: 'ana@example.invalid' } };
+  const db = { student: { findMany: async () => [row], findFirst: async () => row } };
+  const students = new StudentsService(db, {}, {});
+  assert.equal((await students.findAll('gym'))[0].cpf, null);
+  assert.equal((await students.findOne('student', 'gym')).cpf, null);
+  assert.equal((await students.findAll('gym', true))[0].cpf, row.cpf);
+});

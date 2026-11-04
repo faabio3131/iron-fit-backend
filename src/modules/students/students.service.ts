@@ -321,7 +321,7 @@ export class StudentsService {
     };
   }
 
-  async findAll(gymId: string) {
+  async findAll(gymId: string, canReadCpf = false) {
     const students = await this.prisma.student.findMany({
       where: { gymId },
       include: { user: { select: publicUserSelect } },
@@ -333,7 +333,7 @@ export class StudentsService {
       name: s.user!.name,
       email: s.user!.email,
       phone: s.user!.phone,
-      cpf: s.cpf,
+      cpf: canReadCpf ? s.cpf : null,
       photoUrl: s.photoUrl,
       birthDate: s.birthDate,
       status: s.status,
@@ -341,7 +341,7 @@ export class StudentsService {
     }));
   }
 
-  async findOne(id: string, gymId: string) {
+  async findOne(id: string, gymId: string, canReadCpf = false) {
     const student = await this.prisma.student.findFirst({
       where: { id, gymId },
       include: { user: { select: publicUserSelect } },
@@ -356,7 +356,7 @@ export class StudentsService {
       name: student.user!.name,
       email: student.user!.email,
       phone: student.user!.phone,
-      cpf: student.cpf,
+      cpf: canReadCpf ? student.cpf : null,
       photoUrl: student.photoUrl,
       birthDate: student.birthDate,
       gender: student.gender,

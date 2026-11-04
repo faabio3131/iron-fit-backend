@@ -13,6 +13,10 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 export class StudentsController {
   constructor(private studentsService: StudentsService) {}
 
+  private canReadCpf(user: any) {
+    return Array.isArray(user.roles) && user.roles.some((role: string) => ['OWNER', 'MANAGER', 'RECEPTION'].includes(role));
+  }
+
   @Post()
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   create(@Body() dto: CreateStudentDto, @CurrentUser() user: any) {
@@ -26,7 +30,7 @@ export class StudentsController {
   @Get()
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION', 'TRAINER')
   findAll(@CurrentUser() user: any) {
-    return this.studentsService.findAll(user.activeGymId ?? user.gymId);
+    return this.studentsService.findAll(user.activeGymId ?? user.gymId, this.canReadCpf(user));
   }
 
   @Get(':id')
@@ -35,6 +39,7 @@ export class StudentsController {
     return this.studentsService.findOne(
       id,
       user.activeGymId ?? user.gymId,
+      this.canReadCpf(user),
     );
   }
 

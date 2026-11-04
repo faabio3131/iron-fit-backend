@@ -35,3 +35,10 @@ Leitura SSH de 209.126.84.250 em 04/11 confirmou serviços de outro produto e Ev
 ## Continuidade
 
 Concluir CI da Fase 2, corrigir causas-raiz, integrar somente verde e conferir pós-merge. Depois executar os gaps internos das Fases 3–6 sequencialmente. A ausência de homologação física não autoriza marcar GO-LIVE CERTIFIED.
+
+### Correções durante a certificação da Fase 2
+
+- CPF só é projetado a OWNER/MANAGER/RECEPTION; TRAINER recebe null e não ganha esse dado por URL direta.
+- Regressão backend local final: 937 testes PASS, zero skips; lint/typecheck/build PASS.
+- Nova suíte HTTP tem isolamento explícito dos buckets antiabuso somente em CI/HOMOLOG/localhost/iron_ci, antes de iniciar sua jornada. Não reduz limites ou proteções em runtime. Inclui duas requisições simultâneas com a mesma chave, além do replay sequencial.
+- Gate de dependências do app identificou advisories novos do node-forge 1.4.0; override/lock elevados para 1.4.3. Auditoria local PASS sem exceção nova. Gate cruzado deve certificar o HEAD atualizado do app.
