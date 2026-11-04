@@ -863,8 +863,10 @@ Atualizar este bloco a cada entrega:
 
 ## CURRENT — Fase 3 / fichas-modelo (04/11/2026)
 
-- Fase 2 integrada: backend #218 main `af86fa253f5717cb2c220f46aff793106eb47f56`; app #83 main `b0f161cfbef7b2952c2a0539b6eac6686f5df570`. CI pré-merge backend 41877912066 e app 41877081658 SUCCESS; 937 testes backend, 390 app e 9 jornadas HTTP/PostgreSQL 18 PASS. Pós-merges 41880622803/41880677293 ainda devem ser consultados.
+- Fase 2 integrada: backend #218 main `af86fa253f5717cb2c220f46aff793106eb47f56`; app #83 main `b0f161cfbef7b2952c2a0539b6eac6686f5df570`. CI pré-merge backend 41877912066 e app 41877081658 SUCCESS; 937 testes backend, 390 app e 9 jornadas HTTP/PostgreSQL 18 PASS. Pós-merges 41880622803/41880677293 SUCCESS consultados.
 - Fase atual: 3, branch `feat/pilot-workout-templates-20261104` nos dois repositórios. Cinco modelos versionados de edição, sem persistência ou aprovação automática; IDs de exercícios resolvidos da biblioteca canônica, aparelhos somente do tenant, ativos/operacionais e com mapping PRIMARY/ALTERNATIVE. Mapping OPTIONAL não prova disponibilidade de máquina obrigatória.
 - API `/workouts/templates` e Workout Studio real: modelo preenche o composer existente, POST /workouts cria DRAFT, aprovação e ativação continuam humanas e distintas. Equipamento em manutenção também deixa de ser aceito pela prescrição canônica e pelo seletor de compatibilidade.
 - Próximo gate: testes/CI reais desta árvore, inclusive uso de modelo → rascunho → revisão → ativação pelo TRAINER no navegador, sem confundir com geração de IA real. Depois merge/pós-merge e Fase 4.
 - Nenhuma configuração/modelo externo foi declarado homologado; equipamentos reais e API/modelo real permanecem externos. Nenhum deploy do produto.
+
+- Conferência final da Fase 3 completou carga/orientação no composer e na revisão. Backend e aluno já suportavam suggestedLoad; navegador agora deve conferir o campo do professor até a tela do aluno. App candidato 154f598 tem 393 testes PASS. CI do backend deve fixar esse HEAD; não certificar a variante anterior 3809514 como entrega de carga.
