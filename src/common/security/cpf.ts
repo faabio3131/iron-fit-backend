@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 
-export function normalizeCpf(value?: string): string | null {
-  if (value === undefined || value.trim() === '') return null;
+export function normalizeCpf(value?: string | null): string | null {
+  if (value == null || value.trim() === '') return null;
   if (!/^[0-9.\-\s]+$/.test(value)) throw new BadRequestException('CPF invalido');
   const cpf = value.replace(/\D/g, '');
   if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) throw new BadRequestException('CPF invalido');

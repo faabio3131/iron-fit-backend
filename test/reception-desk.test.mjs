@@ -7,6 +7,7 @@ const { nextMembershipBilling, ReceptionService } = require('../dist/src/modules
 test('CPF validates check digits, strips formatting and keeps absent values nullable', () => {
   assert.equal(normalizeCpf('529.982.247-25'), '52998224725');
   assert.equal(normalizeCpf(undefined), null);
+  assert.equal(normalizeCpf(null), null);
   for (const value of ['11111111111', '52998224726', 'abcd', '123']) assert.throws(() => normalizeCpf(value), /CPF/);
 });
 test('membership billing clamps month ends without skipping February or crossing quarter boundary', () => {
