@@ -263,6 +263,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         await openModule('workouts', ['/workouts', '/students']);
         await page.getByTestId('studio-template-adaptation').waitFor();
         await page.getByTestId('studio-template-adaptation').click();
+        await page.getByTestId('studio-exercise-load-1-0').fill('Peso corporal');
         await page.getByTestId(`studio-student-${studentCreated.id}`).click();
         const [workoutResponse] = await Promise.all([
           page.waitForResponse(response => response.url().endsWith('/workouts') && response.request().method() === 'POST'),
@@ -272,6 +273,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         const workout = await workoutResponse.json();
         assert.equal(workout.status, 'DRAFT');
         assert.equal(workout.createdByAI, false);
+        assert.equal(workout.sessions[0].exercises[0].suggestedLoad, 'Peso corporal');
         await page.getByTestId(`workout-approve-${workout.id}`).click();
         const [approval] = await Promise.all([
           page.waitForResponse(response => response.url().endsWith(`/workouts/${workout.id}/status`) && response.request().method() === 'PATCH'),
@@ -300,6 +302,8 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     for (const tab of ['Treino', 'Intelligence', 'Agenda', 'Evolução', 'Plano', 'Perfil']) {
       assert.ok(await page.getByText(tab, { exact: true }).count() >= 1, `Missing student tab ${tab}`);
     }
+    await page.getByText('Treino', { exact: true }).last().click();
+    await page.getByText('Peso corporal', { exact: false }).first().waitFor({ timeout: 20000 });
     await page.getByText('Agenda', { exact: true }).last().click();
     await page.getByText('Perfil', { exact: true }).last().click();
     await page.getByTestId('logout-submit').click();
