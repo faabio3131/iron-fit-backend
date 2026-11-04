@@ -99,6 +99,9 @@ jobs:
           npx prisma migrate deploy
           npx prisma migrate status
 
+      - name: Replay additive reception migration safely
+        run: psql "${DATABASE_URL%%\?*}" -v ON_ERROR_STOP=1 -f prisma/migrations/20261104173500_reception_desk_membership/migration.sql
+
       - name: Lint and typecheck
         run: npm run lint
 
@@ -260,7 +263,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 12e74e8f5931ed8a7161bd6dba868150d9946d10
+          ref: 74062a85503f6db06cfb0eb166e1adce967f5b41
           path: iron-fit-app-macro-o-candidate
 
       - name: Install current Macro O candidate dependencies

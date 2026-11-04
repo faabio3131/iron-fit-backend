@@ -850,3 +850,12 @@ Atualizar este bloco a cada entrega:
 - A aplicação no cliente real será feita pelo próprio cliente. Isso não impede executar/certificar os blocos internos seguintes sequencialmente em ambiente descartável.
 - Reconciliar o cronograma de seis fases com schema/API real; não inventar GymUnit, rotas Next.js, plano corporativo paralelo, APK para iOS nem homologação física.
 - Próximo passo: CI integral da jornada oficial → corrigir → merge verde → pós-merge → Fase 2 recepção/matrícula/caixa com permissões granulares, preservando financeiro OWNER-only fora das operações de balcão autorizadas.
+
+
+## CURRENT — Fase 2 do piloto (04/11/2026)
+
+- Fase 1 interna concluída: #217 MERGED `a5e84305bcb03ac745869ea006fbbc9968c0661e`; CI pré `41872805440` e pós `41874060440` SUCCESS. #216 fechada sem merge; seed fora da jornada.
+- Fase atual: 2, branch `feat/pilot-reception-desk-20261104`; app `feat/pilot-reception-workspace-20261104`. Escopo/critério/matriz: `docs/PILOT_EXECUTION_2026-11-04.md`. Não declarar CI/merge desta entrega antes de consultar o HEAD real.
+- Novos planos são da academia→aluno, sem nova autoridade SaaS. Caixa opt-in com OWNER+step-up; recepção só recebe vendas autorizadas e vê o próprio fechamento. Liquidação usa FinancialService canônico na mesma transação. Gateway nunca é baixado por checkbox.
+- Próximo gate: lint/typecheck/build/regressão → PostgreSQL/HTTP e navegador com app candidato → corrigir → merge verde e pós-merge → Fase 3. Preservar RBAC administrativo e isolamento de tenant.
+- Nenhum deploy, conta real, pagamento real ou homologação física realizados. O cliente piloto fará a própria entrada pelo botão Testar grátis.

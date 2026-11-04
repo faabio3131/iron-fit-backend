@@ -5,6 +5,8 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  IsUrl,
+  MaxLength,
 } from 'class-validator';
 
 export class CreateStudentDto {
@@ -21,6 +23,16 @@ export class CreateStudentDto {
   @IsString()
   @IsOptional()
   phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  cpf?: string;
+
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(2048)
+  photoUrl?: string;
 
   @IsDateString()
   @IsOptional()
