@@ -1,3 +1,4 @@
+import { WORKOUT_TEMPLATES } from './workout-templates';
 import { publicUserSelect } from '../../common/security/public-user-select';
 import { Prisma } from '@prisma/client';
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
@@ -25,6 +26,31 @@ export class WorkoutsService {
       throw new BadRequestException('Tenant ativo obrigatorio');
     }
     return userGymId;
+  }
+
+  async templates(userGymId?: string) {
+    const gymId = this.requireGymId(userGymId);
+    const gym = await this.prisma.gym.findFirst({ where: { id: gymId, active: true } });
+    if (!gym) throw new NotFoundException('Academia nao encontrada');
+    const names = [...new Set(WORKOUT_TEMPLATES.flatMap(template => template.sessions.flatMap(session => session.exercises.map(exercise => exercise.name))))];
+    const [library, inventory] = await Promise.all([
+      this.prisma.exercise.findMany({ where: { name: { in: names } }, select: { id: true, name: true } }),
+      this.prisma.equipment.findMany({ where: { gymId, active: true, operationalStatus: 'OPERATIONAL', catalogItem: { active: true } }, include: { catalogItem: true }, orderBy: { name: 'asc' } }),
+    ]);
+    return WORKOUT_TEMPLATES.map(template => {
+      const missingExercises: string[] = [], missingEquipment: string[] = [];
+      const sessions = template.sessions.map((session, index) => ({ name: session.name, order: index + 1, exercises: session.exercises.flatMap((reference, exerciseIndex) => {
+        const exercise = library.find(row => row.name === reference.name);
+        if (!exercise) { missingExercises.push(reference.name); return []; }
+        const equipment = reference.bodyweight ? null : inventory.find(item => { const mapping = findEquipmentExerciseMapping(item.catalogItem?.metadata, exercise.id, exercise.name); return mapping && mapping.compatibility !== 'OPTIONAL'; });
+        if (!reference.bodyweight && !equipment) { missingEquipment.push(reference.name); return []; }
+        return [{ exerciseId: exercise.id, ...(equipment ? { equipmentId: equipment.id } : {}), order: exerciseIndex + 1, sets: reference.sets ?? 3, reps: reference.reps ?? '10–12', restSeconds: reference.restSeconds ?? 60 }];
+      }) }));
+      return { id: template.id, name: template.name, version: 1, goal: template.goal, level: template.level, weeklyFrequency: template.weeklyFrequency,
+        notes: 'Modelo inicial: revisar avaliacao, restricoes, carga, series e aparelhos antes de aprovar para o aluno.',
+        status: 'DRAFT', createdByAI: false, requiresHumanReview: true,
+        ready: missingExercises.length === 0 && missingEquipment.length === 0, missingExercises, missingEquipment, sessions };
+    });
   }
 
   async findAll(userGymId?: string) {
@@ -107,7 +133,7 @@ export class WorkoutsService {
     if (equipmentIds.length > 0) {
       const [scopedEquipment, canonicalCatalog] = await Promise.all([
         this.prisma.equipment.findMany({
-          where: { id: { in: equipmentIds }, gymId, active: true },
+          where: { id: { in: equipmentIds }, gymId, active: true, operationalStatus: 'OPERATIONAL' },
           select: {
             id: true,
             catalogItemId: true,

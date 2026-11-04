@@ -82,7 +82,7 @@ test('EQ4 workout creation rejects known incompatible catalog equipment before m
   assert.ok(workoutsService.includes('knownCompatibleCatalog.size > 0'));
   assert.ok(workoutsService.includes('!knownCompatibleCatalog.has(equipment.catalogItemId)'));
   assert.ok(workoutsService.includes('Equipamento incompativel com o exercicio'));
-  assert.ok(workoutsService.includes("where: { id: { in: equipmentIds }, gymId, active: true }"));
+  assert.ok(workoutsService.includes("where: { id: { in: equipmentIds }, gymId, active: true, operationalStatus: 'OPERATIONAL' }"));
 
   const validationIndex = workoutsService.indexOf('Equipamento incompativel com o exercicio');
   const mutationIndex = workoutsService.indexOf('this.prisma.workout.create');

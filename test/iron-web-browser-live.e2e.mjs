@@ -259,6 +259,36 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
       }
       assert.equal(await page.getByTestId('nav-team').count(), employee.role === 'MANAGER' ? 1 : 0);
       assert.equal(await page.getByTestId('nav-workouts').count(), employee.role === 'TRAINER' ? 1 : (employee.role === 'MANAGER' ? 1 : 0));
+      if (employee.role === 'TRAINER') {
+        await openModule('workouts', ['/workouts', '/students']);
+        await page.getByTestId('studio-template-adaptation').waitFor();
+        await page.getByTestId('studio-template-adaptation').click();
+        await page.getByTestId('studio-exercise-load-1-0').fill('Peso corporal');
+        await page.getByTestId(`studio-student-${studentCreated.id}`).click();
+        const [workoutResponse] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith('/workouts') && response.request().method() === 'POST'),
+          page.getByTestId('manual-workout-create').click(),
+        ]);
+        assert.equal(workoutResponse.status(), 201);
+        const workout = await workoutResponse.json();
+        assert.equal(workout.status, 'DRAFT');
+        assert.equal(workout.createdByAI, false);
+        assert.equal(workout.sessions[0].exercises[0].suggestedLoad, 'Peso corporal');
+        await page.getByTestId(`workout-approve-${workout.id}`).click();
+        const [approval] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith(`/workouts/${workout.id}/status`) && response.request().method() === 'PATCH'),
+          page.getByTestId(`workout-review-confirm-${workout.id}`).click(),
+        ]);
+        assert.equal(approval.status(), 200);
+        const [activation] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith(`/workouts/${workout.id}/status`) && response.request().method() === 'PATCH'),
+          page.getByTestId(`workout-activate-${workout.id}`).click(),
+        ]);
+        assert.equal(activation.status(), 200);
+      }
+      // Mutation completion is followed by canonical permission/tenant refresh.
+      // Assert the settled authenticated shell, preserving the exact RBAC check.
+      await page.getByTestId('nav-security').waitFor({ timeout: 20000 });
       assert.equal(await page.getByTestId('nav-security').count(), 1);
       await page.getByTestId('commercial-logout').click();
       await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
@@ -272,6 +302,8 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     for (const tab of ['Treino', 'Intelligence', 'Agenda', 'Evolução', 'Plano', 'Perfil']) {
       assert.ok(await page.getByText(tab, { exact: true }).count() >= 1, `Missing student tab ${tab}`);
     }
+    await page.getByText('Treino', { exact: true }).last().click();
+    await page.getByText('Peso corporal', { exact: false }).first().waitFor({ timeout: 20000 });
     await page.getByText('Agenda', { exact: true }).last().click();
     await page.getByText('Perfil', { exact: true }).last().click();
     await page.getByTestId('logout-submit').click();
