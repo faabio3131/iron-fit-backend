@@ -105,6 +105,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Pilot provisioning PostgreSQL regression
+        run: node scripts/pilot-gym-db-certify.mjs
+
       - name: AI multi-provider disposable PostgreSQL concurrency and budget certification
         env:
           IRON_AI_MP_DB_CERTIFY: 'true'

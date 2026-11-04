@@ -839,3 +839,15 @@ Atualizar este bloco a cada entrega:
 - **Sem deploy nem homologação externa executados nesta reconciliação.** A existência de PR de promoção não prova operação efetiva do provider.
 
 **Próxima ação permitida:** reconciliar o critério formal de prontidão R, a matriz dos providers e evidências de ambientes/serviços efetivamente observáveis. Só programar gaps internos reproduzíveis. Não abrir um novo bloco genérico P ou Q sem falha específica.
+
+
+## CURRENT — Retomada piloto 04/11/2026
+
+- Repositórios confirmados pelo Diretor: `faabio3131/iron-fit-backend` e `faabio3131/iron-fit-app` (Web/mobile). Não usar antigo web-platform.
+- Última entrega anterior: backend #215 main `23a2a5bc9cfb0b14049e3996c6407b56536c1f33`, CI pós-merge `41119522850` SUCCESS; app #82 main `12e74e8f5931ed8a7161bd6dba868150d9946d10`, CI pós-merge `41119589227` SUCCESS. Catracas sem homologação física; nenhum deploy nesta retomada.
+- Cronograma vigente adicional: piloto em seis fases de 04–09/11/2026. Executar sequencialmente e preservar gates globais O–T.
+- Bloco atual: Fase 1, branch `feat/pilot-phase1-20261104`. Seed em `prisma/seeds/pilot-gym-seed.ts`, testes unitários e gate PostgreSQL adicionado à CI. Evidências atuais de execução devem ser consultadas na PR/CI, nunca presumidas por este checkpoint.
+- Reconciliação schema/rotas/plano e operação: `docs/PILOT_PHASE1_2026-11-04.md`. `GymUnit` inexistente no CURRENT; não inventar unidade ou segundo domínio. APK não comprova iOS.
+- Gate humano operacional/externo: dados reais da academia/equipe, configuração protegida de contas e confirmação do destino piloto/versão publicada adequada; depois seed e teste real dos três logins. Nenhum tenant real criado. Não marcar Fase 1 concluída nem começar Fase 2 antes desse gate.
+- PRs pré-existentes observadas abertas: backend #211 e app #81 (vídeos); não integrar sem reconciliar conteúdo já entregue e CI.
+- Próximo passo: concluir lint/typecheck/build/regressão e PostgreSQL na CI desta branch; corrigir falhas; merge só verde, consultar pós-merge e então executar o gate real quando os insumos estiverem disponíveis.

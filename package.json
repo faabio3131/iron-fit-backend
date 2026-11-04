@@ -18,7 +18,8 @@
     "start:prod": "node dist/src/main.js",
     "commercial:materialize-v1": "node scripts/materialize-launch-v1.mjs",
     "readiness:edge-preflight": "node scripts/public-edge-preflight.mjs",
-    "gateway:start": "node scripts/physical-gateway-agent.mjs"
+    "gateway:start": "node scripts/physical-gateway-agent.mjs",
+    "pilot:seed": "ts-node prisma/seeds/pilot-gym-seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
