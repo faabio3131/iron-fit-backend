@@ -1025,6 +1025,8 @@ model AccessCredential {
   id            String   @id @default(uuid())
   studentId     String
   type          AccessType
+  selfService   Boolean  @default(false)
+  createdAt     DateTime @default(now())
   tokenHash     String?
   biometricHash String?
   active        Boolean  @default(true)
@@ -1039,12 +1041,18 @@ model AccessEvent {
   studentId    String?
   deviceId     String?
   allowed      Boolean
+  requestId String?
+  requestFingerprint String?
+  actorUserId String?
+  warning String?
+  source String @default("DEVICE_DECISION")
   denialReason String?
   occurredAt   DateTime @default(now())
   gym          Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
   student      Student? @relation(fields: [studentId], references: [id])
   device       AccessDevice? @relation(fields: [deviceId], references: [id])
   aggregatorLink AggregatorAccessEventLink?
+  @@unique([gymId, requestId])
   @@index([gymId])
 }
 

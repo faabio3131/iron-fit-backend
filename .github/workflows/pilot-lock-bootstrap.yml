@@ -1,0 +1,24 @@
+name: Pilot dependency lock bootstrap
+on:
+  push:
+    branches: ['feat/pilot-access-terminal-20261104']
+    paths: ['.github/workflows/pilot-lock-bootstrap.yml']
+permissions:
+  contents: read
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Export dependency lock as text for exact reviewed commit
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const lock = fs.readFileSync('package-lock.json', 'utf8');
+          for (let i = 0; i < lock.length; i += 1800) console.log('IRON_LOCK_CHUNK ' + JSON.stringify(lock.slice(i, i + 1800)));
+          NODE
