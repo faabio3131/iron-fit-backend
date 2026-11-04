@@ -45,7 +45,28 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByTestId('trial-gym-name').fill(`B6 Browser Gym ${id}`);
     await page.getByTestId('trial-email').fill(email);
     await page.getByTestId('trial-password').fill(password);
-    await page.getByTestId('trial-submit').click();
+    const [trialResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/commercial/trial/start') && response.request().method() === 'POST'),
+      page.getByTestId('trial-submit').click(),
+    ]);
+    assert.equal(trialResponse.status(), 201);
+    const trial = await trialResponse.json();
+    const trialBody = trialResponse.request().postDataJSON();
+    const persisted = await prisma.commercialTrialProvisioning.findUnique({ where: { requestId: trialBody.requestId } });
+    assert.equal(persisted.gymId, trial.gymId);
+    assert.equal(persisted.trialEndsAt.getTime() - persisted.trialStartedAt.getTime(), 30 * 86400000);
+    const subscription = await prisma.tenantProductSubscription.findUnique({ where: { id: persisted.subscriptionId }, include: { planVersion: true } });
+    assert.equal(subscription.status, 'ACTIVE');
+    assert.equal(subscription.planVersion.status, 'PUBLISHED');
+    assert.equal(subscription.gymId, trial.gymId);
+    const replay = await page.request.post(`${process.env.B6_API_URL}/commercial/trial/start`, { data: trialBody });
+    assert.equal(replay.status(), 201);
+    assert.equal((await replay.json()).gymId, trial.gymId);
+    assert.equal(await prisma.tenantProductSubscription.count({ where: { gymId: trial.gymId } }), 1);
+    const ownerMemberships = await prisma.userRole.findMany({ where: { userId: persisted.userId }, include: { role: true } });
+    assert.equal(ownerMemberships.length, 1);
+    assert.equal(ownerMemberships[0].role.name, 'OWNER');
+    assert.equal(ownerMemberships[0].gymId, trial.gymId);
     await page.getByTestId('login-notice').waitFor({ timeout: 20000 });
     await page.getByTestId('login-email').fill(email);
     await page.getByTestId('login-password').fill(password);

@@ -839,3 +839,14 @@ Atualizar este bloco a cada entrega:
 - **Sem deploy nem homologação externa executados nesta reconciliação.** A existência de PR de promoção não prova operação efetiva do provider.
 
 **Próxima ação permitida:** reconciliar o critério formal de prontidão R, a matriz dos providers e evidências de ambientes/serviços efetivamente observáveis. Só programar gaps internos reproduzíveis. Não abrir um novo bloco genérico P ou Q sem falha específica.
+
+
+## CURRENT — Piloto pela jornada oficial (04/11/2026)
+
+- Decisão expressa do Diretor: cliente piloto entra por **Testar grátis → cadastro → provisioning canônico → login OWNER → convite da equipe**. Não solicitar dados/senhas para seed; não criar tenant ou liberar entitlement por fora desse fluxo.
+- PR #216 ENCERRADA SEM MERGE; seed e testes permanecem apenas no histórico/branch. CI #41867558459 SUCCESS não representa aprovação para usar seed no piloto.
+- Repositórios oficiais: backend `faabio3131/iron-fit-backend`; Web/mobile `faabio3131/iron-fit-app`. Antigo web-platform não deve ser usado.
+- Fase 1 interna: navegador real já cobre cadastro gratuito, onboarding, OWNER e convite/login MANAGER/RECEPTION/TRAINER. Nova certificação fixa o app atual `12e74e8f5931ed8a7161bd6dba868150d9946d10`, em vez da candidata antiga, e verifica persistência/idempotência/30 dias/assinatura publicada/OWNER exclusivo. Aguardar CI deste HEAD.
+- A aplicação no cliente real será feita pelo próprio cliente. Isso não impede executar/certificar os blocos internos seguintes sequencialmente em ambiente descartável.
+- Reconciliar o cronograma de seis fases com schema/API real; não inventar GymUnit, rotas Next.js, plano corporativo paralelo, APK para iOS nem homologação física.
+- Próximo passo: CI integral da jornada oficial → corrigir → merge verde → pós-merge → Fase 2 recepção/matrícula/caixa com permissões granulares, preservando financeiro OWNER-only fora das operações de balcão autorizadas.
