@@ -1,3 +1,4 @@
+import { normalizeCpf } from '../../common/security/cpf';
 import { publicUserSelect } from '../../common/security/public-user-select';
 import {
   BadRequestException,
@@ -88,6 +89,7 @@ export class StudentsService {
       throw new NotFoundException('Academia nao encontrada');
     }
 
+    const cpf = normalizeCpf(dto.cpf);
     const gym = await this.prisma.gym.findFirst({
       where: { id: userGymId, active: true },
     });
@@ -181,6 +183,8 @@ export class StudentsService {
         data: {
           gymId: userGymId,
           userId: user.id,
+          cpf,
+          photoUrl: dto.photoUrl ?? null,
           birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
           gender: dto.gender,
           goal: dto.goal,
@@ -254,6 +258,9 @@ export class StudentsService {
         };
       } catch (error) {
         if (this.retryable(error) && attempt < SERIALIZABLE_ATTEMPTS) continue;
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new ConflictException('Cadastro ja existente para estes dados');
+        }
         throw error;
       }
     }
@@ -326,6 +333,9 @@ export class StudentsService {
       name: s.user!.name,
       email: s.user!.email,
       phone: s.user!.phone,
+      cpf: s.cpf,
+      photoUrl: s.photoUrl,
+      birthDate: s.birthDate,
       status: s.status,
       enrollmentDate: s.enrollmentDate,
     }));
@@ -346,6 +356,8 @@ export class StudentsService {
       name: student.user!.name,
       email: student.user!.email,
       phone: student.user!.phone,
+      cpf: student.cpf,
+      photoUrl: student.photoUrl,
       birthDate: student.birthDate,
       gender: student.gender,
       goal: student.goal,

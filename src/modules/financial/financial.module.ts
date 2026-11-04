@@ -1,3 +1,5 @@
+import { ReceptionController } from '../reception/reception.controller';
+import { ReceptionService } from '../reception/reception.service';
 import { Module } from '@nestjs/common';
 import { FinancialController } from './financial.controller';
 import { StripePaymentWebhookController } from './stripe-payment-webhook.controller';
@@ -24,9 +26,10 @@ import { FiscalReconciliationCancellationService } from './fiscal-reconciliation
 
 @Module({
   imports: [PrismaModule, IntegrationsModule, AuthModule],
-  controllers: [FinancialController, StripePaymentWebhookController, MercadoPagoPaymentWebhookController],
+  controllers: [ReceptionController, FinancialController, StripePaymentWebhookController, MercadoPagoPaymentWebhookController],
   providers: [
     FinancialService,
+    ReceptionService,
     StripePaymentWebhookInboxService,
     MercadoPagoPaymentWebhookInboxService,
     TenantPaymentCheckoutService,

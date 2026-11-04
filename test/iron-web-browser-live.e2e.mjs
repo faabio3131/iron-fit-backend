@@ -188,6 +188,30 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByTestId('admin-step-up-submit').click();
     await page.getByTestId('admin-password-input').waitFor({ state: 'hidden', timeout: 20000 });
 
+    // Configure the authorized academy desk inside the real OWNER step-up area.
+    await page.getByTestId('finance-account-name').fill('Caixa piloto navegador');
+    const [deskAccountResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/financial/accounts') && response.request().method() === 'POST'),
+      page.getByTestId('finance-create-account').click(),
+    ]);
+    assert.equal(deskAccountResponse.status(), 201);
+    const deskAccount = await deskAccountResponse.json();
+    await page.getByTestId(`desk-account-${deskAccount.id}`).waitFor();
+    await page.getByTestId('desk-plan-name').fill('Mensal piloto navegador');
+    await page.getByTestId('desk-plan-price').fill('159,90');
+    const [deskPlanResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/reception/admin/plans') && response.request().method() === 'POST'),
+      page.getByTestId('desk-create-plan').click(),
+    ]);
+    assert.equal(deskPlanResponse.status(), 201);
+    const deskPlan = await deskPlanResponse.json();
+    await page.getByTestId(`desk-account-${deskAccount.id}`).click();
+    const [deskPolicyResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/reception/admin/policy') && response.request().method() === 'POST'),
+      page.getByTestId('desk-enable').click(),
+    ]);
+    assert.equal(deskPolicyResponse.status(), 201);
+
     const moduleIds = await page.locator('[data-testid^="nav-"]').evaluateAll((nodes) =>
       nodes.map((node) => node.getAttribute('data-testid')).filter(Boolean));
     assert.ok(moduleIds.length >= 12, `Expected core modules, saw ${moduleIds.length}`);
@@ -212,6 +236,26 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
       for (const restricted of ['financial', 'fiscal', 'saasBilling', 'entitlements', 'integrations']) {
         assert.equal(await page.getByTestId(`nav-${restricted}`).count(), 0,
           `${employee.role} must not receive ${restricted} navigation`);
+      }
+      assert.equal(await page.getByTestId('nav-reception').count(), employee.role === 'RECEPTION' ? 1 : 0);
+      if (employee.role === 'RECEPTION') {
+        await openModule('reception', ['/students']);
+        await page.getByTestId(`desk-student-${studentCreated.id}`).waitFor();
+        await page.getByTestId(`desk-student-${studentCreated.id}`).click();
+        await page.getByTestId(`desk-plan-${deskPlan.id}`).click();
+        assert.equal(await page.getByTestId('desk-enroll').isEnabled(), false);
+        await page.getByTestId('desk-confirm').click();
+        const [saleResponse] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith('/reception/enroll') && response.request().method() === 'POST'),
+          page.getByTestId('desk-enroll').click(),
+        ]);
+        assert.equal(saleResponse.status(), 201);
+        const sale = await saleResponse.json();
+        assert.equal(sale.charge.status, 'PAID');
+        assert.equal(sale.charge.amount, 15990);
+        await page.getByTestId('desk-success').waitFor();
+        await page.getByTestId('desk-closing').waitFor();
+        assert.equal(await prisma.financialTransaction.count({ where: { gymId: trial.gymId, sourceId: sale.charge.id } }), 1);
       }
       assert.equal(await page.getByTestId('nav-team').count(), employee.role === 'MANAGER' ? 1 : 0);
       assert.equal(await page.getByTestId('nav-workouts').count(), employee.role === 'TRAINER' ? 1 : (employee.role === 'MANAGER' ? 1 : 0));

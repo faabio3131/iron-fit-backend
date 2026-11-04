@@ -1,0 +1,45 @@
+// Academy → student desk sales. Never FM → academy SaaS billing.
+model MembershipPlan {
+  id String @id @default(uuid())
+  gymId String
+  name String
+  amount Int
+  intervalMonths Int @default(1)
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  gym Gym @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  enrollments DeskReceipt[]
+  @@index([gymId, active])
+}
+
+model ReceptionDeskPolicy {
+  gymId String @id
+  accountId String
+  enabled Boolean @default(false)
+  updatedByUserId String
+  updatedAt DateTime @updatedAt
+  gym Gym @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  account FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+}
+
+// Idempotency and operator attribution only. Charge/FinancialTransaction remain
+// the financial source of truth; no duplicate balance or amount ledger here.
+model DeskReceipt {
+  id String @id @default(uuid())
+  gymId String
+  requestId String
+  fingerprint String
+  actorUserId String
+  studentId String
+  planId String?
+  subscriptionId String?
+  chargeId String @unique
+  createdAt DateTime @default(now())
+  gym Gym @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  plan MembershipPlan? @relation(fields: [planId], references: [id], onDelete: Restrict)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  charge Charge @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+  @@unique([gymId, requestId])
+  @@index([gymId, actorUserId, createdAt])
+}
