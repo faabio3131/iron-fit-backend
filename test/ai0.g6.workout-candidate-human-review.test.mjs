@@ -44,7 +44,7 @@ test('AI0 G6 validates provider output and reuses canonical workout equipment va
   assert.match(service, /this\.workouts\.createAiCandidate/);
   assert.match(workouts, /findEquipmentExerciseMapping/);
   assert.match(workouts, /Equipamento incompativel com o exercicio/);
-  assert.match(workouts, /where: \{ id: \{ in: equipmentIds \}, gymId, active: true \}/);
+  assert.match(workouts, /where: \{ id: \{ in: equipmentIds \}, gymId, active: true, operationalStatus: 'OPERATIONAL' \}/);
 });
 
 test('AI0 G6 physically constrains AI creation to PENDING_REVIEW with no approver', async () => {

@@ -42,3 +42,7 @@ Concluir CI da Fase 2, corrigir causas-raiz, integrar somente verde e conferir p
 - Regressão backend local final: 937 testes PASS, zero skips; lint/typecheck/build PASS.
 - Nova suíte HTTP tem isolamento explícito dos buckets antiabuso somente em CI/HOMOLOG/localhost/iron_ci, antes de iniciar sua jornada. Não reduz limites ou proteções em runtime. Inclui duas requisições simultâneas com a mesma chave, além do replay sequencial.
 - Gate de dependências do app identificou advisories novos do node-forge 1.4.0; override/lock elevados para 1.4.3. Auditoria local PASS sem exceção nova. Gate cruzado deve certificar o HEAD atualizado do app.
+
+## Avanço da Fase 3
+
+Fase 2 integrada nas PRs backend #218 e app #83 com CI completa verde. Fase 3 candidata adiciona Adaptação, Hipertrofia A/B, Emagrecimento/condicionamento, Glúteos/inferiores e Funcional como modelos de edição no Workout Studio. Não grava treinos de alunos sem ação humana. Modelos só ficam prontos quando exercícios existem e aparelhos necessários estão ativos, operacionais e compatíveis no inventário do tenant. Templates com lacunas mostram o motivo e não são carregados como se estivessem prontos. Prescrição manual permanece disponível; aprovação/ativação humanas são preservadas. IA real depende da configuração governada já existente e não é simulada por estes modelos. Aguardar CI e navegador desta candidata antes de marcar Fase 3 interna certificada.

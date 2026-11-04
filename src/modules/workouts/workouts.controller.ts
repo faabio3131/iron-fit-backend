@@ -40,6 +40,10 @@ export class WorkoutsController {
     );
   }
 
+  @Get('templates')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
+  templates(@CurrentUser() user: any) { return this.workoutsService.templates(user.activeGymId ?? user.gymId); }
+
   @Get(':id')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
   findOne(

@@ -259,6 +259,31 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
       }
       assert.equal(await page.getByTestId('nav-team').count(), employee.role === 'MANAGER' ? 1 : 0);
       assert.equal(await page.getByTestId('nav-workouts').count(), employee.role === 'TRAINER' ? 1 : (employee.role === 'MANAGER' ? 1 : 0));
+      if (employee.role === 'TRAINER') {
+        await openModule('workouts', ['/workouts', '/students']);
+        await page.getByTestId('studio-template-adaptation').waitFor();
+        await page.getByTestId('studio-template-adaptation').click();
+        await page.getByTestId(`studio-student-${studentCreated.id}`).click();
+        const [workoutResponse] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith('/workouts') && response.request().method() === 'POST'),
+          page.getByTestId('manual-workout-create').click(),
+        ]);
+        assert.equal(workoutResponse.status(), 201);
+        const workout = await workoutResponse.json();
+        assert.equal(workout.status, 'DRAFT');
+        assert.equal(workout.createdByAI, false);
+        await page.getByTestId(`workout-approve-${workout.id}`).click();
+        const [approval] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith(`/workouts/${workout.id}/status`) && response.request().method() === 'PATCH'),
+          page.getByTestId(`workout-review-confirm-${workout.id}`).click(),
+        ]);
+        assert.equal(approval.status(), 200);
+        const [activation] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith(`/workouts/${workout.id}/status`) && response.request().method() === 'PATCH'),
+          page.getByTestId(`workout-activate-${workout.id}`).click(),
+        ]);
+        assert.equal(activation.status(), 200);
+      }
       assert.equal(await page.getByTestId('nav-security').count(), 1);
       await page.getByTestId('commercial-logout').click();
       await page.getByTestId('login-submit').waitFor({ timeout: 15000 });

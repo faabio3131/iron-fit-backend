@@ -96,6 +96,6 @@ test('S12 critical mutation domains emit central AuditLog actions', async () => 
 test('S12 workout creation rejects cross-tenant assessment and equipment links by scoped lookup', async () => {
   const source = await readFile('src/modules/workouts/workouts.service.ts', 'utf8');
   assert.equal(source.includes('student: { gymId }'), true);
-  assert.equal(source.includes("where: { id: { in: equipmentIds }, gymId, active: true }"), true);
+  assert.equal(source.includes("where: { id: { in: equipmentIds }, gymId, active: true, operationalStatus: 'OPERATIONAL' }"), true);
   assert.equal(source.includes("throw new NotFoundException('Equipamento nao encontrado')"), true);
 });
