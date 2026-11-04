@@ -14,7 +14,7 @@ const db = new PrismaClient();
 const suffix = randomUUID();
 const slug = `pilot-cert-${suffix}`;
 const roles = ['OWNER', 'RECEPTION', 'TRAINER'];
-const config = { gym: { name: 'Synthetic CI pilot', slug, timezone: 'America/Sao_Paulo' }, planVersionId: '', effectiveUntil: new Date(Date.now() + 30 * 86400000).toISOString(), users: roles.map(role => ({ role, name: role, email: `${role}-${suffix}@example.invalid` })) };
+const config = { gym: { name: 'Synthetic CI pilot', slug, timezone: 'America/Sao_Paulo' }, planVersionId: '', effectiveUntil: new Date(Date.now() + 30 * 86400000).toISOString(), users: roles.map(role => ({ role, name: role, email: `${role.toLowerCase()}-${suffix}@example.invalid` })) };
 const env = { IRON_RUNTIME_ENV: 'HOMOLOG', IRON_PILOT_APPLY: slug, ...Object.fromEntries(roles.map(role => [`IRON_PILOT_${role}_PASSWORD`, `Synthetic-${role}-${suffix}!`])) };
 let planId;
 try {
