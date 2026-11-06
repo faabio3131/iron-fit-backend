@@ -725,6 +725,9 @@ model Gym {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   userRoles UserRole[]
+  membershipPlans MembershipPlan[]
+  receptionDeskPolicy ReceptionDeskPolicy?
+  deskReceipts DeskReceipt[]
   students  Student[]
   equipments Equipment[]
   equipmentCatalogCandidates EquipmentCatalogCandidate[]
@@ -764,6 +767,8 @@ model Student {
   id              String        @id @default(uuid())
   gymId           String
   userId          String?
+  cpf             String?
+  photoUrl        String?
   birthDate       DateTime?
   gender          String?
   goal            String?
@@ -775,6 +780,7 @@ model Student {
   consentBiometry Boolean       @default(false)
   gym             Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
   user            User?   @relation(fields: [userId], references: [id])
+  deskReceipts DeskReceipt[]
   assessments     Assessment[]
   workouts        Workout[]
   schedules       StudentSchedule[]
@@ -786,6 +792,7 @@ model Student {
   communicationPreference CommunicationPreference?
   aggregatorMembers AggregatorMember[]
   @@index([gymId])
+  @@unique([gymId, cpf])
 }
 
 model Assessment {
@@ -966,6 +973,11 @@ model AccessDevice {
   name            String
   type            AccessType
   protocol        String?
+  manufacturer    String?
+  model           String?
+  firmwareVersion String?
+  certificationStatus String @default("NOT_HOMOLOGATED")
+  certificationRef String?
   ipAddress       String?
   active          Boolean @default(true)
   lastSyncAt      DateTime?
@@ -974,6 +986,28 @@ model AccessDevice {
   gym             Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
   events          AccessEvent[]
   scanNonces      AccessScanNonce[]
+}
+
+// Hardware passage lifecycle is not the same as a decision AccessEvent.
+// Never count AUTHORIZED or COMMAND_ACCEPTED as confirmed attendance.
+model PhysicalAccessAttempt {
+  id                String   @id @default(uuid())
+  gymId             String
+  deviceId          String
+  studentId         String?
+  authorizationId   String   @unique
+  decisionEventId   String?
+  state             String   @default("REQUESTED")
+  denialReason      String?
+  manufacturer      String
+  direction         String
+  vendorEventId     String?
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  @@index([gymId, createdAt])
+  @@index([deviceId, state])
+  @@unique([deviceId, vendorEventId])
 }
 
 model AccessScanNonce {
@@ -991,6 +1025,8 @@ model AccessCredential {
   id            String   @id @default(uuid())
   studentId     String
   type          AccessType
+  selfService   Boolean  @default(false)
+  createdAt     DateTime @default(now())
   tokenHash     String?
   biometricHash String?
   active        Boolean  @default(true)
@@ -1005,12 +1041,18 @@ model AccessEvent {
   studentId    String?
   deviceId     String?
   allowed      Boolean
+  requestId String?
+  requestFingerprint String?
+  actorUserId String?
+  warning String?
+  source String @default("DEVICE_DECISION")
   denialReason String?
   occurredAt   DateTime @default(now())
   gym          Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
   student      Student? @relation(fields: [studentId], references: [id])
   device       AccessDevice? @relation(fields: [deviceId], references: [id])
   aggregatorLink AggregatorAccessEventLink?
+  @@unique([gymId, requestId])
   @@index([gymId])
 }
 
@@ -1049,6 +1091,7 @@ model FinancialAccount {
   initialBalance Int    @default(0)
   active         Boolean @default(true)
   gym            Gym    @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  deskPolicies   ReceptionDeskPolicy[]
   transactions   FinancialTransaction[]
 }
 
@@ -1164,6 +1207,7 @@ model Subscription {
   gym           Gym     @relation(fields: [gymId], references: [id], onDelete: Cascade)
   student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   charges       Charge[]
+  deskReceipts DeskReceipt[]
   @@index([gymId])
 }
 
@@ -1189,6 +1233,7 @@ model Charge {
   subscription             Subscription? @relation(fields: [subscriptionId], references: [id])
   gatewayConnection        IntegrationConnection? @relation(fields: [gatewayConnectionId], references: [id], onDelete: SetNull)
   fiscalHandoff            FiscalHandoff?
+  deskReceipt           DeskReceipt?
 
   @@index([gymId])
   @@index([gymId, status])

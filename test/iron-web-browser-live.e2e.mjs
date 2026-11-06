@@ -45,7 +45,28 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByTestId('trial-gym-name').fill(`B6 Browser Gym ${id}`);
     await page.getByTestId('trial-email').fill(email);
     await page.getByTestId('trial-password').fill(password);
-    await page.getByTestId('trial-submit').click();
+    const [trialResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/commercial/trial/start') && response.request().method() === 'POST'),
+      page.getByTestId('trial-submit').click(),
+    ]);
+    assert.equal(trialResponse.status(), 201);
+    const trial = await trialResponse.json();
+    const trialBody = trialResponse.request().postDataJSON();
+    const persisted = await prisma.commercialTrialProvisioning.findUnique({ where: { requestId: trialBody.requestId } });
+    assert.equal(persisted.gymId, trial.gymId);
+    assert.equal(persisted.trialEndsAt.getTime() - persisted.trialStartedAt.getTime(), 30 * 86400000);
+    const subscription = await prisma.tenantProductSubscription.findUnique({ where: { id: persisted.subscriptionId }, include: { planVersion: true } });
+    assert.equal(subscription.status, 'ACTIVE');
+    assert.equal(subscription.planVersion.status, 'PUBLISHED');
+    assert.equal(subscription.gymId, trial.gymId);
+    const replay = await page.request.post(`${process.env.B6_API_URL}/commercial/trial/start`, { data: trialBody });
+    assert.equal(replay.status(), 201);
+    assert.equal((await replay.json()).gymId, trial.gymId);
+    assert.equal(await prisma.tenantProductSubscription.count({ where: { gymId: trial.gymId } }), 1);
+    const ownerMemberships = await prisma.userRole.findMany({ where: { userId: persisted.userId }, include: { role: true } });
+    assert.equal(ownerMemberships.length, 1);
+    assert.equal(ownerMemberships[0].role.name, 'OWNER');
+    assert.equal(ownerMemberships[0].gymId, trial.gymId);
     await page.getByTestId('login-notice').waitFor({ timeout: 20000 });
     await page.getByTestId('login-email').fill(email);
     await page.getByTestId('login-password').fill(password);
@@ -167,6 +188,30 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByTestId('admin-step-up-submit').click();
     await page.getByTestId('admin-password-input').waitFor({ state: 'hidden', timeout: 20000 });
 
+    // Configure the authorized academy desk inside the real OWNER step-up area.
+    await page.getByTestId('finance-account-name').fill('Caixa piloto navegador');
+    const [deskAccountResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/financial/accounts') && response.request().method() === 'POST'),
+      page.getByTestId('finance-create-account').click(),
+    ]);
+    assert.equal(deskAccountResponse.status(), 201);
+    const deskAccount = await deskAccountResponse.json();
+    await page.getByTestId(`desk-account-${deskAccount.id}`).waitFor();
+    await page.getByTestId('desk-plan-name').fill('Mensal piloto navegador');
+    await page.getByTestId('desk-plan-price').fill('159,90');
+    const [deskPlanResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/reception/admin/plans') && response.request().method() === 'POST'),
+      page.getByTestId('desk-create-plan').click(),
+    ]);
+    assert.equal(deskPlanResponse.status(), 201);
+    const deskPlan = await deskPlanResponse.json();
+    await page.getByTestId(`desk-account-${deskAccount.id}`).click();
+    const [deskPolicyResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/reception/admin/policy') && response.request().method() === 'POST'),
+      page.getByTestId('desk-enable').click(),
+    ]);
+    assert.equal(deskPolicyResponse.status(), 201);
+
     const moduleIds = await page.locator('[data-testid^="nav-"]').evaluateAll((nodes) =>
       nodes.map((node) => node.getAttribute('data-testid')).filter(Boolean));
     assert.ok(moduleIds.length >= 12, `Expected core modules, saw ${moduleIds.length}`);
@@ -192,8 +237,100 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         assert.equal(await page.getByTestId(`nav-${restricted}`).count(), 0,
           `${employee.role} must not receive ${restricted} navigation`);
       }
+      assert.equal(await page.getByTestId('nav-reception').count(), employee.role === 'RECEPTION' ? 1 : 0);
+      if (employee.role === 'RECEPTION') {
+        await openModule('reception', ['/students']);
+        await page.getByTestId(`desk-student-${studentCreated.id}`).waitFor();
+        await page.getByTestId(`desk-student-${studentCreated.id}`).click();
+        await page.getByTestId(`desk-plan-${deskPlan.id}`).click();
+        assert.equal(await page.getByTestId('desk-enroll').isEnabled(), false);
+        await page.getByTestId('desk-confirm').click();
+        const [saleResponse] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith('/reception/enroll') && response.request().method() === 'POST'),
+          page.getByTestId('desk-enroll').click(),
+        ]);
+        assert.equal(saleResponse.status(), 201);
+        const sale = await saleResponse.json();
+        assert.equal(sale.charge.status, 'PAID');
+        assert.equal(sale.charge.amount, 15990);
+        await page.getByTestId('desk-success').waitFor();
+        await page.getByTestId('desk-closing').waitFor();
+        assert.equal(await prisma.financialTransaction.count({ where: { gymId: trial.gymId, sourceId: sale.charge.id } }), 1);
+        await page.getByTestId('nav-access').click();
+        await page.getByTestId('reception-access-terminal').waitFor({ timeout: 20000 });
+        const authorization = await saleResponse.request().headerValue('authorization');
+        assert.ok(authorization);
+        const headers = { authorization };
+        const issued = await page.request.post(process.env.B6_API_URL + '/access/credentials', {
+          headers, data: { studentId: studentCreated.id, type: 'QR_CODE' },
+        });
+        assert.equal(issued.status(), 201);
+        const { qrToken } = await issued.json();
+        const eventIds = [];
+        const durations = [];
+        for (let i = 0; i < 10; i++) {
+          if (i === 0) await page.getByTestId('terminal-qr').fill(qrToken);
+          else await page.getByTestId('terminal-search').fill(studentCreated.id);
+          const [response] = await Promise.all([
+            page.waitForResponse(r => r.url().endsWith('/access/terminal/check-in') && r.request().method() === 'POST'),
+            i === 0 ? page.getByTestId('terminal-qr').press('Enter') : page.getByTestId('terminal-check-' + studentCreated.id).click(),
+          ]);
+          assert.equal(response.status(), 201);
+          const decision = await response.json();
+          assert.equal(decision.allowed, true);
+          eventIds.push(decision.eventId);
+          if (i === 0) {
+            const data = response.request().postDataJSON();
+            const replay = await page.request.post(response.url(), { headers, data });
+            assert.equal(replay.status(), 201);
+            assert.equal((await replay.json()).eventId, decision.eventId);
+            const mismatch = await page.request.post(response.url(), {
+              headers, data: { requestId: data.requestId, studentId: studentCreated.id },
+            });
+            assert.equal(mismatch.status(), 409);
+          }
+          const timing = response.request().timing();
+          durations.push(timing.responseEnd - timing.requestStart);
+        }
+        assert.equal(new Set(eventIds).size, 10);
+        assert.equal(await prisma.accessEvent.count({ where: { id: { in: eventIds }, gymId: trial.gymId, studentId: studentCreated.id } }), 10);
+        assert.equal(await prisma.auditLog.count({ where: { entityId: { in: eventIds }, gymId: trial.gymId, action: 'ACCESS_DECISION_RECORDED' } }), 10);
+        assert.ok(durations.every(ms => Number.isFinite(ms) && ms >= 0));
+        durations.sort((a, b) => a - b);
+        assert.ok(durations[9] < 300, 'Terminal local p95: ' + durations[9] + ' ms');
+      }
       assert.equal(await page.getByTestId('nav-team').count(), employee.role === 'MANAGER' ? 1 : 0);
       assert.equal(await page.getByTestId('nav-workouts').count(), employee.role === 'TRAINER' ? 1 : (employee.role === 'MANAGER' ? 1 : 0));
+      if (employee.role === 'TRAINER') {
+        await openModule('workouts', ['/workouts', '/students']);
+        await page.getByTestId('studio-template-adaptation').waitFor();
+        await page.getByTestId('studio-template-adaptation').click();
+        await page.getByTestId('studio-exercise-load-1-0').fill('Peso corporal');
+        await page.getByTestId(`studio-student-${studentCreated.id}`).click();
+        const [workoutResponse] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith('/workouts') && response.request().method() === 'POST'),
+          page.getByTestId('manual-workout-create').click(),
+        ]);
+        assert.equal(workoutResponse.status(), 201);
+        const workout = await workoutResponse.json();
+        assert.equal(workout.status, 'DRAFT');
+        assert.equal(workout.createdByAI, false);
+        assert.equal(workout.sessions[0].exercises[0].suggestedLoad, 'Peso corporal');
+        await page.getByTestId(`workout-approve-${workout.id}`).click();
+        const [approval] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith(`/workouts/${workout.id}/status`) && response.request().method() === 'PATCH'),
+          page.getByTestId(`workout-review-confirm-${workout.id}`).click(),
+        ]);
+        assert.equal(approval.status(), 200);
+        const [activation] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith(`/workouts/${workout.id}/status`) && response.request().method() === 'PATCH'),
+          page.getByTestId(`workout-activate-${workout.id}`).click(),
+        ]);
+        assert.equal(activation.status(), 200);
+      }
+      // Mutation completion is followed by canonical permission/tenant refresh.
+      // Assert the settled authenticated shell, preserving the exact RBAC check.
+      await page.getByTestId('nav-security').waitFor({ timeout: 20000 });
       assert.equal(await page.getByTestId('nav-security').count(), 1);
       await page.getByTestId('commercial-logout').click();
       await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
@@ -207,8 +344,19 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     for (const tab of ['Treino', 'Intelligence', 'Agenda', 'Evolução', 'Plano', 'Perfil']) {
       assert.ok(await page.getByText(tab, { exact: true }).count() >= 1, `Missing student tab ${tab}`);
     }
+    await page.getByText('Treino', { exact: true }).last().click();
+    await page.getByText('Peso corporal', { exact: false }).first().waitFor({ timeout: 20000 });
     await page.getByText('Agenda', { exact: true }).last().click();
     await page.getByText('Perfil', { exact: true }).last().click();
+    const [qrResponse] = await Promise.all([
+      page.waitForResponse(r => r.url().endsWith('/me/access/qr-code') && r.request().method() === 'POST'),
+      page.getByTestId('student-qr-generate').click(),
+    ]);
+    assert.equal(qrResponse.status(), 201);
+    const ownQr = await qrResponse.json();
+    assert.match(ownQr.imageDataUrl, /^data:image\/png;base64,iVBOR/);
+    assert.equal(ownQr.qrToken, undefined);
+    assert.equal(await prisma.accessCredential.count({ where: { id: ownQr.credentialId, studentId: studentCreated.id, selfService: true, active: true } }), 1);
     await page.getByTestId('logout-submit').click();
     await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
 

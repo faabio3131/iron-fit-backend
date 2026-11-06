@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -27,36 +27,24 @@ export class AccessService {
     return a.length === b.length && timingSafeEqual(a, b);
   }
 
-  private async recordEvent(params: {
-    gymId: string;
-    deviceId: string;
-    studentId?: string | null;
-    allowed: boolean;
-    denialReason?: string | null;
-  }) {
-    const event = await this.prisma.accessEvent.create({
-      data: {
-        gymId: params.gymId,
-        deviceId: params.deviceId,
-        studentId: params.studentId ?? null,
-        allowed: params.allowed,
-        denialReason: params.denialReason ?? null,
-      } as any,
-    });
-
+  async recordEvent(params: {
+    gymId: string; deviceId: string | null; studentId?: string | null; allowed: boolean;
+    denialReason?: string | null; warning?: string | null; source?: string;
+    actorUserId?: string; requestId?: string; requestFingerprint?: string;
+  }, db: PrismaService | Prisma.TransactionClient = this.prisma) {
+    const event = await db.accessEvent.create({ data: {
+      gymId: params.gymId, deviceId: params.deviceId, studentId: params.studentId ?? null,
+      allowed: params.allowed, denialReason: params.denialReason ?? null, warning: params.warning ?? null,
+      source: params.source ?? 'DEVICE_DECISION', actorUserId: params.actorUserId,
+      requestId: params.requestId, requestFingerprint: params.requestFingerprint,
+    } });
     await this.audit.record({
-      gymId: params.gymId,
-      action: 'ACCESS_DECISION_RECORDED',
-      entity: 'AccessEvent',
-      entityId: event.id,
-      next: {
-        deviceId: params.deviceId,
-        studentId: params.studentId ?? null,
-        allowed: params.allowed,
-        denialReason: params.denialReason ?? null,
+      gymId: params.gymId, userId: params.actorUserId ?? null, action: 'ACCESS_DECISION_RECORDED',
+      entity: 'AccessEvent', entityId: event.id, next: {
+        deviceId: params.deviceId, studentId: params.studentId ?? null, allowed: params.allowed,
+        denialReason: params.denialReason ?? null, source: params.source ?? 'DEVICE_DECISION',
       },
-    });
-
+    }, db);
     return event;
   }
 
@@ -253,6 +241,11 @@ export class AccessService {
         name: true,
         type: true,
         protocol: true,
+        manufacturer: true,
+        model: true,
+        firmwareVersion: true,
+        certificationStatus: true,
+        certificationRef: true,
         active: true,
         lastSyncAt: true,
         tokenRotatedAt: true,
@@ -264,8 +257,11 @@ export class AccessService {
     dto: CreateCredentialDto,
     gymId: string,
     actorUserId?: string,
+    transaction?: Prisma.TransactionClient,
+    selfService = false,
   ) {
-    const student = await this.prisma.student.findFirst({
+    const db = transaction ?? this.prisma;
+    const student = await db.student.findFirst({
       where: { id: dto.studentId, gymId },
     });
 
@@ -276,11 +272,12 @@ export class AccessService {
     const rawToken = randomBytes(24).toString('hex');
     const tokenHash = this.hash(rawToken);
 
-    const credential = await this.prisma.accessCredential.create({
+    const credential = await db.accessCredential.create({
       data: {
         studentId: dto.studentId,
         type: dto.type || 'QR_CODE',
         tokenHash,
+        selfService,
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
       } as any,
     });
@@ -297,7 +294,7 @@ export class AccessService {
         active: credential.active,
         expiresAt: credential.expiresAt,
       },
-    });
+    }, db);
 
     return {
       credentialId: credential.id,
@@ -312,6 +309,7 @@ export class AccessService {
     deviceId: string,
     gymId: string,
     actorUserId?: string,
+    allowInactiveEnrollment = false,
   ) {
     const rawToken = randomBytes(32).toString('base64url');
     const tokenRotatedAt = new Date();
@@ -319,17 +317,20 @@ export class AccessService {
     try {
       await this.prisma.$transaction(async (tx) => {
         const device = await tx.accessDevice.findFirst({
-          where: { id: deviceId, gymId, active: true },
-          select: { id: true },
+          where: { id: deviceId, gymId, active: !allowInactiveEnrollment },
+          select: { id: true, manufacturer: true },
         });
         if (!device) {
           throw new NotFoundException('Dispositivo nao encontrado');
+        }
+        if (!allowInactiveEnrollment && device.manufacturer) {
+          throw new ForbiddenException('Token de catraca fisica exige provisionamento protegido pelo proprietario');
         }
 
         // Do not provision secrets for a device that changed tenant/status
         // after the read; rotate token and audit in one DB transaction.
         await tx.accessDevice.update({
-          where: { id: device.id, gymId, active: true },
+          where: { id: device.id, gymId, active: !allowInactiveEnrollment },
           data: {
             deviceTokenHash: this.hash(rawToken),
             tokenRotatedAt,

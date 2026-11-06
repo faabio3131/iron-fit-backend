@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { PrismaClient } from '@prisma/client';
+import { login, request } from '../scripts/b6-e2e-lib.mjs';
+const db = new PrismaClient();
+test('pilot templates: official trial, canonical draft, human approval and student/mobile visibility', async () => {
+  assert.equal(process.env.CI, 'true'); assert.equal(process.env.NODE_ENV, 'test'); assert.equal(process.env.IRON_RUNTIME_ENV, 'HOMOLOG');
+  const url = new URL(process.env.DATABASE_URL); assert.equal(url.pathname, '/iron_ci'); assert.ok(['localhost','127.0.0.1'].includes(url.hostname));
+  try {
+    await db.authRateLimitBucket.deleteMany({ where: { scope: { in: ['AUTH_SIGNUP_IP', 'AUTH_LOGIN_REQUEST_IP', 'AUTH_LOGIN_FAILURE_IP'] } } });
+    const id = randomUUID().slice(0, 8), email = `templates-${id}@example.com`, password = process.env.B6_OWNER_PASSWORD;
+    await request('/commercial/trial/start', { expected: 201, method: 'POST', body: { requestId: randomUUID(), email, password, name: 'Template Owner', gymName: `Template Gym ${id}`, timezone: 'America/Sao_Paulo' } });
+    const owner = await login(email, password);
+    const trainerEmail = `templates-trainer-${id}@example.com`;
+    await request('/users', { token: owner.access_token, method: 'POST', expected: 201, body: { email: trainerEmail, password: process.env.B6_STAFF_PASSWORD, name: 'Template Trainer', roleName: 'TRAINER' } });
+    const trainer = await login(trainerEmail, process.env.B6_STAFF_PASSWORD);
+    const studentEmail = `templates-student-${id}@example.com`;
+    const student = (await request('/students', { token: owner.access_token, method: 'POST', expected: 201, body: { name: 'Template Student', email: studentEmail } })).payload;
+    const templates = (await request('/workouts/templates', { token: trainer.access_token, expected: 200 })).payload;
+    assert.equal(templates.length, 5);
+    const template = templates.find(row => row.id === 'adaptation');
+    assert.equal(template.ready, true); assert.equal(template.requiresHumanReview, true);
+    const draft = (await request('/workouts', { token: trainer.access_token, method: 'POST', expected: 201, body: { studentId: student.id, goal: template.goal, weeklyFrequency: template.weeklyFrequency, sessions: template.sessions, notes: template.notes } })).payload;
+    assert.equal(draft.status, 'DRAFT'); assert.equal(draft.createdByAI, false);
+    const unavailable = await db.equipment.create({ data: { gymId: owner.user.activeGymId, name: 'Synthetic maintenance fixture', active: true, operationalStatus: 'MAINTENANCE' } });
+    const invalidSessions = structuredClone(template.sessions);
+    invalidSessions[0].exercises[0].equipmentId = unavailable.id;
+    await request('/workouts', { token: trainer.access_token, method: 'POST', expected: 404, body: { studentId: student.id, sessions: invalidSessions } });
+    assert.equal(await db.workout.count({ where: { studentId: student.id } }), 1);
+    await request(`/workouts/${draft.id}/status`, { token: trainer.access_token, method: 'PATCH', expected: 400, body: { status: 'ACTIVE' } });
+    await request(`/workouts/${draft.id}/status`, { token: trainer.access_token, method: 'PATCH', expected: 200, body: { status: 'APPROVED' } });
+    await request(`/workouts/${draft.id}/status`, { token: trainer.access_token, method: 'PATCH', expected: 200, body: { status: 'ACTIVE' } });
+    await request('/student-onboarding/accept-invite', { method: 'POST', expected: 201, body: { token: student.onboarding.token, password: process.env.B6_STUDENT_PASSWORD } });
+    const learner = await login(studentEmail, process.env.B6_STUDENT_PASSWORD);
+    await request('/workouts/templates', { token: learner.access_token, expected: 403 });
+    const visible = (await request('/me/workouts', { token: learner.access_token, expected: 200 })).payload;
+    assert.ok(visible.some(row => row.id === draft.id));
+  } finally { await db.$disconnect(); }
+}, { timeout: 60000 });

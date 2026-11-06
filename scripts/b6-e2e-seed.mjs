@@ -279,7 +279,7 @@ async function main() {
       matrixId: matrix.id,
       trialEnabled: true,
       trialPlanVersionId: trial.version.id,
-      trialDays: 14,
+      trialDays: 30,
       invoiceDueDays: 3,
       dunningGraceDays: 5,
       upgradePolicy: 'IMMEDIATE_PRORATED',

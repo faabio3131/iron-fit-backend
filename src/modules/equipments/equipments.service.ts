@@ -163,6 +163,7 @@ export class EquipmentsService {
       where: {
         gymId,
         active: true,
+        operationalStatus: 'OPERATIONAL',
         catalogItemId: { not: null },
       },
       include: { catalogItem: true },

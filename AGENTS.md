@@ -839,3 +839,42 @@ Atualizar este bloco a cada entrega:
 - **Sem deploy nem homologação externa executados nesta reconciliação.** A existência de PR de promoção não prova operação efetiva do provider.
 
 **Próxima ação permitida:** reconciliar o critério formal de prontidão R, a matriz dos providers e evidências de ambientes/serviços efetivamente observáveis. Só programar gaps internos reproduzíveis. Não abrir um novo bloco genérico P ou Q sem falha específica.
+
+
+## CURRENT — Piloto pela jornada oficial (04/11/2026)
+
+- Decisão expressa do Diretor: cliente piloto entra por **Testar grátis → cadastro → provisioning canônico → login OWNER → convite da equipe**. Não solicitar dados/senhas para seed; não criar tenant ou liberar entitlement por fora desse fluxo.
+- PR #216 ENCERRADA SEM MERGE; seed e testes permanecem apenas no histórico/branch. CI #41867558459 SUCCESS não representa aprovação para usar seed no piloto.
+- Repositórios oficiais: backend `faabio3131/iron-fit-backend`; Web/mobile `faabio3131/iron-fit-app`. Antigo web-platform não deve ser usado.
+- Fase 1 interna: navegador real já cobre cadastro gratuito, onboarding, OWNER e convite/login MANAGER/RECEPTION/TRAINER. Nova certificação fixa o app atual `12e74e8f5931ed8a7161bd6dba868150d9946d10`, em vez da candidata antiga, e verifica persistência/idempotência/30 dias/assinatura publicada/OWNER exclusivo. Aguardar CI deste HEAD.
+- A aplicação no cliente real será feita pelo próprio cliente. Isso não impede executar/certificar os blocos internos seguintes sequencialmente em ambiente descartável.
+- Reconciliar o cronograma de seis fases com schema/API real; não inventar GymUnit, rotas Next.js, plano corporativo paralelo, APK para iOS nem homologação física.
+- Próximo passo: CI integral da jornada oficial → corrigir → merge verde → pós-merge → Fase 2 recepção/matrícula/caixa com permissões granulares, preservando financeiro OWNER-only fora das operações de balcão autorizadas.
+
+
+## CURRENT — Fase 2 do piloto (04/11/2026)
+
+- Fase 1 interna concluída: #217 MERGED `a5e84305bcb03ac745869ea006fbbc9968c0661e`; CI pré `41872805440` e pós `41874060440` SUCCESS. #216 fechada sem merge; seed fora da jornada.
+- Fase atual: 2, branch `feat/pilot-reception-desk-20261104`; app `feat/pilot-reception-workspace-20261104`. Escopo/critério/matriz: `docs/PILOT_EXECUTION_2026-11-04.md`. Não declarar CI/merge desta entrega antes de consultar o HEAD real.
+- Novos planos são da academia→aluno, sem nova autoridade SaaS. Caixa opt-in com OWNER+step-up; recepção só recebe vendas autorizadas e vê o próprio fechamento. Liquidação usa FinancialService canônico na mesma transação. Gateway nunca é baixado por checkbox.
+- Próximo gate: lint/typecheck/build/regressão → PostgreSQL/HTTP e navegador com app candidato → corrigir → merge verde e pós-merge → Fase 3. Preservar RBAC administrativo e isolamento de tenant.
+- Nenhum deploy, conta real, pagamento real ou homologação física realizados. O cliente piloto fará a própria entrada pelo botão Testar grátis.
+
+
+## CURRENT — Fase 3 / fichas-modelo (04/11/2026)
+
+- Fase 2 integrada: backend #218 main `af86fa253f5717cb2c220f46aff793106eb47f56`; app #83 main `b0f161cfbef7b2952c2a0539b6eac6686f5df570`. CI pré-merge backend 41877912066 e app 41877081658 SUCCESS; 937 testes backend, 390 app e 9 jornadas HTTP/PostgreSQL 18 PASS. Pós-merges 41880622803/41880677293 SUCCESS consultados.
+- Fase atual: 3, branch `feat/pilot-workout-templates-20261104` nos dois repositórios. Cinco modelos versionados de edição, sem persistência ou aprovação automática; IDs de exercícios resolvidos da biblioteca canônica, aparelhos somente do tenant, ativos/operacionais e com mapping PRIMARY/ALTERNATIVE. Mapping OPTIONAL não prova disponibilidade de máquina obrigatória.
+- API `/workouts/templates` e Workout Studio real: modelo preenche o composer existente, POST /workouts cria DRAFT, aprovação e ativação continuam humanas e distintas. Equipamento em manutenção também deixa de ser aceito pela prescrição canônica e pelo seletor de compatibilidade.
+- Próximo gate: testes/CI reais desta árvore, inclusive uso de modelo → rascunho → revisão → ativação pelo TRAINER no navegador, sem confundir com geração de IA real. Depois merge/pós-merge e Fase 4.
+- Nenhuma configuração/modelo externo foi declarado homologado; equipamentos reais e API/modelo real permanecem externos. Nenhum deploy do produto.
+
+- Conferência final da Fase 3 completou carga/orientação no composer e na revisão. Backend e aluno já suportavam suggestedLoad; navegador agora deve conferir o campo do professor até a tela do aluno. App candidato 154f598 tem 393 testes PASS. CI do backend deve fixar esse HEAD; não certificar a variante anterior 3809514 como entrega de carga.
+
+
+## CURRENT — Fase 4 do piloto (06/11/2026)
+
+- Fase 3 integrada nos PRs backend #219 e app #84. Pós-merges 41886487686 e 41886501492 SUCCESS.
+- Candidatos Fase 4: backend #220 e app #85. Decisão da recepção auditada na mesma transação PostgreSQL; autorização da academia e elegibilidade consultadas no servidor. QR do aluno tem expiração de 120 segundos e apenas o hash do token fica persistido.
+- Gate atual: CI completa dos dois HEADs, navegador com dez decisões, replay e QR, merge após confirmação verde, pós-merge. App 5639c55 alinha três patches Expo exigidos pelo Expo Doctor.
+- O cliente piloto segue pelo fluxo público Testar grátis. Gates externos seguintes: assinatura móvel e aparelhos, leitor físico, ensaio operacional e decisão GO. Não há evidência de deploy da Fase 4 nem de giro físico nesta etapa.

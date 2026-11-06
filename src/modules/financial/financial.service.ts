@@ -234,10 +234,9 @@ export class FinancialService {
     gymId: string,
     actorUserId?: string,
     verifiedProviderEvidence?: { connectionId: string; paymentRef: string },
+    transaction?: Prisma.TransactionClient,
   ) {
-    return this.withSerializableRetry(() =>
-      this.prisma.$transaction(
-        async (tx) => {
+    const settle = async (tx: Prisma.TransactionClient) => {
           const charge = await tx.charge.findFirst({
             where: { id: chargeId, gymId },
             include: { student: true, subscription: true },
@@ -423,10 +422,11 @@ export class FinancialService {
             fiscalHandoffRecordId: materialized.record.id,
             idempotent: false,
           };
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      ),
-    );
+    };
+    if (transaction) return settle(transaction);
+    return this.withSerializableRetry(() => this.prisma.$transaction(
+      settle, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ));
   }
 
   /**
