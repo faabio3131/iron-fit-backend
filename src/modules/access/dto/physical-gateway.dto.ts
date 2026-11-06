@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class GatewayDeviceAuthDto {
   @IsUUID()
@@ -17,7 +17,13 @@ export class GatewayDeviceAuthDto {
   timestamp: number;
 }
 
-export class GatewayClaimDto extends GatewayDeviceAuthDto {}
+export class GatewayClaimDto extends GatewayDeviceAuthDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  authorizationId?: string;
+}
 
 export class GatewayIdentifyDto extends GatewayDeviceAuthDto {
   @IsString()
