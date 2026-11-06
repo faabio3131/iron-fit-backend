@@ -1,4 +1,4 @@
-# Piloto IRON — checkpoint vigente — 04/11/2026
+# Piloto IRON — checkpoint vigente — 06/11/2026
 
 O cliente entra por **Testar grátis → cadastro → provisioning canônico → login OWNER → convite da equipe**. PR #216 do seed encerrada sem merge. Não criar cadastro real ou concessão de entitlement por fora dessa jornada.
 
@@ -9,9 +9,9 @@ Repositórios: faabio3131/iron-fit-backend e faabio3131/iron-fit-app (Web/mobile
 | 1 — Entrada oficial | CERTIFIED_INTERNAL: #217 main a5e8430; CI pré 41872805440 e pós 41874060440 SUCCESS. Navegador prova trial de 30 dias, assinatura/OWNER únicos, replay e equipe. | Uso real pelo próprio cliente; não bloqueia construção interna. |
 | 2 — Recepção e caixa | CERTIFIED_INTERNAL: backend #218 main af86fa2 e app #83 main b0f161c; CI pré 41877912066/41877081658 e pós 41880622803/41880677293 SUCCESS. 937 testes backend, 390 app e 9 jornadas HTTP/PostgreSQL 18 PASS. | Publicação e operação do cliente permanecem gates separados. |
 | 3 — Equipamentos e treinos | CERTIFIED_INTERNAL: backend #219 main 3963eb0 e app #84 main 862620e. CI pós-merge 41886487686/41886501492 SUCCESS. | Fluxo certificado em ambiente isolado. |
-| 4 — Terminal e portaria | IMPLEMENTED_CANDIDATE: backend #220 e app #85. Terminal por aluno/QR, decisão e auditoria transacionais, QR temporário do aluno. | CI integrada, merge e pós-merge. Leitor USB e catracas reais exigem evidência operacional. |
-| 5 — Android/iOS | CI existente exporta bundles. EAS preview produz APK; production produz AAB. | APK assinado, URL real, distribuição e aparelhos reais. APK não instala no iOS. SDK Android/EAS CLI ausentes no PC observado. |
-| 6 — Ensaio e abertura | Runbooks e observabilidade existentes; GO não declarado. | Ensaio com terminal, destino piloto, backup/restore operacional, treinamento e abertura real em 09/11 às 06h00. |
+| 4 — Terminal e portaria | CERTIFIED_INTERNAL: backend #220 (1539ef7) e app #85 (a87ffc6). CI pós-merge 42236552074/42236564797 SUCCESS. Dez decisões no navegador, QR via teclado, replay e auditoria no PostgreSQL. | Leitor USB e aparelhos reais na bancada. |
+| 5 — Android/iOS | Bundles Android/iOS íntegros na CI 42236564797. O perfil preview atual gera APK Android e usa simulador no iOS. | BLOCKED_EXTERNAL: URL homologada e projeto de assinatura Expo/EAS sem acesso neste ambiente. Instalação Android e TestFlight em aparelhos reais pendentes. |
+| 6 — Ensaio e abertura | Ensaio automatizado passou na CI 42236552074, com navegador/API/PostgreSQL, backup/restore descartável e recuperação após reinício. | Ensaio presencial, validação de backup/restore do ambiente piloto, treinamento e decisão GO. |
 
 ## Fronteiras preservadas
 
@@ -30,4 +30,14 @@ Uma certificação usou PostgreSQL 18 e Node 22 em contêineres descartáveis na
 
 ## Continuidade
 
-Concluir a CI do backend #220 e app #85, corrigir e integrar com o gate verde. Depois avançar à distribuição móvel e ao ensaio. O cliente piloto entra pelo botão Testar grátis.
+Abrir os gates operacionais abaixo no ambiente aprovado. O cliente piloto entra pelo botão Testar grátis.
+
+
+## Validação de campo
+
+1. Confirmar Web/API do piloto e rodar o preflight de borda existente com o SHA implantado e o ambiente esperado. Conferir DNS, TLS, CORS e readiness. Registrar também backup, restauração e retorno à revisão anterior com o responsável pela operação.
+2. Vincular o projeto Expo/EAS oficial, confirmar o certificado esperado e gerar APK interno Android com a API aprovada. Verificar assinatura, identificador `com.faabio3131.ironfit` e SHA-256 antes de disponibilizar o link. Distribuir iOS por TestFlight, com build para aparelho e identificador `com.ironfit.app`.
+3. Validar em Android e iPhone o login, tenant, perfil, treino, agenda, QR temporário e logout. Registrar versão do app, modelo do aparelho e resultado. Na estação da recepção, ler um QR real pelo USB em modo teclado e comprovar decisão e registro único de auditoria. Conferir também QR vencido e acesso negado. Registrar confirmação de passagem em catraca apenas se houver equipamento homologado e evidência de giro.
+4. Ensaiar a partir de Testar grátis em ambiente piloto autorizado. O cliente real faz o próprio cadastro. Validar convite da recepção e do treinador, matrícula, recebimento controlado, treino, QR e fechamento. Registrar operador, horário, evidências e decisão GO.
+
+Na estação conectada, a inspeção encontrou um dispositivo USB genérico, sem identificação como leitor, e não confirmou aparelho conectado. ADB e CLI EAS indisponíveis. Nenhuma sessão Expo ou variável EXPO_TOKEN ativa foi confirmada. A listagem de credenciais e variáveis no nível do repositório do app retornou vazia, sem inspeção de valores de segredos.
