@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, HttpException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, RoleName } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -11,7 +11,7 @@ import { TerminalCheckInDto } from './dto/terminal-check-in.dto';
 export class AccessTerminalService {
   constructor(private readonly db: PrismaService, private readonly access: AccessService) {}
 
-  private async authorize(tx: Prisma.TransactionClient, gymId: string, actor: string, roles: string[]) {
+  private async authorize(tx: Prisma.TransactionClient, gymId: string, actor: string, roles: RoleName[]) {
     if (!gymId || !actor) throw new ForbiddenException('Academia e operador autenticados obrigatorios');
     const membership = await tx.userRole.findFirst({ where: {
       gymId, userId: actor, active: true, user: { active: true }, gym: { active: true },
@@ -75,7 +75,7 @@ export class AccessTerminalService {
     return {
       eventId: event.id, allowed: event.allowed, denialReason: event.denialReason, warning: event.warning,
       status: !event.allowed ? 'DENIED' : event.warning ? 'REVIEW' : 'ALLOWED', occurredAt: event.occurredAt,
-      student: student ? { id: student.id, name: student.user.name, photoUrl: student.photoUrl } : null,
+      student: student ? { id: student.id, name: student.user?.name ?? 'Aluno', photoUrl: student.photoUrl } : null,
     };
   }
 

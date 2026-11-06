@@ -8,8 +8,8 @@ Repositórios: faabio3131/iron-fit-backend e faabio3131/iron-fit-app (Web/mobile
 | --- | --- | --- |
 | 1 — Entrada oficial | CERTIFIED_INTERNAL: #217 main a5e8430; CI pré 41872805440 e pós 41874060440 SUCCESS. Navegador prova trial de 30 dias, assinatura/OWNER únicos, replay e equipe. | Uso real pelo próprio cliente; não bloqueia construção interna. |
 | 2 — Recepção e caixa | CERTIFIED_INTERNAL: backend #218 main af86fa2 e app #83 main b0f161c; CI pré 41877912066/41877081658 e pós 41880622803/41880677293 SUCCESS. 937 testes backend, 390 app e 9 jornadas HTTP/PostgreSQL 18 PASS. | Publicação e operação do cliente permanecem gates separados. |
-| 3 — Equipamentos e treinos | IMPLEMENTED_CANDIDATE: #219/#84, branches feat/pilot-workout-templates-20261104. Cinco modelos, carga no composer/revisão, IDs reais e aparelhos operacionais. Local 941 testes backend e 393 app PASS. | CI dos últimos HEADs, navegador com carga até o aluno, merge/pós-merge. |
-| 4 — Terminal e portaria | NÃO INICIADA nesta retomada. Access Center, QR e drivers existentes preservados. | Construir o gap do terminal e certificar dez decisões, sem confundir autorização com giro físico. |
+| 3 — Equipamentos e treinos | CERTIFIED_INTERNAL: backend #219 main 3963eb0 e app #84 main 862620e. CI pós-merge 41886487686/41886501492 SUCCESS. | Fluxo certificado em ambiente isolado. |
+| 4 — Terminal e portaria | IMPLEMENTED_CANDIDATE: backend #220 e app #85. Terminal por aluno/QR, decisão e auditoria transacionais, QR temporário do aluno. | CI integrada, merge e pós-merge. Leitor USB e catracas reais exigem evidência operacional. |
 | 5 — Android/iOS | CI existente exporta bundles. EAS preview produz APK; production produz AAB. | APK assinado, URL real, distribuição e aparelhos reais. APK não instala no iOS. SDK Android/EAS CLI ausentes no PC observado. |
 | 6 — Ensaio e abertura | Runbooks e observabilidade existentes; GO não declarado. | Ensaio com terminal, destino piloto, backup/restore operacional, treinamento e abertura real em 09/11 às 06h00. |
 
@@ -30,4 +30,4 @@ Uma certificação usou PostgreSQL 18 e Node 22 em contêineres descartáveis na
 
 ## Continuidade
 
-Concluir CI dos HEADs reais de #219/#84 (incluindo app 154f598), corrigir falhas e integrar somente verde. Depois Fase 4 e fases seguintes, sem encerrar por checkpoint. Não declarar GO-LIVE CERTIFIED sem evidência operacional/externa exigida.
+Concluir a CI do backend #220 e app #85, corrigir e integrar com o gate verde. Depois avançar à distribuição móvel e ao ensaio. O cliente piloto entra pelo botão Testar grátis.
