@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -40,7 +41,7 @@ test('P/Q Command-to-IRON live S2S: guard, snapshot, license status, idempotency
   const provision = (await request('/commercial/trial/start', { method: 'POST', expected: 201,
     body: { requestId: randomUUID(), email: `s2s-${suffix}@example.com`,
       password: ownerPassword, name: 'S2S Isolated Owner',
-      gymName: `S2S QA Gym ${suffix}`, timezone: 'America/Sao_Paulo' },
+      cnpj: fixtureCnpj(), gymName: `S2S QA Gym ${suffix}`, timezone: 'America/Sao_Paulo' },
   })).payload;
   assert.ok(provision.gymId && provision.subscriptionId);
 

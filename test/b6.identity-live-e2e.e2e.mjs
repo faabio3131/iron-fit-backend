@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -47,7 +48,7 @@ test('B6 live refresh rotation, session revocation, password recovery and MFA', 
       email,
       password: initialPassword,
       name: 'B6 Identity Owner',
-      gymName: `B6 Identity ${suffix}`,
+      cnpj: fixtureCnpj(), gymName: `B6 Identity ${suffix}`,
       timezone: 'America/Sao_Paulo',
     },
   });

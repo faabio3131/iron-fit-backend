@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -11,7 +12,7 @@ test('pilot reception: official trial, owner opt-in, atomic enrollment, four pay
   const id = randomUUID().slice(0, 8), password = process.env.B6_OWNER_PASSWORD;
   async function tenant(label) {
     const email = `desk-${label}-${id}@example.com`;
-    const { payload } = await request('/commercial/trial/start', { method: 'POST', expected: 201, body: { requestId: randomUUID(), email, password, name: `Desk ${label}`, gymName: `Desk ${label} ${id}`, timezone: 'America/Sao_Paulo' } });
+    const { payload } = await request('/commercial/trial/start', { method: 'POST', expected: 201, body: { requestId: randomUUID(), email, password, name: `Desk ${label}`, cnpj: fixtureCnpj(), gymName: `Desk ${label} ${id}`, timezone: 'America/Sao_Paulo' } });
     return { gymId: payload.gymId, session: await login(email, password) };
   }
   try {

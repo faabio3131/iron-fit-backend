@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -14,7 +15,7 @@ test('B6 live resilience: replay-safe signup, authenticated burst and retired lo
     email: `b6-resilience-${suffix}@example.com`,
     password,
     name: 'B6 Resilience Owner',
-    gymName: `B6 Resilience Gym ${suffix}`,
+    cnpj: fixtureCnpj(), gymName: `B6 Resilience Gym ${suffix}`,
     timezone: 'America/Sao_Paulo',
   };
 

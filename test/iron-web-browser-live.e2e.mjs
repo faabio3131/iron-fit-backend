@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -10,6 +11,7 @@ const { chromium } = require('playwright-core');
 test('Macro O real browser: trial, login, team actions, restricted finance, module navigation and logout', async () => {
   assert.equal(process.env.CI, 'true', 'Browser certification requires the isolated CI database');
   assert.equal(new URL(process.env.DATABASE_URL).pathname, '/iron_ci');
+  assert.equal(new URL(process.env.B6_API_URL).hostname, '127.0.0.1', 'Browser certification must target the local API');
   const prisma = new PrismaClient();
   const { decryptActionSecret } = createRequire(import.meta.url)('../dist/src/modules/auth/auth-security.js');
   const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
@@ -43,6 +45,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
 
     await page.getByTestId('trial-name').fill('B6 Browser Owner');
     await page.getByTestId('trial-gym-name').fill(`B6 Browser Gym ${id}`);
+    await page.getByTestId('trial-cnpj').fill(fixtureCnpj());
     await page.getByTestId('trial-email').fill(email);
     await page.getByTestId('trial-password').fill(password);
     const [trialResponse] = await Promise.all([
@@ -60,6 +63,10 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     assert.equal(subscription.planVersion.status, 'PUBLISHED');
     assert.equal(subscription.gymId, trial.gymId);
     const replay = await page.request.post(`${process.env.B6_API_URL}/commercial/trial/start`, { data: trialBody });
+    const duplicateCnpj = await page.request.post(`${process.env.B6_API_URL}/commercial/trial/start`, {
+      data: { ...trialBody, requestId: randomUUID(), email: 'duplicate-' + trialBody.email },
+    });
+    assert.equal(duplicateCnpj.status(), 409);
     assert.equal(replay.status(), 201);
     assert.equal((await replay.json()).gymId, trial.gymId);
     assert.equal(await prisma.tenantProductSubscription.count({ where: { gymId: trial.gymId } }), 1);
@@ -254,7 +261,9 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         assert.equal(sale.charge.status, 'PAID');
         assert.equal(sale.charge.amount, 15990);
         await page.getByTestId('desk-success').waitFor();
-        await page.getByTestId('desk-closing').waitFor();
+        const closing = page.getByTestId('desk-closing');
+        await closing.getByText('1 registro(s) do operador atual', { exact: true }).waitFor();
+        await closing.getByText(/Dinheiro:.*159,90/).waitFor();
         assert.equal(await prisma.financialTransaction.count({ where: { gymId: trial.gymId, sourceId: sale.charge.id } }), 1);
         await page.getByTestId('nav-access').click();
         await page.getByTestId('reception-access-terminal').waitFor({ timeout: 20000 });
@@ -265,7 +274,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
           headers, data: { studentId: studentCreated.id, type: 'QR_CODE' },
         });
         assert.equal(issued.status(), 201);
-        const { qrToken } = await issued.json();
+        const { qrToken, credentialId } = await issued.json();
         const eventIds = [];
         const durations = [];
         for (let i = 0; i < 10; i++) {
@@ -298,6 +307,31 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         assert.ok(durations.every(ms => Number.isFinite(ms) && ms >= 0));
         durations.sort((a, b) => a - b);
         assert.ok(durations[9] < 300, 'Terminal local p95: ' + durations[9] + ' ms');
+
+        // Expire only the credential issued above in the disposable database.
+        // This exercises the same input path as a USB reader in keyboard mode.
+        await prisma.accessCredential.update({
+          where: { id: credentialId, studentId: studentCreated.id },
+          data: { expiresAt: new Date(Date.now() - 1000) },
+        });
+        const scanner = page.getByTestId('terminal-qr');
+        await scanner.fill(qrToken);
+        const [expired] = await Promise.all([
+          page.waitForResponse(r => r.url().endsWith('/access/terminal/check-in') && r.request().method() === 'POST'),
+          scanner.press('Enter'),
+        ]);
+        assert.equal(expired.status(), 201);
+        const denied = await expired.json();
+        assert.equal(denied.allowed, false);
+        assert.equal(denied.denialReason, 'Credencial invalida ou expirada');
+        assert.ok(!eventIds.includes(denied.eventId));
+        await page.getByTestId('terminal-decision').getByText('Entrada negada', { exact: true }).waitFor();
+        assert.equal(await prisma.accessEvent.count({
+          where: { id: denied.eventId, gymId: trial.gymId, allowed: false },
+        }), 1);
+        assert.equal(await prisma.auditLog.count({
+          where: { entityId: denied.eventId, gymId: trial.gymId, action: 'ACCESS_DECISION_RECORDED' },
+        }), 1);
       }
       assert.equal(await page.getByTestId('nav-team').count(), employee.role === 'MANAGER' ? 1 : 0);
       assert.equal(await page.getByTestId('nav-workouts').count(), employee.role === 'TRAINER' ? 1 : (employee.role === 'MANAGER' ? 1 : 0));
@@ -360,7 +394,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByTestId('logout-submit').click();
     await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
 
-    console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, staffRoles: employees.map(e => e.role), financialNavigationDenied: true, studentSelfService: true, inventoryCtaRoundtrip: true, stepUp: true, logout: true }));
+    console.log(JSON.stringify({ event: 'iron_browser_internal_cert', testedModules: checked + 1, auth: true, invite: true, staffRoles: employees.map(e => e.role), financialNavigationDenied: true, studentSelfService: true, inventoryCtaRoundtrip: true, stepUp: true, logout: true, expiredQrDeniedAndAudited: true, operatorClosingVerified: true }));
   } finally {
     await browser.close();
     await prisma.$disconnect();

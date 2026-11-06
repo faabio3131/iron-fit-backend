@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -16,7 +17,7 @@ test('P module mutations: communication consent, automation roles, privacy DSR a
     const email = `p-module-${name}-${suffix}@example.com`;
     const trial = (await request('/commercial/trial/start', { method: 'POST', expected: 201,
       body: { requestId: randomUUID(), email, password: ownerPassword,
-        name: 'P Module Owner', gymName: `P Module ${name} ${suffix}`,
+        name: 'P Module Owner', cnpj: fixtureCnpj(), gymName: `P Module ${name} ${suffix}`,
         timezone: 'America/Sao_Paulo' },
     })).payload;
     return { trial, session: await login(email, ownerPassword) };

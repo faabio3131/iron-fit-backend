@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -41,7 +42,7 @@ test('Q internal: CORS, security headers, direct financial denial and HTTP laten
     body: {
       requestId: randomUUID(),
       name: 'Q Internal Owner',
-      gymName: `Q Internal Gym ${id}`,
+      cnpj: fixtureCnpj(), gymName: `Q Internal Gym ${id}`,
       email,
       password: ownerPassword,
       timezone: 'America/Sao_Paulo',

@@ -43,7 +43,9 @@ function makeHarness(overrides = {}) {
 
   const tx = {
     commercialTrialProvisioning: {
-      findUnique: async ({ where }) => state.provisionings.get(where.requestId) ?? null,
+      findUnique: async ({ where }) => where.cnpj
+        ? [...state.provisionings.values()].find(item => item.cnpj === where.cnpj) ?? null
+        : state.provisionings.get(where.requestId) ?? null,
       findFirst: async ({ where }) =>
         [...state.provisionings.values()].find(
           (item) => item.subscriptionId === where.subscriptionId,
@@ -219,6 +221,7 @@ const dto = {
   name: 'Owner Example',
   phone: '11999999999',
   gymName: 'Academia Alpha',
+  cnpj: '12ABC34501DE35',
   timezone: 'America/Sao_Paulo',
 };
 
@@ -478,4 +481,17 @@ test('M5 CI gates implementation branches and retains the complete canonical qua
   assert.match(workflow, /npm run lint/);
   assert.match(workflow, /npm run build/);
   assert.match(workflow, /npm run test:smoke/);
+});
+
+test('trial rejects invalid and missing CNPJ, and only allows one trial per normalized CNPJ', async () => {
+  const { service } = makeHarness();
+  await assert.rejects(() => service.startTrial({ ...dto, cnpj: undefined }), /CNPJ/);
+  await assert.rejects(() => service.startTrial({ ...dto, cnpj: '12ABC34501DE36' }), /CNPJ/);
+  await assert.rejects(() => service.startTrial({ ...dto, cnpj: '00000000000000' }), /CNPJ/);
+  const result = await service.startTrial({ ...dto, cnpj: '12.abc.345/01de-35' });
+  assert.equal((await service.startTrial(dto)).gymId, result.gymId);
+  await assert.rejects(
+    () => service.startTrial({ ...dto, requestId: 'another-request', email: 'another@example.com' }),
+    /Cadastro indisponivel/,
+  );
 });
