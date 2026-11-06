@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -9,6 +10,7 @@ test('B6 live commercial trial, login and ordered onboarding', async () => {
   assert.ok(password);
 
   const email = `b6-owner-${suffix}@example.com`;
+  const cnpj = fixtureCnpj();
   const trial = (await request('/commercial/trial/start', {
     method: 'POST',
     expected: 201,
@@ -17,10 +19,18 @@ test('B6 live commercial trial, login and ordered onboarding', async () => {
       email,
       password,
       name: 'B6 Owner',
-      gymName: `B6 Academy ${suffix}`,
+      cnpj, gymName: `B6 Academy ${suffix}`,
       timezone: 'America/Sao_Paulo',
     },
   })).payload;
+
+  const otherRequest = {
+    requestId: randomUUID(), email: 'another-' + email, password, name: 'B6 Another Owner',
+    gymName: 'B6 Another Gym', timezone: 'America/Sao_Paulo',
+  };
+  for (const body of [otherRequest, { ...otherRequest, cnpj: '00000000000000' }]) {
+    await request('/commercial/trial/start', { method: 'POST', expected: 400, body });
+  }
 
   const owner = await login(email, password);
   assert.equal(owner.user.activeGymId, trial.gymId);

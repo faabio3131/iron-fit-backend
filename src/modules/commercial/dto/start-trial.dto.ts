@@ -12,6 +12,11 @@ export class StartTrialDto {
   @IsUUID()
   requestId!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(24)
+  cnpj?: string;
+
   @IsEmail()
   email!: string;
 

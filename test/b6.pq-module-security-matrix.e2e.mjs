@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -50,7 +51,7 @@ test('P/Q live module matrix: all canonically exposed read surfaces, role denial
   const gym = (await request('/commercial/trial/start', {
     method: 'POST', expected: 201,
     body: { requestId: randomUUID(), name: 'Module QA Owner', email, password,
-      gymName: `Module QA Gym ${uid}`, timezone: 'America/Sao_Paulo' },
+      cnpj: fixtureCnpj(), gymName: `Module QA Gym ${uid}`, timezone: 'America/Sao_Paulo' },
   })).payload;
   const owner = await login(email, password);
   await request('/auth/step-up', { method: 'POST', token: owner.access_token,
@@ -106,7 +107,7 @@ test('P/Q live module matrix: all canonically exposed read surfaces, role denial
   const otherEmail = `other-owner-${uid}@example.com`;
   const otherGym = (await request('/commercial/trial/start', { method: 'POST', expected: 201,
     body: { requestId: randomUUID(), name: 'Other Tenant Owner', email: otherEmail,
-      password, gymName: `Other QA Gym ${uid}`, timezone: 'America/Sao_Paulo' },
+      password, cnpj: fixtureCnpj(), gymName: `Other QA Gym ${uid}`, timezone: 'America/Sao_Paulo' },
   })).payload;
   assert.notEqual(gym.gymId, otherGym.gymId);
   await request(`/students?gymId=${otherGym.gymId}`, { token: owner.access_token, expected: 200 });

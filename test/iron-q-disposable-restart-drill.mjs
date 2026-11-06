@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile, unlink } from 'node:fs/promises';
@@ -18,7 +19,7 @@ if (mode === 'prepare') {
   const email = `q-dr-owner-${suffix}@example.com`;
   const gym = (await request('/commercial/trial/start', { method: 'POST', expected: 201,
     body: { requestId: randomUUID(), email, password: pass,
-      name: 'Restart QA Owner', gymName: `Restart QA Gym ${suffix}`,
+      name: 'Restart QA Owner', cnpj: fixtureCnpj(), gymName: `Restart QA Gym ${suffix}`,
       timezone: 'America/Sao_Paulo' } })).payload;
   const session = await login(email, pass);
   await request('/auth/step-up', { token: session.access_token,
