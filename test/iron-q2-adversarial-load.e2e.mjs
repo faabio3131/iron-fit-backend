@@ -4,9 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { BASE, login, request } from '../scripts/b6-e2e-lib.mjs';
 
-function p95(numbers) {
+function percentile(numbers, fraction) {
   const sorted = [...numbers].sort((a, b) => a - b);
-  return sorted[Math.ceil(sorted.length * 0.95) - 1];
+  return sorted[Math.ceil(sorted.length * fraction) - 1];
 }
 
 test('Q adversarial live API: invalid tokens, direct-object access, tenant spoofing and safe parse errors', async () => {
@@ -93,7 +93,7 @@ test('Q adversarial live API: invalid tokens, direct-object access, tenant spoof
   }));
 }, { timeout: 120000 });
 
-test('Q isolated bounded concurrent reads: sustained rate, p95 and 5xx budget with real PostgreSQL', async () => {
+test('Q isolated bounded concurrent reads: per-scenario latency, throughput and error budget with real PostgreSQL', async () => {
   assert.equal(process.env.NODE_ENV, 'test');
   assert.equal(process.env.IRON_RUNTIME_ENV, 'HOMOLOG');
   const password = process.env.B6_OWNER_PASSWORD;
@@ -104,38 +104,58 @@ test('Q isolated bounded concurrent reads: sustained rate, p95 and 5xx budget wi
     body: { requestId: randomUUID(), name: 'Q Load Owner', email, password,
       gymName: `Q Load Gym ${suffix}`, timezone: 'America/Sao_Paulo' } });
   const session = await login(email, password);
-  const limit = 16, total = 240;
+  await request('/auth/step-up', {
+    method: 'POST', token: session.access_token, expected: 200,
+    body: { currentPassword: password },
+  });
+  const paths = [
+    '/auth/me', '/students', '/workouts', '/schedules',
+    '/financial/charges', '/saas-billing/current',
+    '/product-entitlements/tenant/features',
+  ];
+  const samples = Object.fromEntries(paths.map(path => [path, []]));
+  const limit = 16, total = paths.length * 40;
   const latencyMs = [], httpStatus = {};
   let counter = 0, failures = 0;
   const started = performance.now();
   const workers = Array.from({ length: limit }, async () => {
     while (counter < total) {
       const index = counter++;
-      const path = index % 3 === 0 ? '/students' : index % 3 === 1
-        ? '/product-entitlements/tenant/features' : '/auth/me';
+      const path = paths[index % paths.length];
       const start = performance.now();
       const response = await fetch(BASE + path, {
         headers: { authorization: 'Bearer ' + session.access_token },
         signal: AbortSignal.timeout(10000),
       });
       await response.arrayBuffer();
-      latencyMs.push(performance.now() - start);
+      const latency = performance.now() - start;
+      latencyMs.push(latency);
+      samples[path].push(latency);
       httpStatus[response.status] = (httpStatus[response.status] ?? 0) + 1;
       if (response.status !== 200) failures++;
     }
   });
   await Promise.all(workers);
   const elapsedMs = Math.round(performance.now() - started);
-  const observedP95 = Math.round(p95(latencyMs) * 100) / 100;
+  const latency = values => Object.fromEntries([50, 95, 99].map(p => [
+    'p' + p, Math.round(percentile(values, p / 100) * 100) / 100,
+  ]));
+  const observed = latency(latencyMs);
   const result = {
     event: 'iron_q_bounded_postgres_load',
     environment: 'EPHEMERAL_CI_HOMOLOG', concurrentClients: limit,
     requests: total, httpStatus, elapsedMs,
     throughputRps: Math.round(1000 * total / elapsedMs * 100) / 100,
-    p95Ms: observedP95, failures,
+    latencyMs: observed, failures, errorRate: failures / total,
+    scenarios: Object.fromEntries(paths.map(path => [
+      path, { requests: samples[path].length, ...latency(samples[path]) },
+    ])),
   };
   assert.equal(failures, 0, JSON.stringify(result));
-  assert.ok(observedP95 < 5000, JSON.stringify(result));
+  for (const [path, scenario] of Object.entries(result.scenarios)) {
+    assert.equal(scenario.requests, 40, path);
+    assert.ok(scenario.p95 < 5000, path + ' p95 exceeded CI limit: ' + JSON.stringify(scenario));
+  }
   assert.equal((await fetch(BASE + '/health/ready')).status, 200);
   console.log(JSON.stringify(result));
 }, { timeout: 120000 });
