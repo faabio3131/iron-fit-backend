@@ -22,9 +22,10 @@
  * Vendor-specific DLL signatures and protocol bytes are never guessed here.
  */
 import { createHmac, randomBytes } from 'node:crypto';
+import { stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-const API_PATH = '/access/hardware/';
+const API_PATH = '/api/v1/access/hardware/';
 const SUPPORTED = new Set(['TOPDATA', 'HENRY', 'DIMEP']);
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -44,42 +45,58 @@ export function passageSignature(input, token) {
   ])).digest('hex');
 }
 
-export class IronPhysicalGatewayClient {
-  constructor({ origin, deviceId, token, sdk, fetchImpl = fetch }) {
+class GatewayTransport {
+  constructor({ origin, deviceId, token, fetchImpl = fetch }) {
     this.origin = gatewayOrigin(origin);
     if (!/^[0-9a-f-]{36}$/i.test(deviceId) || !token || token.length < 32) {
       throw new Error('Identidade de equipamento incompleta');
     }
+    this.deviceId = deviceId;
+    this.token = token;
+    this.fetch = fetchImpl;
+  }
+
+  async call(operation, body = {}) {
+    if (!['check', 'identify', 'claim', 'ack', 'passage'].includes(operation)) {
+      throw new Error('Operacao de gateway desconhecida');
+    }
+    const response = await this.fetch(this.origin + API_PATH + operation, {
+      method: 'POST',
+      redirect: 'error',
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      body: JSON.stringify({
+        ...body,
+        deviceId: this.deviceId,
+        deviceToken: this.token,
+        nonce: randomBytes(24).toString('hex'),
+        timestamp: Date.now(),
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error('Gateway HTTP ' + response.status);
+    return response.json();
+  }
+}
+
+export class IronPhysicalGatewayClient extends GatewayTransport {
+  constructor({ sdk, ...options }) {
+    super(options);
     if (!SUPPORTED.has(sdk?.manufacturer) || !sdk.model || !sdk.firmware ||
         typeof sdk.readIdentification !== 'function' ||
         typeof sdk.release !== 'function' ||
         typeof sdk.waitForPassage !== 'function') {
       throw new Error('SDK local nao carregado ou nao compativel');
     }
-    this.deviceId = deviceId;
-    this.token = token;
     this.sdk = sdk;
-    this.fetch = fetchImpl;
   }
 
-  async call(operation, body = {}) {
-    if (!['identify', 'claim', 'ack', 'passage'].includes(operation)) {
-      throw new Error('Operacao de gateway desconhecida');
+  async verifyBinding() {
+    const device = await this.call('check');
+    if (!device.active || !device.homologated ||
+        device.manufacturer !== this.sdk.manufacturer || device.model !== this.sdk.model ||
+        device.firmwareVersion !== this.sdk.firmware) {
+      throw new Error('Equipamento inativo, não homologado ou diferente da configuração local');
     }
-    const response = await this.fetch(this.origin + API_PATH + operation, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-      body: JSON.stringify({
-        deviceId: this.deviceId,
-        deviceToken: this.token,
-        nonce: randomBytes(24).toString('hex'),
-        timestamp: Date.now(),
-        ...body,
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!response.ok) throw new Error('Gateway HTTP '+response.status);
-    return response.json();
   }
 
   /** One identity -> canonical decision -> reserved command -> SDK ACK -> physical giro. */
@@ -98,11 +115,12 @@ export class IronPhysicalGatewayClient {
       return { handled: true, allowed: false };
     }
 
-    const { command } = await this.call('claim');
+    const { command } = await this.call('claim', { authorizationId: decision.authorizationId });
+    const expiresAt = Date.parse(command?.expiresAt);
     if (!command || command.authorizationId !== decision.authorizationId ||
         command.deviceId !== this.deviceId || command.manufacturer !== this.sdk.manufacturer ||
         command.model !== this.sdk.model || command.firmwareVersion !== this.sdk.firmware ||
-        Date.parse(command.expiresAt) <= Date.now()) {
+        command.direction !== identity.direction || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
       // Never guess a command, and never retry an uncertain authorization.
       return { handled: true, allowed: false };
     }
@@ -165,12 +183,31 @@ async function main() {
   if (!origin || !deviceId || !token || !binding) {
     throw new Error('Configuracao de gateway ou SDK incompleta');
   }
-  const mod = await import(binding);
+  const file = new URL(binding);
+  if (file.protocol !== 'file:' || file.hostname || file.search || file.hash || !(await stat(file)).isFile()) {
+    throw new Error('O SDK precisa ser um arquivo local');
+  }
+  if (process.argv.includes('--check')) {
+    const transport = new GatewayTransport({ origin, deviceId, token });
+    const result = await transport.call('check');
+    process.stdout.write(JSON.stringify({
+      api: 'ok',
+      sdkFilePresent: true,
+      manufacturer: result.manufacturer,
+      model: result.model,
+      firmwareVersion: result.firmwareVersion,
+      active: result.active,
+      homologated: result.homologated,
+    }) + '\n');
+    return;
+  }
+  const mod = await import(file.href);
   if (typeof mod.createIronSdkBinding !== 'function') {
     throw new Error('Modulo SDK nao fornece contrato de integracao IRON');
   }
   const sdk = await mod.createIronSdkBinding();
   const client = new IronPhysicalGatewayClient({ origin, deviceId, token, sdk });
+  await client.verifyBinding();
   process.stdout.write('IRON physical gateway iniciado; aguarda SDK e identidade do equipamento.\n');
   while (true) {
     try {

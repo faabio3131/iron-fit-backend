@@ -32,17 +32,18 @@ export class PhysicalGatewayService {
     return a.length === b.length && timingSafeEqual(a, b);
   }
 
-  private async authenticate(input: GatewayDeviceAuthDto) {
+  private async authenticate(input: GatewayDeviceAuthDto, checkOnly = false) {
     const now = Date.now();
     if (!Number.isSafeInteger(input.timestamp) || Math.abs(now - input.timestamp) > MAX_REQUEST_AGE_MS) {
       throw new UnauthorizedException('Credencial ou timestamp de gateway inválido');
     }
     const device = await this.prisma.accessDevice.findFirst({
-      where: { id: input.deviceId, active: true },
+      where: { id: input.deviceId, ...(checkOnly ? {} : { active: true }) },
       select: { id: true, gymId: true, manufacturer: true, deviceTokenHash: true, active: true, certificationStatus: true, certificationRef: true, model: true, firmwareVersion: true },
     });
     if (!device || !device.deviceTokenHash || !SUPPORTED.has(device.manufacturer || '') ||
-        (!device.model || !device.firmwareVersion || device.certificationStatus !== 'PRODUCTION_HOMOLOGATED' || !device.certificationRef) ||
+        !device.model || !device.firmwareVersion ||
+        (!checkOnly && (device.certificationStatus !== 'PRODUCTION_HOMOLOGATED' || !device.certificationRef)) ||
         !this.equalHex(createHash('sha256').update(input.deviceToken).digest('hex'), device.deviceTokenHash)) {
       throw new UnauthorizedException('Credencial ou timestamp de gateway inválido');
     }
@@ -66,6 +67,17 @@ export class PhysicalGatewayService {
     return device;
   }
 
+  async check(input: GatewayDeviceAuthDto) {
+    const device = await this.authenticate(input, true);
+    return {
+      manufacturer: device.manufacturer,
+      model: device.model,
+      firmwareVersion: device.firmwareVersion,
+      active: device.active,
+      homologated: device.certificationStatus === 'PRODUCTION_HOMOLOGATED' && Boolean(device.certificationRef),
+    };
+  }
+
   /** The canonical scan must own the nonce. Do not authenticate twice. */
   async identify(input: GatewayIdentifyDto) {
     return this.coordinator.decide({
@@ -87,6 +99,7 @@ export class PhysicalGatewayService {
         deviceId: device.id,
         manufacturer: device.manufacturer!,
         state: 'AUTHORIZED',
+        ...(input.authorizationId ? { authorizationId: input.authorizationId } : {}),
         expiresAt: { gt: now },
       },
       orderBy: { createdAt: 'asc' },

@@ -6,7 +6,7 @@ import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { resolveTenantOperationGymId } from '../../../common/security/tenant-operation-scope';
 import { PhysicalAccessRecoveryService } from './physical-access-recovery.service';
 import {
-  GatewayAckDto, GatewayClaimDto, GatewayIdentifyDto, GatewayPassageDto,
+  GatewayAckDto, GatewayClaimDto, GatewayDeviceAuthDto, GatewayIdentifyDto, GatewayPassageDto,
 } from '../dto/physical-gateway.dto';
 import { PhysicalGatewayService } from './physical-gateway.service';
 
@@ -32,6 +32,11 @@ export class PhysicalGatewayController {
       isSuperAdmin: user.isSuperAdmin === true,
     });
     return this.recovery.listRecent(gymId);
+  }
+
+  @Post('check')
+  check(@Body() dto: GatewayDeviceAuthDto) {
+    return this.gateway.check(dto);
   }
 
   @Post('identify')

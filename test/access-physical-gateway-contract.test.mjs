@@ -11,7 +11,7 @@ const deviceId = '123e4567-e89b-12d3-a456-426614174000';
 const gymId = 'gym-a';
 const authId = 'auth-event-a';
 
-function harness() {
+function harness({ active = true, homologated = true } = {}) {
   let attempt = {
     id: 'attempt-a', gymId, deviceId, manufacturer: 'HENRY',
     authorizationId: authId, state: 'AUTHORIZED',
@@ -22,10 +22,10 @@ function harness() {
   const knownNonce = new Set();
   const prisma = {
     accessDevice: { findFirst: async ({ where }) =>
-      where.id === deviceId && where.active === true
+      where.id === deviceId && (where.active === undefined || where.active === active)
         ? { id: deviceId, gymId, manufacturer: 'HENRY',
-          deviceTokenHash: createHash('sha256').update(deviceToken).digest('hex'), active: true,
-          certificationStatus: 'PRODUCTION_HOMOLOGATED', certificationRef: 'official-test-evidence', model: 'Pedestal', firmwareVersion: 'approved-firmware' }
+          deviceTokenHash: createHash('sha256').update(deviceToken).digest('hex'), active,
+          certificationStatus: homologated ? 'PRODUCTION_HOMOLOGATED' : 'NOT_HOMOLOGATED', certificationRef: homologated ? 'official-test-evidence' : null, model: 'Pedestal', firmwareVersion: 'approved-firmware' }
         : null },
     accessScanNonce: { deleteMany: async () => ({ count: 0 }), create: async ({ data }) => {
       if (knownNonce.has(data.nonce)) throw new Error('reused nonce');
@@ -142,4 +142,22 @@ test('legacy active device without external certification cannot claim commands'
   });
   await assert.rejects(() => h.service.claim(auth()));
   assert.equal(h.getAttempt().state, 'AUTHORIZED');
+});
+
+test('provisioned inactive hardware can diagnose configuration but cannot claim commands', async () => {
+  const h = harness({ active: false, homologated: false });
+  await assert.rejects(() => h.service.check({ ...auth(), deviceToken: 'wrong-device-token-placeholder' }));
+  assert.deepEqual(await h.service.check(auth()), {
+    manufacturer: 'HENRY', model: 'Pedestal', firmwareVersion: 'approved-firmware',
+    active: false, homologated: false,
+  });
+  await assert.rejects(() => h.service.claim({ ...auth(), authorizationId: authId }));
+  assert.deepEqual(h.updates, []);
+});
+
+test('claim for a different authorization leaves the actual release available', async () => {
+  const h = harness();
+  assert.deepEqual(await h.service.claim({ ...auth(), authorizationId: 'unrelated-authorization' }), { command: null });
+  assert.deepEqual(h.updates, []);
+  assert.equal((await h.service.claim({ ...auth(), authorizationId: authId })).command.authorizationId, authId);
 });
