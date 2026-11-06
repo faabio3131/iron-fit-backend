@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -17,7 +18,7 @@ test('B6 SaaS billing is read-only in IRON and mutation authority belongs to FM 
       email,
       password: ownerPassword,
       name: 'B6 Billing Authority Owner',
-      gymName: `B6 Billing Authority ${suffix}`,
+      cnpj: fixtureCnpj(), gymName: `B6 Billing Authority ${suffix}`,
       timezone: 'America/Sao_Paulo',
     },
   });

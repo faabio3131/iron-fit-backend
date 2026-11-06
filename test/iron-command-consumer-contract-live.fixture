@@ -55,6 +55,7 @@ describe("IRON real FM Command consumer ↔ Nest/PostgreSQL S2S interoperability
         requestId: randomUUID(),
         name: "FM Command Connector QA",
         gymName: "FMCC Real Consumer QA " + marker,
+        cnpj: "12ABC34501DE35",
         email: "command-consumer-" + marker + "@example.com",
         password: process.env.B6_OWNER_PASSWORD,
         timezone: "America/Sao_Paulo",

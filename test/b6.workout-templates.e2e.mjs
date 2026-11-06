@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -10,7 +11,7 @@ test('pilot templates: official trial, canonical draft, human approval and stude
   try {
     await db.authRateLimitBucket.deleteMany({ where: { scope: { in: ['AUTH_SIGNUP_IP', 'AUTH_LOGIN_REQUEST_IP', 'AUTH_LOGIN_FAILURE_IP'] } } });
     const id = randomUUID().slice(0, 8), email = `templates-${id}@example.com`, password = process.env.B6_OWNER_PASSWORD;
-    await request('/commercial/trial/start', { expected: 201, method: 'POST', body: { requestId: randomUUID(), email, password, name: 'Template Owner', gymName: `Template Gym ${id}`, timezone: 'America/Sao_Paulo' } });
+    await request('/commercial/trial/start', { expected: 201, method: 'POST', body: { requestId: randomUUID(), email, password, name: 'Template Owner', cnpj: fixtureCnpj(), gymName: `Template Gym ${id}`, timezone: 'America/Sao_Paulo' } });
     const owner = await login(email, password);
     const trainerEmail = `templates-trainer-${id}@example.com`;
     await request('/users', { token: owner.access_token, method: 'POST', expected: 201, body: { email: trainerEmail, password: process.env.B6_STAFF_PASSWORD, name: 'Template Trainer', roleName: 'TRAINER' } });

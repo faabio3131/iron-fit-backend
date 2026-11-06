@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -44,6 +45,7 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
 
     await page.getByTestId('trial-name').fill('B6 Browser Owner');
     await page.getByTestId('trial-gym-name').fill(`B6 Browser Gym ${id}`);
+    await page.getByTestId('trial-cnpj').fill(fixtureCnpj());
     await page.getByTestId('trial-email').fill(email);
     await page.getByTestId('trial-password').fill(password);
     const [trialResponse] = await Promise.all([

@@ -18,6 +18,7 @@ import { passwordPolicyViolations } from '../auth/auth-security';
 import { AuthSecurityService } from '../auth/auth-security.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CommercialLaunchService } from '../commercial-launch/commercial-launch.service';
+import { normalizeTrialCnpj } from './trial-cnpj';
 import { StartTrialDto } from './dto/start-trial.dto';
 import {
   COMMERCIAL_ONBOARDING_STEPS,
@@ -89,6 +90,7 @@ export class CommercialTrialService {
     name: string;
     phone: string | null;
     gymName: string;
+    cnpj?: string;
     timezone: string;
   }) {
     return createHash('sha256').update(JSON.stringify(input)).digest('hex');
@@ -136,7 +138,11 @@ export class CommercialTrialService {
     if (!this.validTimezone(timezone)) {
       throw new BadRequestException('Timezone invalido');
     }
-    const fingerprint = this.requestFingerprint({ email, name, phone, gymName, timezone });
+    const cnpj = dto.cnpj ? normalizeTrialCnpj(dto.cnpj) : null;
+    if (dto.cnpj && !cnpj) throw new BadRequestException('Informe um CNPJ válido');
+    const fingerprint = this.requestFingerprint({
+      email, name, phone, gymName, timezone, ...(cnpj ? { cnpj } : {}),
+    });
 
     const persistedReplay = await this.previousProvisioning(
       this.prisma,
@@ -144,6 +150,7 @@ export class CommercialTrialService {
       fingerprint,
     );
     if (persistedReplay) return persistedReplay;
+    if (!cnpj) throw new BadRequestException('Informe um CNPJ válido');
 
     const config = await this.trialConfig();
 
@@ -159,6 +166,11 @@ export class CommercialTrialService {
         return await this.prisma.$transaction(async (tx) => {
           const replay = await this.previousProvisioning(tx, dto.requestId, fingerprint);
           if (replay) return replay;
+
+          const usedCnpj = await tx.commercialTrialProvisioning.findUnique({
+            where: { cnpj }, select: { requestId: true },
+          });
+          if (usedCnpj) throw new ConflictException('Cadastro indisponivel para estes dados');
 
           const existingUser = await tx.user.findUnique({ where: { email } });
           if (existingUser) {
@@ -217,6 +229,7 @@ export class CommercialTrialService {
             data: {
               requestId: dto.requestId,
               requestFingerprint: fingerprint,
+              cnpj,
               userId: user.id,
               gymId: gym.id,
               subscriptionId: subscription.id,

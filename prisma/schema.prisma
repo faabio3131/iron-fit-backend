@@ -669,6 +669,7 @@ model EvolutionTenantInstance {
 
 
 model CommercialTrialProvisioning {
+  cnpj               String?  @unique
   requestId          String   @id
   requestFingerprint String
   userId             String

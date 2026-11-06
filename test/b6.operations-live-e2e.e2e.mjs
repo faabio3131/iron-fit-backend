@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -24,7 +25,7 @@ async function createTenant(label) {
       email,
       password,
       name: `B6 ${label} Owner`,
-      gymName: `B6 ${label} ${suffix}`,
+      cnpj: fixtureCnpj(), gymName: `B6 ${label} ${suffix}`,
       timezone: 'America/Sao_Paulo',
     },
   })).payload;

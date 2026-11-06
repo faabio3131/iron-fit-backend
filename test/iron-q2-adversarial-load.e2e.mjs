@@ -1,3 +1,4 @@
+import { fixtureCnpj } from './fixture-cnpj.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -18,7 +19,7 @@ test('Q adversarial live API: invalid tokens, direct-object access, tenant spoof
   const createGym = async (name) => {
     const email = `q-adversarial-${name}-${id}@example.com`;
     const provision = (await request('/commercial/trial/start', { method: 'POST', expected: 201,
-      body: { requestId: randomUUID(), name: 'Security QA Owner', gymName: `Security QA ${name} ${id}`,
+      body: { requestId: randomUUID(), name: 'Security QA Owner', cnpj: fixtureCnpj(), gymName: `Security QA ${name} ${id}`,
         email, password: pass, timezone: 'America/Sao_Paulo' } })).payload;
     return { email, provision, session: await login(email, pass) };
   };
@@ -102,7 +103,7 @@ test('Q isolated bounded concurrent reads: per-scenario latency, throughput and 
   const email = `q-load-${suffix}@example.com`;
   await request('/commercial/trial/start', { method: 'POST', expected: 201,
     body: { requestId: randomUUID(), name: 'Q Load Owner', email, password,
-      gymName: `Q Load Gym ${suffix}`, timezone: 'America/Sao_Paulo' } });
+      cnpj: fixtureCnpj(), gymName: `Q Load Gym ${suffix}`, timezone: 'America/Sao_Paulo' } });
   const session = await login(email, password);
   await request('/auth/step-up', {
     method: 'POST', token: session.access_token, expected: 200,
