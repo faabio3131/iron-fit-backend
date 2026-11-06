@@ -258,18 +258,37 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         assert.equal(await prisma.financialTransaction.count({ where: { gymId: trial.gymId, sourceId: sale.charge.id } }), 1);
         await page.getByTestId('nav-access').click();
         await page.getByTestId('reception-access-terminal').waitFor({ timeout: 20000 });
+        const authorization = await saleResponse.request().headerValue('authorization');
+        assert.ok(authorization);
+        const headers = { authorization };
+        const issued = await page.request.post(process.env.B6_API_URL + '/access/credentials', {
+          headers, data: { studentId: studentCreated.id, type: 'QR_CODE' },
+        });
+        assert.equal(issued.status(), 201);
+        const { qrToken } = await issued.json();
         const eventIds = [];
         const durations = [];
         for (let i = 0; i < 10; i++) {
-          await page.getByTestId('terminal-search').fill(studentCreated.id);
+          if (i === 0) await page.getByTestId('terminal-qr').fill(qrToken);
+          else await page.getByTestId('terminal-search').fill(studentCreated.id);
           const [response] = await Promise.all([
             page.waitForResponse(r => r.url().endsWith('/access/terminal/check-in') && r.request().method() === 'POST'),
-            page.getByTestId('terminal-check-' + studentCreated.id).click(),
+            i === 0 ? page.getByTestId('terminal-qr').press('Enter') : page.getByTestId('terminal-check-' + studentCreated.id).click(),
           ]);
           assert.equal(response.status(), 201);
           const decision = await response.json();
           assert.equal(decision.allowed, true);
           eventIds.push(decision.eventId);
+          if (i === 0) {
+            const data = response.request().postDataJSON();
+            const replay = await page.request.post(response.url(), { headers, data });
+            assert.equal(replay.status(), 201);
+            assert.equal((await replay.json()).eventId, decision.eventId);
+            const mismatch = await page.request.post(response.url(), {
+              headers, data: { requestId: data.requestId, studentId: studentCreated.id },
+            });
+            assert.equal(mismatch.status(), 409);
+          }
           const timing = response.request().timing();
           durations.push(timing.responseEnd - timing.requestStart);
         }
