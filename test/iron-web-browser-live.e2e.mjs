@@ -63,6 +63,10 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     assert.equal(subscription.planVersion.status, 'PUBLISHED');
     assert.equal(subscription.gymId, trial.gymId);
     const replay = await page.request.post(`${process.env.B6_API_URL}/commercial/trial/start`, { data: trialBody });
+    const duplicateCnpj = await page.request.post(`${process.env.B6_API_URL}/commercial/trial/start`, {
+      data: { ...trialBody, requestId: randomUUID(), email: 'duplicate-' + trialBody.email },
+    });
+    assert.equal(duplicateCnpj.status(), 409);
     assert.equal(replay.status(), 201);
     assert.equal((await replay.json()).gymId, trial.gymId);
     assert.equal(await prisma.tenantProductSubscription.count({ where: { gymId: trial.gymId } }), 1);

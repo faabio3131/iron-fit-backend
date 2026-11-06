@@ -31,9 +31,6 @@ test('B6 live commercial trial, login and ordered onboarding', async () => {
   for (const body of [otherRequest, { ...otherRequest, cnpj: '00000000000000' }]) {
     await request('/commercial/trial/start', { method: 'POST', expected: 400, body });
   }
-  await request('/commercial/trial/start', {
-    method: 'POST', expected: 409, body: { ...otherRequest, cnpj },
-  });
 
   const owner = await login(email, password);
   assert.equal(owner.user.activeGymId, trial.gymId);
