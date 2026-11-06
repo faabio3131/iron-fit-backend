@@ -256,6 +256,29 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         await page.getByTestId('desk-success').waitFor();
         await page.getByTestId('desk-closing').waitFor();
         assert.equal(await prisma.financialTransaction.count({ where: { gymId: trial.gymId, sourceId: sale.charge.id } }), 1);
+        await page.getByTestId('nav-access').click();
+        await page.getByTestId('reception-access-terminal').waitFor({ timeout: 20000 });
+        const eventIds = [];
+        const durations = [];
+        for (let i = 0; i < 10; i++) {
+          await page.getByTestId('terminal-search').fill(studentCreated.id);
+          const [response] = await Promise.all([
+            page.waitForResponse(r => r.url().endsWith('/access/terminal/check-in') && r.request().method() === 'POST'),
+            page.getByTestId('terminal-check-' + studentCreated.id).click(),
+          ]);
+          assert.equal(response.status(), 201);
+          const decision = await response.json();
+          assert.equal(decision.allowed, true);
+          eventIds.push(decision.eventId);
+          const timing = response.request().timing();
+          durations.push(timing.responseEnd - timing.requestStart);
+        }
+        assert.equal(new Set(eventIds).size, 10);
+        assert.equal(await prisma.accessEvent.count({ where: { id: { in: eventIds }, gymId: trial.gymId, studentId: studentCreated.id } }), 10);
+        assert.equal(await prisma.auditLog.count({ where: { entityId: { in: eventIds }, gymId: trial.gymId, action: 'ACCESS_DECISION_RECORDED' } }), 10);
+        assert.ok(durations.every(ms => Number.isFinite(ms) && ms >= 0));
+        durations.sort((a, b) => a - b);
+        assert.ok(durations[9] < 300, 'Terminal local p95: ' + durations[9] + ' ms');
       }
       assert.equal(await page.getByTestId('nav-team').count(), employee.role === 'MANAGER' ? 1 : 0);
       assert.equal(await page.getByTestId('nav-workouts').count(), employee.role === 'TRAINER' ? 1 : (employee.role === 'MANAGER' ? 1 : 0));
@@ -306,6 +329,15 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     await page.getByText('Peso corporal', { exact: false }).first().waitFor({ timeout: 20000 });
     await page.getByText('Agenda', { exact: true }).last().click();
     await page.getByText('Perfil', { exact: true }).last().click();
+    const [qrResponse] = await Promise.all([
+      page.waitForResponse(r => r.url().endsWith('/me/access/qr-code') && r.request().method() === 'POST'),
+      page.getByTestId('student-qr-generate').click(),
+    ]);
+    assert.equal(qrResponse.status(), 201);
+    const ownQr = await qrResponse.json();
+    assert.match(ownQr.imageDataUrl, /^data:image\/png;base64,iVBOR/);
+    assert.equal(ownQr.qrToken, undefined);
+    assert.equal(await prisma.accessCredential.count({ where: { id: ownQr.credentialId, studentId: studentCreated.id, selfService: true, active: true } }), 1);
     await page.getByTestId('logout-submit').click();
     await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
 

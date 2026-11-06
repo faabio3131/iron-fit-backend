@@ -9,8 +9,7 @@ import { TerminalCheckInDto } from './dto/terminal-check-in.dto';
 
 @Injectable()
 export class AccessTerminalService {
-  constructor(private readonly db: PrismaService, private readonly access: AccessService) {
-  }
+  constructor(private readonly db: PrismaService, private readonly access: AccessService) {}
 
   private async authorize(tx: Prisma.TransactionClient, gymId: string, actor: string, roles: string[]) {
     if (!gymId || !actor) throw new ForbiddenException('Academia e operador autenticados obrigatorios');
@@ -89,7 +88,7 @@ export class AccessTerminalService {
       const recent = await tx.accessCredential.findFirst({
         where: { studentId: student.id, selfService: true, createdAt: { gt: new Date(now.getTime() - 15000) } }, select: { id: true },
       });
-      if (recent) throw new TooManyRequestsException('Aguarde 15 segundos para gerar outro QR');
+      if (recent) throw new HttpException('Aguarde 15 segundos para gerar outro QR', 429);
       const expiresAt = new Date(now.getTime() + 120000);
       await tx.accessCredential.updateMany({ where: { studentId: student.id, selfService: true, active: true }, data: { active: false } });
       const credential = await this.access.createCredential({
