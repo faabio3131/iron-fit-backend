@@ -245,7 +245,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 138b766a372dd56a2a18f144cb275b0c4039ada6
+          ref: 0c50924919e42b089496004c8735506fd583e75f
           path: iron-fit-app
 
       - name: Install certified IRON app dependencies
@@ -263,7 +263,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 138b766a372dd56a2a18f144cb275b0c4039ada6
+          ref: 0c50924919e42b089496004c8735506fd583e75f
           path: iron-fit-app-macro-o-candidate
 
       - name: Install current Macro O candidate dependencies
