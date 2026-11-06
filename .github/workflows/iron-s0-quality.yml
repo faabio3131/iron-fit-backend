@@ -263,7 +263,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 154f5986bcb99c36fea933be8919a38e8ee2d73e
+          ref: 5639c553ba4642b2405a585ad588466182ac1958
           path: iron-fit-app-macro-o-candidate
 
       - name: Install current Macro O candidate dependencies

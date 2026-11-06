@@ -1,3 +1,5 @@
+import { AccessTerminalController } from './access-terminal.controller';
+import { AccessTerminalService } from './access-terminal.service';
 import { Module } from '@nestjs/common';
 import { AccessController } from './access.controller';
 import { AccessService } from './access.service';
@@ -12,8 +14,8 @@ import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule, AuthModule],
-  controllers: [AccessController, PhysicalGatewayController],
-  providers: [AccessService, PhysicalAccessDriverRegistry, PhysicalAccessCoordinator, PhysicalDeviceAdminService, PhysicalAccessRecoveryService, PhysicalGatewayService],
+  controllers: [AccessTerminalController, AccessController, PhysicalGatewayController],
+  providers: [AccessTerminalService, AccessService, PhysicalAccessDriverRegistry, PhysicalAccessCoordinator, PhysicalDeviceAdminService, PhysicalAccessRecoveryService, PhysicalGatewayService],
   exports: [AccessService, PhysicalAccessCoordinator, PhysicalAccessDriverRegistry, PhysicalAccessRecoveryService],
 })
 export class AccessModule {}

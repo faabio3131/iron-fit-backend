@@ -870,3 +870,11 @@ Atualizar este bloco a cada entrega:
 - Nenhuma configuração/modelo externo foi declarado homologado; equipamentos reais e API/modelo real permanecem externos. Nenhum deploy do produto.
 
 - Conferência final da Fase 3 completou carga/orientação no composer e na revisão. Backend e aluno já suportavam suggestedLoad; navegador agora deve conferir o campo do professor até a tela do aluno. App candidato 154f598 tem 393 testes PASS. CI do backend deve fixar esse HEAD; não certificar a variante anterior 3809514 como entrega de carga.
+
+
+## CURRENT — Fase 4 do piloto (06/11/2026)
+
+- Fase 3 integrada nos PRs backend #219 e app #84. Pós-merges 41886487686 e 41886501492 SUCCESS.
+- Candidatos Fase 4: backend #220 e app #85. Decisão da recepção auditada na mesma transação PostgreSQL; autorização da academia e elegibilidade consultadas no servidor. QR do aluno tem expiração de 120 segundos e apenas o hash do token fica persistido.
+- Gate atual: CI completa dos dois HEADs, navegador com dez decisões, replay e QR, merge após confirmação verde, pós-merge. App 5639c55 alinha três patches Expo exigidos pelo Expo Doctor.
+- O cliente piloto segue pelo fluxo público Testar grátis. Gates externos seguintes: assinatura móvel e aparelhos, leitor físico, ensaio operacional e decisão GO. Não há evidência de deploy da Fase 4 nem de giro físico nesta etapa.

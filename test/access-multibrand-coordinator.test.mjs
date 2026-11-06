@@ -14,6 +14,7 @@ function buildHarness({ decision = validDecision, driverAvailable = true } = {})
   const events = [];
   let attempt = null;
   const prisma = {
+    charge: { findFirst: async () => null },
     gym: { findUnique: async () => ({ active: true }) },
     subscription: { findFirst: async () => ({ id: 'membership-a' }) },
     accessDevice: {

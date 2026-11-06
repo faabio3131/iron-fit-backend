@@ -1,3 +1,4 @@
+import { accessMembershipDenial } from '../access-membership';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AccessService } from '../access.service';
@@ -76,24 +77,8 @@ export class PhysicalAccessCoordinator {
     // Reuse the academy's canonical financial subscription status. Do not
     // invent a grace period, calculate balances, or allow a mere ACTIVE
     // student profile to bypass membership/payment authority.
-    const gym = await this.prisma.gym.findUnique({
-      where: { id: device.gymId },
-      select: { active: true },
-    });
-    if (!gym?.active) {
-      return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, 'Academia inativa');
-    }
-    const activeMembership = await this.prisma.subscription.findFirst({
-      where: {
-        gymId: device.gymId,
-        studentId: decision.student.id,
-        status: { in: ['ACTIVE', 'TRIALING'] },
-      },
-      select: { id: true },
-    });
-    if (!activeMembership) {
-      return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, 'Plano do aluno nao elegivel');
-    }
+    const membershipDenial = await accessMembershipDenial(this.prisma, device.gymId, decision.student.id);
+    if (membershipDenial) return this.denyPhysical(device, decision.eventId, decision.student.id, input.direction, membershipDenial);
 
     const manufacturer = device.manufacturer as AccessManufacturer;
     // The on-premise SDK is never loaded into the cloud backend. Only the
