@@ -47,13 +47,18 @@ function createCase(options = {}) {
   };
   const fetchImpl = async (url, init) => {
     const op = url.split('/').pop();
+    assert.equal(url, origin + '/api/v1/access/hardware/' + op);
+    assert.equal(init.redirect, 'error');
     const body = JSON.parse(init.body);
     calls.push({ op, body });
     assert.equal(body.deviceId, deviceId);
     assert.equal(body.deviceToken, token);
     assert.ok(body.nonce.length >= 16);
     assert.ok(Number.isSafeInteger(body.timestamp));
-    const data = op === 'identify'
+    if (op === 'claim') assert.equal(body.authorizationId, authId);
+    const data = op === 'check'
+      ? { manufacturer: sdk.manufacturer, model: sdk.model, firmwareVersion: options.cloudFirmware ?? sdk.firmware, active: !options.inactive, homologated: !options.unverified }
+      : op === 'identify'
       ? { allowed: options.denied !== true, authorizationId: authId, gymId: 'gym-a' }
       : op === 'claim'
         ? { command: {
@@ -126,4 +131,14 @@ test('local SDK refuses authorization intended for a different certified model',
   const result = await t.client.processOnce();
   assert.deepEqual(result, { handled: true, allowed: false });
   assert.equal(t.getReleases(), 0);
+});
+
+test('gateway preflight refuses to operate with inactive, unverified or mismatched hardware', async () => {
+  for (const options of [{ inactive: true }, { unverified: true }, { cloudFirmware: 'different-firmware' }]) {
+    const t = createCase(options);
+    await assert.rejects(() => t.client.verifyBinding(), /inativo, não homologado ou diferente/);
+    assert.deepEqual(t.calls.map(x => x.op), ['check']);
+    assert.equal(t.getReleases(), 0);
+  }
+  await createCase().client.verifyBinding();
 });

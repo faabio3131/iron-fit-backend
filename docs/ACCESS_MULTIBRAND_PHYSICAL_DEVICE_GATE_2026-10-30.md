@@ -13,10 +13,11 @@ Branch: feat/access-multibrand-device-fabric
   credential *decision*, never proof of physical presence.
 - PhysicalGatewayService authenticates an active, provisioned, externally
   certified device and offers reverse-poll APIs without exposing LAN ports:
-    POST /access/hardware/identify
-    POST /access/hardware/claim
-    POST /access/hardware/ack
-    POST /access/hardware/passage
+    POST /api/v1/access/hardware/check (diagnóstico autenticado, sem acionar a catraca)
+    POST /api/v1/access/hardware/identify
+    POST /api/v1/access/hardware/claim
+    POST /api/v1/access/hardware/ack
+    POST /api/v1/access/hardware/passage
 - Every gateway action authenticates its device token, scope, nonce and
   timestamp. Claimed commands use PostgreSQL compare-and-swap. A lost ACK
   never causes an automatic second unlock. Physical confirmation requires
@@ -72,10 +73,16 @@ the token, DLL or vendor credential to Git. Rotate token if compromised.
 Use outbound HTTPS with firewall egress restrictions; never expose raw
 TCP/IP/serial catraca ports publicly.
 
+### Conferência de instalação
+
+No computador Windows da academia, configure as variáveis acima. Para a Contabo, use `IRON_GATEWAY_URL=https://api.ironfitcore.com.br` sem acrescentar `/api/v1`. O agente acrescenta esse prefixo.
+
+Rode `node scripts/physical-gateway-agent.mjs --check`. O resultado informa se o arquivo local existe, se a API reconhece a credencial e se o equipamento está ativo e homologado. O diagnóstico também funciona para um equipamento provisionado que ainda está inativo. Ele não executa o arquivo SDK, não consulta a catraca e não manda comando de abertura. A inicialização normal exige identidade, modelo e firmware iguais aos cadastrados, além de ativação e homologação.
+
 ### SDK lifecycle
 1. Read QR identification from *real device SDK*.
 2. Submit canonical IRON device-authenticated identity decision.
-3. If and only if authorized, atomically claim the one-time command.
+3. If and only if authorized, atomically claim the one-time command for that exact authorization.
 4. Execute the **actual official SDK** command, preserving auth ID and direction.
 5. Submit positive/negative/unknown ACK. Unknown is quarantined, never resent.
 6. Wait for real SDK passage sensor event; send signed proof. An ACK alone
