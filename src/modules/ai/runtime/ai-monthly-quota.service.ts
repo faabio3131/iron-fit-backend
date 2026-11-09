@@ -17,7 +17,6 @@ export const WORKOUT_CREDIT_PACK_UNITS: Readonly<Record<string, number>> = Objec
   IRON_AI_WORKOUT_300: 300,
   IRON_AI_WORKOUT_1000: 1000,
 });
-const MAX_EXTRA_WORKOUT_UNITS_PER_CYCLE = 10000;
 
 export function quotaGroupFor(capability: AiCapability): QuotaGroup {
   return capability === 'WORKOUT_GENERATION' ? 'WORKOUT' : 'ADVISORY';
@@ -159,13 +158,8 @@ export class AiMonthlyQuotaService {
               throw new ConflictException('Referencia financeira de IA ja utilizada');
             return { idempotent: true, grantId: existing.id, units: existing.units };
           }
-          const current = await tx.aiCreditGrant.aggregate({
-            where: { tenantId: input.tenantId, group: 'WORKOUT',
-              periodStart: snapshot.periodStart!, periodEnd: snapshot.periodEnd!, revokedAt: null },
-            _sum: { units: true },
-          });
-          if ((current._sum.units ?? 0) + units > MAX_EXTRA_WORKOUT_UNITS_PER_CYCLE)
-            throw new ConflictException('Limite de pacotes extras por ciclo excedido');
+          // Never accept settled money and then refuse the matching finite credit pack.
+          // Commercial abuse/spend caps must be enforced BEFORE checkout by FM Command.
           const created = await tx.aiCreditGrant.create({ data: {
             tenantId: input.tenantId, group: 'WORKOUT',
             packageCode: input.packageCode, units, sourceInvoiceId: input.sourceInvoiceId,
