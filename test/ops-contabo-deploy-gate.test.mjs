@@ -17,8 +17,8 @@ test('deploy script passes Bash parser, fails closed via pipefail and validates 
   assert.match(script, /docker inspect "ironfit-\$\{service\}-1"/);
   assert.match(script, /docker image inspect "ironfit-\$\{service\}:ensaio"/);
   assert.match(script, /buildSha/);
-  assert.ok(script.indexOf('imagem ativa $service divergiu') < script.indexOf('> "$STATE"'));
-  assert.ok(script.indexOf('buildSha nao corresponde') < script.indexOf('> "$STATE"'));
+  assert.ok(script.indexOf('imagem ativa $service divergiu') < script.lastIndexOf('> "$STATE"'));
+  assert.ok(script.indexOf('buildSha nao corresponde') < script.lastIndexOf('> "$STATE"'));
 });
 
 test('Docker Compose failure cannot be masked by a successful tail or pre-existing HTTP 200 service', () => {
