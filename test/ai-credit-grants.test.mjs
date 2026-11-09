@@ -69,10 +69,12 @@ test('refund revokes exact tenant grant; retry is no-op and unknown refund is sa
  assert.equal(audit.length,2);
  await assert.rejects(()=>svc.grantPaidWorkoutPack({tenantId:gym,sourceInvoiceId:paidInvoice,packageCode:'IRON_AI_WORKOUT_100',paymentStatus:'PAID'}));
 });
-test('extra packs hard capped across a cycle, including existing credits', async()=>{
+test('settled finite packs cannot be silently denied after money is paid', async()=>{
  const {svc,grants}=harness();
  grants.push({id:'existing',tenantId:gym,group:'WORKOUT',periodStart:start,periodEnd:end,revokedAt:null,units:9900,sourceInvoiceId:'existing'});
- await assert.rejects(()=>svc.grantPaidWorkoutPack({
+ const confirmation=await svc.grantPaidWorkoutPack({
   tenantId:gym,sourceInvoiceId:paidInvoice,packageCode:'IRON_AI_WORKOUT_300',paymentStatus:'PAID'
- }));
+ });
+ assert.equal(confirmation.units,300);
+ assert.equal(grants.length,2);
 });
