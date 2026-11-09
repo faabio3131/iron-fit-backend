@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { IsUUID, Matches } from 'class-validator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -19,6 +19,12 @@ class OwnerCheckoutDto {
 @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
 export class IronCommercialCheckoutController {
   constructor(private readonly checkout: IronCommercialCheckoutService) {}
+
+  @Roles('OWNER')
+  @Get('offers')
+  offers(@CurrentUser() user: any) {
+    return this.checkout.offers(user?.activeGymId ?? user?.gymId);
+  }
 
   /** Only the verified tenant OWNER may initiate an FM-owned checkout. */
   @Roles('OWNER')
