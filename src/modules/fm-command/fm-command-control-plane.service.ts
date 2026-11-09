@@ -440,6 +440,24 @@ export class FmCommandControlPlaneService {
       if (!current) throw new NotFoundException('Assinatura IRON nao encontrada');
 
       const target = dto.entitlementStatus as TenantProductSubscriptionStatus;
+
+      // Paid periods originate in FM Command's verified invoice, not an untrusted
+      // browser or webhook. Never extend a license on a non-ACTIVE command.
+      let verifiedPaidThrough: Date | null = null;
+      if (dto.paidThrough !== undefined) {
+        if (target !== TenantProductSubscriptionStatus.ACTIVE ||
+            !['active', 'renewal'].includes(dto.commercialStatus)) {
+          throw new BadRequestException('paidThrough so e permitido para pagamento ativo');
+        }
+        const date = new Date(dto.paidThrough);
+        const now = Date.now();
+        if (!Number.isFinite(date.getTime()) ||
+            date.getTime() <= now ||
+            date.getTime() > now + 400 * 24 * 60 * 60 * 1000) {
+          throw new BadRequestException('paidThrough fora do periodo permitido');
+        }
+        verifiedPaidThrough = date;
+      }
       if (
         current.status === TenantProductSubscriptionStatus.CANCELED &&
         target !== TenantProductSubscriptionStatus.CANCELED
@@ -447,7 +465,11 @@ export class FmCommandControlPlaneService {
         throw new ConflictException('Assinatura cancelada nao pode ser reativada por status.sync');
       }
 
-      const updated = current.status === target
+      const nextPaidThrough = verifiedPaidThrough &&
+        (!current.effectiveUntil || verifiedPaidThrough > current.effectiveUntil)
+        ? verifiedPaidThrough : null;
+      const statusChanged = current.status !== target;
+      const updated = !statusChanged && !nextPaidThrough
         ? current
         : await tx.tenantProductSubscription.update({
             where: { id: current.id },
@@ -455,7 +477,7 @@ export class FmCommandControlPlaneService {
               status: target,
               ...(target === TenantProductSubscriptionStatus.CANCELED
                 ? { effectiveUntil: current.effectiveUntil ?? new Date() }
-                : {}),
+                : nextPaidThrough ? { effectiveUntil: nextPaidThrough } : {}),
             },
             include: { planVersion: { include: { productPlan: true } } },
           });
@@ -473,6 +495,8 @@ export class FmCommandControlPlaneService {
         next: {
           status: updated.status,
           commercialStatus: dto.commercialStatus,
+          paidThrough: dto.paidThrough ?? null,
+          effectiveUntil: updated.effectiveUntil?.toISOString() ?? null,
           planCode: updated.planVersion.productPlan.code,
           planVersion: updated.planVersion.version,
           reason: dto.reason,
@@ -480,7 +504,7 @@ export class FmCommandControlPlaneService {
       }, tx);
 
       return {
-        changed: current.status !== updated.status,
+        changed: statusChanged || Boolean(nextPaidThrough),
         subscriptionId: updated.id,
         tenantId: updated.gymId,
         entitlementStatus: updated.status,

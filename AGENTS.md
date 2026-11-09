@@ -878,3 +878,7 @@ Atualizar este bloco a cada entrega:
 - Candidatos Fase 4: backend #220 e app #85. Decisão da recepção auditada na mesma transação PostgreSQL; autorização da academia e elegibilidade consultadas no servidor. QR do aluno tem expiração de 120 segundos e apenas o hash do token fica persistido.
 - Gate atual: CI completa dos dois HEADs, navegador com dez decisões, replay e QR, merge após confirmação verde, pós-merge. App 5639c55 alinha três patches Expo exigidos pelo Expo Doctor.
 - O cliente piloto segue pelo fluxo público Testar grátis. Gates externos seguintes: assinatura móvel e aparelhos, leitor físico, ensaio operacional e decisão GO. Não há evidência de deploy da Fase 4 nem de giro físico nesta etapa.
+
+
+## CHECKPOINT VIVO — Fechamento comercial 09/11/2026
+O cronograma operacional das pendências finais e os gates por domínio estão no arquivo [AGENTES.md](AGENTES.md). Executar IF-P0-01 → IF-T-01 sobre os repositórios reais; este bloco tem precedência sobre checkpoints históricos da Fase 2/3/4, sem substituir decisões arquiteturais aprovadas. **CURRENT:** main backend c0bbcd4e, app 8204c7a1; Command PR #56 e Site PR #19 Draft; plataforma HOMOLOG com gateway sandbox e email desabilitado; não afirmar GO. Atualizar AGENTES.md com SHA, CI e resultado de cada WP.
