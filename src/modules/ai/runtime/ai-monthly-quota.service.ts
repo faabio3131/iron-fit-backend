@@ -62,10 +62,16 @@ export class AiMonthlyQuotaService {
     });
     if (!subscription) return { group, allowance: 0, used: 0, remaining: 0, percent: 0, periodStart: null, periodEnd: null };
     const billing = subscription.saasBillingAgreement;
+    // Never reset consumption simply because a plan transition creates a new subscription row.
+    const firstSubscription = await this.prisma.tenantProductSubscription.findFirst({
+      where: { gymId: tenantId, effectiveFrom: { lte: now } },
+      orderBy: { effectiveFrom: 'asc' },
+      select: { effectiveFrom: true },
+    });
     const cycle = billing?.currentPeriodStart && billing.currentPeriodEnd
       && billing.currentPeriodStart <= now && now < billing.currentPeriodEnd
       ? { start: billing.currentPeriodStart, end: billing.currentPeriodEnd }
-      : monthlyCycle(subscription.effectiveFrom, now);
+      : monthlyCycle(firstSubscription?.effectiveFrom ?? subscription.effectiveFrom, now);
     const [used, purchased] = await Promise.all([
       this.prisma.aiMonthlyConsumption.count({
         where: { tenantId, group, periodStart: cycle.start, state: { in: ['RESERVED', 'CONSUMED'] } },
@@ -185,7 +191,8 @@ export class AiMonthlyQuotaService {
       throw new BadRequestException('Referencia financeira invalida');
     return this.prisma.$transaction(async (tx) => {
       const grant = await tx.aiCreditGrant.findUnique({ where: { sourceInvoiceId: input.sourceInvoiceId } });
-      if (!grant) throw new BadRequestException('Credito financeiro nao encontrado');
+      // Refund can overtake a still-pending GRANT delivery: no credit is a safe idempotent no-op.
+      if (!grant) return { idempotent: true, revoked: 0 };
       if (grant.tenantId !== input.tenantId) throw new ConflictException('Credito pertence a outra academia');
       if (grant.revokedAt) return { idempotent: true, revoked: 0 };
       const revoked = await tx.aiCreditGrant.updateMany({

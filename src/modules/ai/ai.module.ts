@@ -18,6 +18,7 @@ import { AiMobileAdvisoryService } from './ai-mobile-advisory.service';
 import { AiPersistenceService } from './ai-persistence.service';
 import { AiWorkoutCandidateController } from './ai-workout-candidate.controller';
 import { AiMonthlyQuotaController } from './ai-monthly-quota.controller';
+import { AiCreditCheckoutController } from './ai-credit-checkout.controller';
 import { AiWorkoutCandidateService } from './ai-workout-candidate.service';
 import { AiConfigurationResolverService } from './configuration/ai-configuration-resolver.service';
 import { AiContextBuilderService } from './context/ai-context-builder.service';
@@ -39,7 +40,7 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     WorkoutsModule,
     IntegrationsModule,
   ],
-  controllers: [AiController, AiWorkoutCandidateController, AiMonthlyQuotaController, AiConfigurationAdminController],
+  controllers: [AiController, AiWorkoutCandidateController, AiMonthlyQuotaController, AiCreditCheckoutController, AiConfigurationAdminController],
   providers: [
     AiHttpTransport,
     AiAttemptLedgerService,
