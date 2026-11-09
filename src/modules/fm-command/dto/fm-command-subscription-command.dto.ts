@@ -1,5 +1,6 @@
 import {
   IsIn,
+  IsISO8601,
   IsInt,
   IsOptional,
   IsString,
@@ -62,4 +63,9 @@ export class FmCommandSubscriptionCommandDto {
   @MinLength(3)
   @MaxLength(256)
   reason: string;
+
+  /** Expiration of the current paid license, computed by FM billing from real payment, not by IRON UI. */
+  @IsISO8601({ strict: true })
+  @IsOptional()
+  paidThrough?: string;
 }
