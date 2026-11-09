@@ -87,6 +87,15 @@ function harness(allowance = 2) {
   };
 }
 
+test('annual paid subscriptions still use a monthly quota, not an annual pool', async () => {
+  const {service} = harness(20);
+  // A yearly period must not turn one month of credits into twelve months of credits.
+  const cycle = monthlyCycle(new Date('2026-01-31T00:00:00Z'), new Date('2026-11-09T12:00:00Z'));
+  assert.equal(cycle.start.toISOString(), '2026-10-31T00:00:00.000Z');
+  assert.equal(cycle.end.toISOString(), '2026-11-30T00:00:00.000Z');
+  assert.equal((await service.usage('gym-a','WORKOUT_GENERATION')).allowance,20);
+});
+
 test('AI quota reserves once per tenant/request and denies replay and overage', async () => {
   const {service} = harness(2);
   const one = await service.reserve('gym-a', 'WORKOUT_GENERATION', 'first');
