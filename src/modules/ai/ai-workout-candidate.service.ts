@@ -155,6 +155,7 @@ export class AiWorkoutCandidateService {
         latencyMs,
         requestId,
       });
+      await this.execution.releaseRejectedWorkout(gymId, requestId);
       throw new BadGatewayException({
         code: 'AI_WORKOUT_GENERATION_INVALID_RESPONSE',
         failureCategory: validation.failureCategory ?? 'INVALID_RESPONSE',
@@ -190,6 +191,7 @@ export class AiWorkoutCandidateService {
         latencyMs,
         requestId,
       });
+      await this.execution.releaseRejectedWorkout(gymId, requestId);
       throw new BadGatewayException({
         code: 'AI_WORKOUT_GENERATION_INVALID_RESPONSE',
         failureCategory: 'INVALID_RESPONSE',
