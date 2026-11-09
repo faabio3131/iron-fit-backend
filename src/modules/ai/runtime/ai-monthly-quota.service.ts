@@ -130,6 +130,15 @@ export class AiMonthlyQuotaService {
     });
   }
 
+  /** A model answer rejected before a usable workout candidate exists is not a generated sheet. */
+  async releaseRejectedWorkout(tenantId: string, requestId: string) {
+    if (!tenantId?.trim() || !requestId?.trim()) return;
+    await this.prisma.aiMonthlyConsumption.updateMany({
+      where: { tenantId, group: 'WORKOUT', requestId, state: 'CONSUMED' },
+      data: { state: 'RELEASED', finishedAt: new Date() },
+    });
+  }
+
   /** Only FM Command's authenticated S2S boundary may call this after its canonical invoice is PAID. */
   async grantPaidWorkoutPack(input: {
     tenantId: string;
