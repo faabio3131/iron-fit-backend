@@ -12,6 +12,7 @@ const { NestFactory }=require('@nestjs/core');
 const { AppModule }=require('../dist/src/app.module.js');
 const { PrismaService }=require('../dist/src/prisma/prisma.service.js');
 const { ProductEntitlementsService }=require('../dist/src/modules/product-entitlements/product-entitlements.service.js');
+const { ProductCapabilityCatalogService }=require('../dist/src/modules/product-entitlements/product-capability-catalog.service.js');
 
 const LIMIT_WORKOUT='ai.workout_monthly_max';
 const LIMIT_ADVISORY='ai.advisory_monthly_max';
@@ -71,13 +72,19 @@ async function main() {
   try {
     const prisma=app.get(PrismaService);
     const service=app.get(ProductEntitlementsService);
+    const catalog=app.get(ProductCapabilityCatalogService);
     const actor=process.env.IRON_AI_QUOTA_ACTOR_USER_ID;
     if(apply) {
       const role=await prisma.userRole.findFirst({where:{
         userId:actor,active:true,gymId:null,role:{name:'SUPER_ADMIN'},user:{active:true},
       },select:{id:true}});
       if(!role)throw new Error('AI_QUOTA_SUPER_ADMIN_REQUIRED');
-      for(const key of [LIMIT_WORKOUT,LIMIT_ADVISORY]) {
+      for (const [key,description] of [
+        [LIMIT_WORKOUT,'Limite mensal de pedidos de geracao de treino por academia.'],
+        [LIMIT_ADVISORY,'Limite mensal de outras acoes de IA por academia.'],
+      ]) {
+        // Canonical create is audited and strictly idempotent; no ad-hoc SQL catalog writes.
+        await catalog.create({ key, kind:'LIMIT', domain:'AI', description },actor);
         const definition=await prisma.productCapabilityDefinition.findUnique({where:{key}});
         if (!definition || definition.kind!=='LIMIT' || definition.status!=='ACTIVE')
           throw new Error('AI_QUOTA_CANONICAL_LIMIT_NOT_REGISTERED');
