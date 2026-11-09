@@ -37,6 +37,45 @@ export class IronCommercialCheckoutService {
     return { url: url.toString(), token };
   }
 
+  async offers(gymId: string | undefined) {
+    if (!gymId || !UUID.test(gymId)) throw new BadRequestException('Academia ativa obrigatoria');
+    const conf = this.config();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12_000);
+    let response: Response;
+    try {
+      response = await fetch(conf.url, {
+        method: 'GET', redirect: 'error', cache: 'no-store', signal: controller.signal,
+        headers: { 'Authorization': 'Bearer ' + conf.token },
+      });
+    } catch {
+      throw new ServiceUnavailableException('Catalogo comercial temporariamente indisponivel');
+    } finally { clearTimeout(timeout); }
+    if (!response.ok) throw new ServiceUnavailableException('Nao foi possivel consultar os planos comerciais');
+    let result: unknown;
+    try { result = await response.json(); }
+    catch { throw new ServiceUnavailableException('Resposta do catalogo invalida'); }
+    if (!result || typeof result !== 'object' || !Array.isArray((result as any).plans))
+      throw new ServiceUnavailableException('Resposta do catalogo invalida');
+    const plans = (result as { plans: unknown[] }).plans;
+    if (plans.length > 30) throw new ServiceUnavailableException('Catalogo comercial excedeu o limite');
+    return { plans: plans.map((plan) => {
+      if (!plan || typeof plan !== 'object' || Array.isArray(plan))
+        throw new ServiceUnavailableException('Plano comercial malformado');
+      const p = plan as Record<string, unknown>;
+      if (typeof p.planCode !== 'string' || !PLAN.test(p.planCode) ||
+          typeof p.name !== 'string' || p.name.length < 2 || p.name.length > 120 ||
+          !['monthly', 'yearly'].includes(String(p.interval)) ||
+          typeof p.amountMinor !== 'number' || !Number.isSafeInteger(p.amountMinor) ||
+          p.amountMinor <= 0 || p.currency !== 'BRL')
+        throw new ServiceUnavailableException('Plano comercial malformado');
+      return {
+        planCode: p.planCode, name: p.name, interval: p.interval,
+        amountMinor: p.amountMinor, currency: 'BRL',
+      };
+    }) };
+  }
+
   async prepare(gymId: string | undefined, planCode: string, requestId: string) {
     if (!gymId || !UUID.test(gymId)) throw new BadRequestException('Academia ativa obrigatoria');
     if (!PLAN.test(planCode) || !UUID.test(requestId))
