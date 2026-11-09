@@ -118,6 +118,11 @@ export class AiProviderExecutionService {
     return result;
   }
 
+  /** Provider SUCCEEDED alone does not bill a rejected workout-sheet candidate. */
+  async releaseRejectedWorkout(tenantId: string, requestId: string) {
+    await this.monthlyQuota.releaseRejectedWorkout(tenantId, requestId);
+  }
+
   private denied<T> (flag: string): AiNormalizedResponse<T> {
     return { status: 'UNAVAILABLE', flags: [flag], failureCategory: 'CONFIGURATION_UNAVAILABLE' };
   }
