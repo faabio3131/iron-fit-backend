@@ -100,5 +100,3 @@ echo "$RUNTIME" | grep -Fq "\"buildSha\":\"$NB\"" || rollback "API buildSha nao 
 printf 'BACKEND_SHA=%s\nAPP_SHA=%s\n' "$NB" "$NA" > "$STATE"; rm -f "$FAILED"
 docker image prune -f >/dev/null 2>&1; rm -f "$OLDENV"
 log "== DEPLOY OK backend=${NB:0:7} app=${NA:0:7}"
-
-[executed on device: DESKTOP-URCTNQ1 (f34d2c56-c641-4ba3-af64-b38ecdf2e7d5)]
