@@ -68,10 +68,13 @@ export class AiMonthlyQuotaService {
       orderBy: { effectiveFrom: 'asc' },
       select: { effectiveFrom: true },
     });
-    const cycle = billing?.currentPeriodStart && billing.currentPeriodEnd
-      && billing.currentPeriodStart <= now && now < billing.currentPeriodEnd
-      ? { start: billing.currentPeriodStart, end: billing.currentPeriodEnd }
-      : monthlyCycle(firstSubscription?.effectiveFrom ?? subscription.effectiveFrom, now);
+    // A YEARLY subscription has a yearly paidThrough window, but AI allowance is MONTHLY.
+    const billingActive = billing?.currentPeriodStart && billing.currentPeriodEnd
+      && billing.currentPeriodStart <= now && now < billing.currentPeriodEnd;
+    const cycle = monthlyCycle(
+      billingActive ? billing!.currentPeriodStart! : firstSubscription?.effectiveFrom ?? subscription.effectiveFrom,
+      now,
+    );
     const [used, purchased] = await Promise.all([
       this.prisma.aiMonthlyConsumption.count({
         where: { tenantId, group, periodStart: cycle.start, state: { in: ['RESERVED', 'CONSUMED'] } },
