@@ -1,4 +1,5 @@
 import { AiAttemptLedgerService } from './runtime/ai-attempt-ledger.service';
+import { AiMonthlyQuotaService } from './runtime/ai-monthly-quota.service';
 import { AiHttpTransport } from './providers/ai-http-transport';
 import { Module, OnModuleInit } from '@nestjs/common';
 import { OpenAiCompatibleProviderAdapter, GeminiNativeProviderAdapter } from './providers/external-ai-provider.adapters';
@@ -16,6 +17,7 @@ import { AiController } from './ai.controller';
 import { AiMobileAdvisoryService } from './ai-mobile-advisory.service';
 import { AiPersistenceService } from './ai-persistence.service';
 import { AiWorkoutCandidateController } from './ai-workout-candidate.controller';
+import { AiMonthlyQuotaController } from './ai-monthly-quota.controller';
 import { AiWorkoutCandidateService } from './ai-workout-candidate.service';
 import { AiConfigurationResolverService } from './configuration/ai-configuration-resolver.service';
 import { AiContextBuilderService } from './context/ai-context-builder.service';
@@ -37,10 +39,11 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     WorkoutsModule,
     IntegrationsModule,
   ],
-  controllers: [AiController, AiWorkoutCandidateController, AiConfigurationAdminController],
+  controllers: [AiController, AiWorkoutCandidateController, AiMonthlyQuotaController, AiConfigurationAdminController],
   providers: [
     AiHttpTransport,
     AiAttemptLedgerService,
+    AiMonthlyQuotaService,
     AuditService,
     AiPersistenceService,
     AiSanitizerService,
@@ -59,6 +62,7 @@ import { AiOutputValidatorService } from './validation/ai-output-validator.servi
     AiWorkoutCandidateService,
   ],
   exports: [
+    AiMonthlyQuotaService,
     AiPersistenceService,
     AiSanitizerService,
     AiContextBuilderService,

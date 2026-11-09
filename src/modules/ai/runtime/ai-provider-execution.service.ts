@@ -5,6 +5,7 @@ import { AiConfigurationResolverService } from '../configuration/ai-configuratio
 import { AiProviderRegistryService } from '../providers/ai-provider-registry.service';
 import { AiSecretReferenceService } from '../secrets/ai-secret-reference.service';
 import { AiAttemptLedgerService } from './ai-attempt-ledger.service';
+import { AiMonthlyQuotaService } from './ai-monthly-quota.service';
 
 const TRANSIENT = new Set(['RATE_LIMIT', 'PROVIDER_INTERNAL_ERROR', 'OFFLINE', 'TIMEOUT']);
 
@@ -17,9 +18,30 @@ export class AiProviderExecutionService {
     private readonly providers: AiProviderRegistryService,
     private readonly secrets: AiSecretReferenceService,
     private readonly ledger: AiAttemptLedgerService,
+    private readonly monthlyQuota: AiMonthlyQuotaService,
   ) {}
 
   async execute<TInput = unknown, TOutput = unknown>(request: AiNormalizedRequest<TInput>): Promise<AiNormalizedResponse<TOutput>> {
+    const tenantId = request.context?.tenantId;
+    const requestId = request.context?.requestId;
+    if (!tenantId || !requestId || requestId.length > 160) return this.denied('AI_REQUEST_CONTEXT_INVALID');
+    let reservation: Awaited<ReturnType<AiMonthlyQuotaService['reserve']>>;
+    try { reservation = await this.monthlyQuota.reserve(tenantId, request.capability, requestId); }
+    catch { return this.denied('AI_MONTHLY_QUOTA_UNAVAILABLE'); }
+    if (!reservation.allowed || !('periodStart' in reservation) || !reservation.periodStart)
+      return this.denied(reservation.code);
+    let success = false;
+    try {
+      const response = await this.executeWithReservedQuota<TInput, TOutput>(request);
+      success = response.status === 'SUCCEEDED';
+      return response;
+    } finally {
+      // Failure and timeout release commercial quota; provider-attempt cost remains auditable.
+      await this.monthlyQuota.finalize(tenantId, request.capability, requestId, reservation.periodStart, success);
+    }
+  }
+
+  private async executeWithReservedQuota<TInput = unknown, TOutput = unknown>(request: AiNormalizedRequest<TInput>): Promise<AiNormalizedResponse<TOutput>> {
     if (!request.context?.tenantId || !request.context.requestId || request.context.requestId.length > 160) {
       return this.denied('AI_REQUEST_CONTEXT_INVALID');
     }
