@@ -44,6 +44,12 @@ IRON backend: `FMCC_IRON_CREDITS_CHECKOUT_URL` deve apontar para URL HTTPS concr
 
 **Gate comercial importante:** a proposta de quatro planos ainda está em `config/commercial/iron-four-tiers-2026.candidate.json`, não publica entitlements. O histórico imutável dos planos `PUBLISHED` não pode ser sobrescrito; preparar versões novas e transição comercial via FM Command com Launch Matrix e CI. A ausência de limites efetivos deve bloquear IA, nunca conceder "ilimitado" ou ignorar tenant.
 
+## Atualização segura dos planos imutáveis
+
+O script `node scripts/stage-ai-monthly-plan-versions.mjs` produz relatório read-only dos planos publicados que precisam receber a nova cota. A execução governada `--apply` exige `IRON_AI_QUOTA_ROLLOUT_APPROVED=YES` e `IRON_AI_QUOTA_ACTOR_USER_ID` com papel global SUPER_ADMIN ativo. Ele utiliza os serviços de entitlements do backend para criar **uma nova versão PUBLISHED**, preservando todas as demais permissões e limites do plano, sem reescrever versão PUBLISHED anterior e sem migrar assinaturas automaticamente. Em caso de DRAFT pré-existente, falha para reconciliação, sem sobrescrever trabalho.
+
+Após o staging, o FM Command exige seleção explícita da versão por `FMCC_IRON_PLAN_VERSIONS_JSON` quando mais de uma PUBLISHED coexistir, recusando escolha ambígua. A migração de assinaturas ativas é executada por seus comandos financeiros governados, não por esta rotina. **Antes da publicação efetiva do mecanismo de quota é obrigatório** comprovar limite efetivo em todos os contratos elegíveis e sincronização do FM Command. A rotina não promove o manifesto comercial candidato dos quatro planos nem ativa checkout por si só.
+
 ## Testes e go-live
 
 Reexecutar lint/typecheck/build, toda matriz backend e web, contrato S2S, Cakto HMAC/mismatch/replay, outbox/refund, concorrência e migrations isoladas. Verificar status real das PRs e resultados da CI, não confundir teste local/mock com transação Cakto. Nenhum merge/deploy até checks verdes, migração segura e verificação pós-merge. A transação com dinheiro real e oferta oficial requer configuração/homologação externas.
