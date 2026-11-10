@@ -9,7 +9,7 @@ test('AI quota rollout preserves four-tier candidate and refuses unlimited limit
  assert.equal(policy.IRON_START.workout,50);
  assert.equal(policy.IRON_GROWTH.workout,200);
  assert.equal(policy.IRON_SCALE.workout,500);
- assert.equal(policy.IRON_ENTERPRISE.workout,1200);
+ assert.equal(policy.IRON_ENTERPRISE.workout,750);
  assert.equal(policy.IRON_ENTERPRISE.advisory,2500);
  assert.equal(policy.IRON_V1_TRIAL.workout,10);
  assert.throws(()=>readQuotaPolicy({...manifest,tiers:[...manifest.tiers.slice(0,3),
