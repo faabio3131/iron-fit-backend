@@ -28,13 +28,17 @@ export function readQuotaPolicy(candidate) {
     || candidate.tiers.length !== 4)
     throw new Error('AI_QUOTA_CANDIDATE_INVALID');
   const planPolicy={...LEGACY};
+  const exactCodes=new Set(['IRON_START','IRON_GROWTH','IRON_SCALE','IRON_ENTERPRISE']);
   for(const tier of candidate.tiers) {
-    if(!/^IRON_[A-Z_]{2,60}$/.test(tier.code) || planPolicy[tier.code] ||
+    if(!exactCodes.delete(tier.code) || planPolicy[tier.code] ||
       !Number.isSafeInteger(tier.workoutAiMonthlyMax) || tier.workoutAiMonthlyMax < 0 ||
-      !Number.isSafeInteger(tier.advisoryAiMonthlyMax) || tier.advisoryAiMonthlyMax < 0)
+      !Number.isSafeInteger(tier.advisoryAiMonthlyMax) || tier.advisoryAiMonthlyMax < 0 ||
+      !Number.isSafeInteger(tier.studentsMax) || tier.studentsMax < 1 ||
+      typeof tier.name !== 'string' || tier.name.trim().length < 2)
       throw new Error('AI_QUOTA_PLAN_POLICY_INVALID');
-    planPolicy[tier.code]={workout:tier.workoutAiMonthlyMax,advisory:tier.advisoryAiMonthlyMax};
+    planPolicy[tier.code]={workout:tier.workoutAiMonthlyMax,advisory:tier.advisoryAiMonthlyMax,students:tier.studentsMax};
   }
+  if(exactCodes.size) throw new Error('AI_QUOTA_FOUR_TIER_INCOMPLETE');
   return planPolicy;
 }
 export function desiredEntitlements(source, allowance) {
@@ -43,7 +47,7 @@ export function desiredEntitlements(source, allowance) {
   // Absence of AI features cannot be interpreted as authorization to introduce them.
   const workout=prior.get('ai.workout_generation')?.featureEnabled === true ? allowance.workout : 0;
   const advisory=prior.get('ai.content_recommendation')?.featureEnabled === true ? allowance.advisory : 0;
-  const output=source.filter(entry=>![LIMIT_WORKOUT,LIMIT_ADVISORY].includes(entry.featureKey))
+  const output=source.filter(entry=>![LIMIT_WORKOUT,LIMIT_ADVISORY,'commercial.students_max','commercial.trial_students_max'].includes(entry.featureKey))
     .map(entry=>({
       featureKey:entry.featureKey,
       ...(entry.kind==='FEATURE'?{featureEnabled:entry.featureEnabled}:{}),
@@ -52,11 +56,13 @@ export function desiredEntitlements(source, allowance) {
     }));
   output.push({featureKey:LIMIT_WORKOUT,limitValue:workout});
   output.push({featureKey:LIMIT_ADVISORY,limitValue:advisory});
+  if(allowance.students!==undefined) output.push({featureKey:'commercial.students_max',limitValue:allowance.students});
+  // Historical trial-only capacity cannot accidentally become a paid-tier cap.
   return output;
 }
 function matchesLimits(version,policy) {
   const wanted=desiredEntitlements(version.entitlements,policy);
-  return [LIMIT_WORKOUT,LIMIT_ADVISORY].every(key=>{
+  return [LIMIT_WORKOUT,LIMIT_ADVISORY,...(policy.students===undefined?[]:['commercial.students_max'])].every(key=>{
     const actual=version.entitlements.find(row=>row.featureKey===key);
     const expected=wanted.find(row=>row.featureKey===key);
     return actual?.kind==='LIMIT' && actual.limitValue===expected?.limitValue;
@@ -79,48 +85,68 @@ async function main() {
         userId:actor,active:true,gymId:null,role:{name:'SUPER_ADMIN'},user:{active:true},
       },select:{id:true}});
       if(!role)throw new Error('AI_QUOTA_SUPER_ADMIN_REQUIRED');
-      for (const [key,description] of [
-        [LIMIT_WORKOUT,'Limite mensal de pedidos de geracao de treino por academia.'],
-        [LIMIT_ADVISORY,'Limite mensal de outras acoes de IA por academia.'],
+      for (const [key,description,domain] of [
+        [LIMIT_WORKOUT,'Limite mensal de pedidos de geracao de treino por academia.','AI'],
+        [LIMIT_ADVISORY,'Limite mensal de outras acoes de IA por academia.','AI'],
+        ['commercial.students_max','Limite maximo de alunos ativos por academia no plano SaaS.','CORE'],
       ]) {
         // Canonical create is audited and strictly idempotent; no ad-hoc SQL catalog writes.
-        await catalog.create({ key, kind:'LIMIT', domain:'AI', description },actor);
+        await catalog.create({ key, kind:'LIMIT', domain, description },actor);
         const definition=await prisma.productCapabilityDefinition.findUnique({where:{key}});
         if (!definition || definition.kind!=='LIMIT' || definition.status!=='ACTIVE')
           throw new Error('AI_QUOTA_CANONICAL_LIMIT_NOT_REGISTERED');
       }
     }
+    // The four new tiers must be real canonical plans, not versions of legacy
+    // IRON_V1. Historical subscriptions and published versions remain immutable.
+    const baseline=await prisma.productPlan.findUnique({
+      where:{code:'IRON_V1'},
+      include:{versions:{orderBy:{version:'desc'},include:{entitlements:true}}},
+    });
+    const baseVersion=baseline?.versions.find(version=>version.status==='PUBLISHED');
+    if(!baseVersion) throw new Error('AI_QUOTA_LEGACY_PUBLISHED_BASELINE_REQUIRED');
+    const tierCodes=manifest.tiers.map(t=>t.code);
     const rows=await prisma.productPlan.findMany({
-      where:{code:{in:Object.keys(policies)}},
+      where:{code:{in:tierCodes}},
       include:{versions:{orderBy:{version:'desc'},include:{entitlements:true}}},
       orderBy:{code:'asc'},
     });
+    const known=new Map(rows.map(plan=>[plan.code,plan]));
     const report=[];
-    for(const plan of rows) {
-      const original=plan.versions.find(version=>version.status==='PUBLISHED');
-      if(!original)continue; // Four-tier candidates are not published by this script.
-      const quota=policies[plan.code];
-      const currentIsCorrect=matchesLimits(original,quota);
-      const proposedVersion=plan.versions[0].version+1;
-      if(currentIsCorrect) {
-        report.push({plan:plan.code,sourceVersion:original.version,status:'CURRENT_ALREADY_COMPLIANT'});
+    for(const tier of manifest.tiers) {
+      const quota=policies[tier.code];
+      const existing=known.get(tier.code);
+      // A tier's entitlements are built from the published launch baseline,
+      // excluding trial-specific limits. No current customer is transitioned.
+      const entitled=desiredEntitlements(baseVersion.entitlements,quota);
+      if(existing?.versions.some(version=>version.status==='DRAFT'))
+        throw new Error('AI_QUOTA_EXISTING_DRAFT_REQUIRES_RECONCILIATION:'+tier.code);
+      const matching=existing?.versions.find(version=>
+        version.status==='PUBLISHED' && matchesLimits(version,quota));
+      if(matching) {
+        report.push({plan:tier.code,version:matching.version,status:'CURRENT_ALREADY_COMPLIANT'});
         continue;
       }
-      if(plan.versions.some(version=>version.status==='DRAFT'))
-        throw new Error('AI_QUOTA_EXISTING_DRAFT_REQUIRES_RECONCILIATION:'+plan.code);
-      report.push({plan:plan.code,sourceVersion:original.version,proposedVersion,
-        status:apply?'PUBLISH_NEW_VERSION':'WOULD_PUBLISH_NEW_VERSION',
-        requiresFmCommandSubscriptionTransition:true});
+      const version=(existing?.versions[0]?.version??0)+1;
+      report.push({plan:tier.code,proposedVersion:version,
+        status:apply?'PUBLISH_NEW_CANONICAL_TIER':'WOULD_PUBLISH_NEW_CANONICAL_TIER',
+        studentLimit:quota.students,workoutMonthlyLimit:quota.workout,
+        advisoryMonthlyLimit:quota.advisory,source:'IRON_V1_PUBLISHED',
+        existingSubscriptionsChanged:0});
       if(!apply)continue;
-      const revision=await service.createVersion(plan.id,{version:proposedVersion},actor);
+      const plan=existing??await service.createPlan({
+        code:tier.code,name:'IRON '+tier.name,
+        description:'Plano canonico IRON FIT CORE '+tier.name+' com limites por academia.',
+      },actor);
+      const revision=await service.createVersion(plan.id,{version},actor);
       if(revision.status!=='DRAFT')throw new Error('AI_QUOTA_VERSION_NOT_DRAFT');
-      for(const entitlement of desiredEntitlements(original.entitlements,quota)){
-        await service.setEntitlement(plan.id,proposedVersion,entitlement,actor);
-      }
-      await service.publishVersion(plan.id,proposedVersion,actor);
+      for(const entitlement of entitled)
+        await service.setEntitlement(plan.id,version,entitlement,actor);
+      await service.publishVersion(plan.id,version,actor);
     }
     console.log(JSON.stringify({applied:apply,planVersionReadiness:report,
-      authority:'IRON_PRODUCT_ENTITLEMENTS',subscriptionTransitionsApplied:0},null,2));
+      authority:'IRON_PRODUCT_ENTITLEMENTS',subscriptionTransitionsApplied:0,
+      historicalPlanVersionsChanged:0},null,2));
   } finally {await app.close();}
 }
 
