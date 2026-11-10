@@ -186,7 +186,7 @@ jobs:
             postgresql://postgres:postgres@localhost:5432/iron_ci?schema=public) ;;
             *) echo 'Refusing canonical tier staging outside disposable CI'; exit 1 ;;
           esac
-          ACTOR="$(node -e "const {PrismaClient}=require('@prisma/client');const db=new PrismaClient();db.user.findUnique({where:{email:'b6-admin@example.com'}}).then(x=>{if(!x?.id)throw Error('Missing CI SUPER_ADMIN');process.stdout.write(x.id)}).finally(()=>db.$disconnect()).catch(()=>process.exit(1))")"
+          ACTOR="$(node -e 'const {PrismaClient}=require("@prisma/client");const db=new PrismaClient();db.user.findUnique({where:{email:"b6-admin@example.com"}}).then(x=>{if(!x?.id)throw Error("Missing CI SUPER_ADMIN");process.stdout.write(x.id)}).finally(()=>db.$disconnect()).catch(()=>process.exit(1))')"
           IRON_AI_QUOTA_ACTOR_USER_ID="$ACTOR" IRON_AI_QUOTA_ROLLOUT_APPROVED=YES node scripts/stage-ai-monthly-plan-versions.mjs --apply
           IRON_AI_QUOTA_ACTOR_USER_ID="$ACTOR" IRON_AI_QUOTA_ROLLOUT_APPROVED=YES node scripts/stage-ai-monthly-plan-versions.mjs --apply
           node --test test/ai-quota-plan-stage-policy.test.mjs test/ai-commercial-student-limits.test.mjs
