@@ -47,7 +47,8 @@ export function desiredEntitlements(source, allowance) {
   // Absence of AI features cannot be interpreted as authorization to introduce them.
   const workout=prior.get('ai.workout_generation')?.featureEnabled === true ? allowance.workout : 0;
   const advisory=prior.get('ai.content_recommendation')?.featureEnabled === true ? allowance.advisory : 0;
-  const output=source.filter(entry=>![LIMIT_WORKOUT,LIMIT_ADVISORY,'commercial.students_max','commercial.trial_students_max'].includes(entry.featureKey))
+  const output=source.filter(entry=>![LIMIT_WORKOUT,LIMIT_ADVISORY,'commercial.students_max',
+    ...(allowance.students===undefined?[]:['commercial.trial_students_max'])].includes(entry.featureKey))
     .map(entry=>({
       featureKey:entry.featureKey,
       ...(entry.kind==='FEATURE'?{featureEnabled:entry.featureEnabled}:{}),
