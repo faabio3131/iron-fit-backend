@@ -207,6 +207,21 @@ jobs:
       - name: Real four-tier license delivery E2E without external Cakto
         run: node --test --test-concurrency=1 test/iron-four-tier-license-live.e2e.mjs
 
+      - name: Isolate disposable signup throttle after four-tier license E2E
+        run: |
+          node <<'NODE'
+          const {PrismaClient}=require('@prisma/client');
+          const u=new URL(process.env.DATABASE_URL||'');
+          if(process.env.NODE_ENV!=='test'||process.env.IRON_RUNTIME_ENV!=='HOMOLOG'||
+              !['localhost','127.0.0.1'].includes(u.hostname)||u.pathname!=='/iron_ci')
+            throw new Error('Refusing signup throttle reset outside isolated CI');
+          const db=new PrismaClient();
+          db.authRateLimitBucket.deleteMany({where:{scope:'AUTH_SIGNUP_IP'}})
+            .then(({count})=>console.log(JSON.stringify({event:'isolated_four_tier_signup_throttle_reset',count})))
+            .finally(()=>db.$disconnect())
+            .catch(e=>{console.error(e.message);process.exitCode=1;});
+          NODE
+
       - name: Integrated live E2E
         run: node --test --test-concurrency=1 test/b6.*.e2e.mjs
 
