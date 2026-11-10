@@ -22,6 +22,8 @@ import { TenantProductEntitlementsService } from '../product-entitlements/tenant
 const STUDENT_ONBOARDING_SESSION = 'STUDENT_ONBOARDING';
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 const TRIAL_STUDENT_LIMIT_FEATURE = 'commercial.trial_students_max';
+const PAID_STUDENT_LIMIT_FEATURE = 'commercial.students_max';
+const METERED_PAID_PLANS = new Set(['IRON_START', 'IRON_GROWTH', 'IRON_SCALE', 'IRON_ENTERPRISE']);
 const SERIALIZABLE_ATTEMPTS = 3;
 
 @Injectable()
@@ -32,8 +34,27 @@ export class StudentsService {
     private entitlements: TenantProductEntitlementsService,
   ) {}
 
-  private async activeTrialStudentLimit(gymId: string): Promise<number | null> {
+  private async activeStudentLimit(gymId: string): Promise<{max:number;isTrial:boolean}|null> {
     const now = new Date();
+    const active = await this.prisma.tenantProductSubscription.findFirst({
+      where: {
+        gymId, status: 'ACTIVE', effectiveFrom: { lte: now },
+        OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }],
+      },
+      include: { planVersion: { include: { productPlan: true } } },
+      orderBy: { effectiveFrom: 'desc' },
+    });
+    // Only new metered commercial tiers require this new cap.
+    // Historical IRON_V1 / IRON_V1_TRIAL subscriptions retain their exact rights.
+    if (METERED_PAID_PLANS.has(active?.planVersion?.productPlan?.code ?? '')) {
+      const paid = await this.entitlements.resolveFeature(gymId, PAID_STUDENT_LIMIT_FEATURE);
+      if (paid.kind !== 'LIMIT' || paid.source !== 'PLAN_ENTITLEMENT' ||
+          typeof paid.value !== 'number' || !Number.isSafeInteger(paid.value) ||
+          paid.value < 1) {
+        throw new ServiceUnavailableException('Limite de alunos do plano nao configurado');
+      }
+      return {max:paid.value,isTrial:false};
+    }
     const provisioning = await this.prisma.commercialTrialProvisioning.findFirst({
       where: {
         gymId,
@@ -70,7 +91,7 @@ export class StudentsService {
         'Limite de alunos do trial nao configurado',
       );
     }
-    return resolution.value;
+    return {max:resolution.value,isTrial:true};
   }
 
   private retryable(error: unknown): boolean {
@@ -122,7 +143,7 @@ export class StudentsService {
       throw new NotFoundException('Role de aluno nao encontrada');
     }
 
-    const trialStudentLimit = await this.activeTrialStudentLimit(userGymId);
+    const studentLimit = await this.activeStudentLimit(userGymId);
 
     for (let attempt = 1; attempt <= SERIALIZABLE_ATTEMPTS; attempt += 1) {
       let onboardingToken: string | null = null;
@@ -130,16 +151,18 @@ export class StudentsService {
 
       try {
         const student = await this.prisma.$transaction(async (tx) => {
-          if (trialStudentLimit !== null) {
+          if (studentLimit !== null) {
             const currentStudents = await tx.student.count({
               where: {
                 gymId: userGymId,
                 status: { not: 'CANCELED' },
               },
             });
-            if (currentStudents >= trialStudentLimit) {
+            if (currentStudents >= studentLimit.max) {
               throw new ConflictException(
-                `Trial limitado a ${trialStudentLimit} alunos`,
+                studentLimit.isTrial
+                  ? `Trial limitado a ${studentLimit.max} alunos`
+                  : `Plano limitado a ${studentLimit.max} alunos ativos`,
               );
             }
           }

@@ -1,3 +1,5 @@
+
+const monthlyQuotaStub = { reserve: async () => ({ allowed: true, code: 'AI_QUOTA_RESERVED', periodStart: new Date('2026-11-01T00:00:00.000Z') }), finalize: async () => {} };
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -166,6 +168,7 @@ test('governed timeout aborts the in-flight provider request and classifies TIME
     }) },
     { resolveForExecution: async () => ({ available: true, connectionId: 'FM', credential: secret.credential }) },
     { reserve: async () => 'attempt-test', complete: async () => {} },
+    monthlyQuotaStub,
   );
   const result = await execution.execute(req);
   assert.equal(result.status, 'FAILED');

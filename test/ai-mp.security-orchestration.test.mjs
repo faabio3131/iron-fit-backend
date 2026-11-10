@@ -1,3 +1,5 @@
+
+const monthlyQuotaStub = { reserve: async () => ({ allowed: true, code: 'AI_QUOTA_RESERVED', periodStart: new Date('2026-11-01T00:00:00.000Z') }), finalize: async () => {} };
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -23,7 +25,7 @@ function harness(overrides = {}, results = []) {
     { resolve: (providerCode) => ({ providerCode, requiresCredential: true, execute: async (_req, cfg) => {
       calls.push(cfg); return results.shift() ?? { status: 'SUCCEEDED', output: { message: 'ok' }, flags: [] };
     } }) },
-    { resolveForExecution: async () => ({ available: true, ...secret }) }, ledger,
+    { resolveForExecution: async () => ({ available: true, ...secret }) }, ledger, monthlyQuotaStub,
   );
   return { runtime, calls, ledger, completed };
 }

@@ -424,7 +424,10 @@ export class FmCommandControlPlaneService {
       version: dto.planVersion,
       transitionKind: dto.transitionKind,
       reason: 'FM Command: ' + dto.reason,
-    }, 'system:fm-command');
+    });
+    // No synthetic userId: AuditLog.userId is a real User FK. The authenticated
+    // FM Command S2S identity is captured by command ledger/correlation + reason,
+    // while system-origin domain audits correctly use userId=null.
   }
 
   private async syncStatus(dto: FmCommandSubscriptionCommandDto) {

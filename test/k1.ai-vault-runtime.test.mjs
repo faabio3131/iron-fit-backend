@@ -1,3 +1,5 @@
+
+const monthlyQuotaStub = { reserve: async () => ({ allowed: true, code: 'AI_QUOTA_RESERVED', periodStart: new Date('2026-11-01T00:00:00.000Z') }), finalize: async () => {} };
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -185,6 +187,7 @@ test('K1 provider runtime receives redacted Vault credential only after config/b
       }),
     },
     { reserve: async () => 'attempt-test', complete: async () => {} },
+    monthlyQuotaStub,
   );
 
   const result = await runtime.execute({
@@ -245,6 +248,7 @@ test('K1 required provider credential missing prevents adapter execution', async
       }),
     },
     { reserve: async () => 'attempt-test', complete: async () => {} },
+    monthlyQuotaStub,
   );
 
   const result = await runtime.execute({

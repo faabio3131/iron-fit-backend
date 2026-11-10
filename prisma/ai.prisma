@@ -117,3 +117,36 @@ model AiProviderAttempt {
   @@unique([tenantId, requestId, ordinal])
   @@index([profileId, createdAt])
 }
+
+// Credits are issued only through the authenticated FM Command S2S boundary after a paid invoice.
+// Each credit pack is non-rollover and bound to one subscription cycle.
+model AiCreditGrant {
+  id              String   @id @default(uuid())
+  tenantId        String
+  group           String
+  packageCode     String
+  units           Int
+  sourceInvoiceId String   @unique
+  periodStart     DateTime
+  periodEnd       DateTime
+  createdAt       DateTime @default(now())
+  revokedAt       DateTime?
+
+  @@index([tenantId, group, periodStart, periodEnd, revokedAt])
+}
+
+// Tenant-specific, auditable monthly quota reservations (commercial authority stays in plan entitlements).
+model AiMonthlyConsumption {
+  id          String   @id @default(uuid())
+  tenantId    String
+  group       String
+  periodStart DateTime
+  periodEnd   DateTime
+  requestId   String
+  state       String   @default("RESERVED")
+  createdAt   DateTime @default(now())
+  finishedAt  DateTime?
+
+  @@unique([tenantId, group, periodStart, requestId])
+  @@index([tenantId, group, periodStart, state])
+}

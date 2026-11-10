@@ -1,3 +1,5 @@
+
+const monthlyQuotaStub = { reserve: async () => ({ allowed: true, code: 'AI_QUOTA_RESERVED', periodStart: new Date('2026-11-01T00:00:00.000Z') }), finalize: async () => {} };
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -36,7 +38,7 @@ for (const Adapter of [OpenAiCompatibleProviderAdapter, GeminiNativeProviderAdap
     } }) };
     const execution = new AiProviderExecutionService(configurations, registry,
       { resolveForExecution: async () => ({ available: true, connectionId: 'central', credential: new IntegrationSecretValue('synthetic-private-key') }) },
-      { reserve: async () => 'attempt-' + events.attempts.length, complete: async (_id, result) => events.attempts.push(result) });
+      { reserve: async () => 'attempt-' + events.attempts.length, complete: async (_id, result) => events.attempts.push(result) }, monthlyQuotaStub);
     const policy = new AiPolicyGuardService({ resolveFeatureForUser: async () => ({ value: true }), resolveFeature: async () => ({ value: true }) });
     const context = {
       buildStudentAdvisoryContext: async () => ({ trainingSummary: 'synthetic' }),
