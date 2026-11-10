@@ -82,7 +82,7 @@
       "code": "IRON_ENTERPRISE",
       "name": "Enterprise",
       "studentsMax": 1500,
-      "workoutAiMonthlyMax": 1200,
+      "workoutAiMonthlyMax": 750,
       "unitsMax": 3,
       "monthlyBRLMinor": 89700,
       "annualBRLMinor": 896400,
