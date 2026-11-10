@@ -84,3 +84,11 @@ test('published plan catalog refuses null timestamps, invalid keys and duplicate
   assert.match(catalog, /ProductPlanVersionStatus\.PUBLISHED/);
   assert.match(catalog, /truncated: rows\.length > 256/);
 });
+
+
+test('FM Command plan transition does not impersonate a nonexistent User foreign key',async()=>{
+  const source=await readFile('src/modules/fm-command/fm-command-control-plane.service.ts','utf8');
+  assert.match(source,/this\\.lifecycle\\.transition\\(/);
+  assert.doesNotMatch(source,/'system:fm-command'/);
+  assert.match(source,/FM Command: /);
+});
