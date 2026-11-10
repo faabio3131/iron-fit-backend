@@ -152,7 +152,7 @@ export class ReceptionService {
       throw new BadRequestException('Confirme recebimento presencial e meio de pagamento');
     }
     const fingerprint = createHash('sha256').update(JSON.stringify({ actor, chargeId, paymentMethod: dto.paymentMethod })).digest('hex');
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 6; attempt++) {
       try {
         return await this.db.$transaction(async tx => {
           await this.authorize(tx, gymId, actor);
@@ -174,7 +174,20 @@ export class ReceptionService {
           return { id: receipt.id, charge: settled.charge, idempotent: false };
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
       } catch (error) {
-        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || !['P2034', 'P2002'].includes(error.code) || attempt === 2) throw error;
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) ||
+            !['P2034', 'P2002'].includes(error.code)) throw error;
+        const committed = await this.db.deskReceipt.findUnique({
+          where: { gymId_requestId: { gymId, requestId: dto.requestId } },
+          include: { charge: true },
+        });
+        if (committed) {
+          if (committed.fingerprint !== fingerprint)
+            throw new ConflictException('Chave reutilizada com outros dados');
+          return { id: committed.id, charge: committed.charge, idempotent: true };
+        }
+        if (attempt === 5)
+          throw new ConflictException('Conflito de concorrencia no recebimento');
+        await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 15));
       }
     }
     throw new ConflictException('Conflito no recebimento');
