@@ -5,6 +5,7 @@ import { IsIn, IsString, Matches } from 'class-validator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { StepUpGuard } from '../auth/guards/step-up.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { resolveTenantOperationGymId } from '../../common/security/tenant-operation-scope';
 
@@ -18,7 +19,7 @@ class AiCreditCheckoutRequest {
 }
 
 @Controller('ai/credits')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
 @Roles('OWNER', 'SUPER_ADMIN')
 export class AiCreditCheckoutController {
   @Post('checkout')
@@ -38,10 +39,7 @@ export class AiCreditCheckoutController {
     if (url.protocol !== 'https:' ||
       url.pathname !== '/api/internal/iron/ai-credits/checkout' ||
       url.search || url.hash || url.username || url.password ||
-      !/^[a-z0-9.-]+$/i.test(url.hostname) ||
-      url.hostname === 'localhost' || /^[0-9.]+$/.test(url.hostname) ||
-      url.hostname.endsWith('.localhost') || url.hostname.endsWith('.internal') ||
-      url.hostname.endsWith('.local')) {
+      url.hostname !== 'app.fmcommand.com.br') {
       throw new ServiceUnavailableException('Checkout de creditos IA indisponivel');
     }
     let response: Response;
