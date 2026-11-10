@@ -16,6 +16,13 @@ No AI unlimited offering is permitted. Existing immutable published plan version
 These are **candidate** limits, not published/subscribed benefits. Source:
 `config/commercial/iron-four-tiers-2026.candidate.json`.
 Existing launch plans `IRON_V1_TRIAL` and `IRON_V1` version 1 were NOT modified.
+For the exact immutable historical v1 subscriptions only, the AI runtime maintains a
+**bounded compatibility allowance** per month: `IRON_V1_TRIAL` 10 workout / 20
+advisory and `IRON_V1` 50 workout / 100 advisory. This requires the underlying
+canonical AI feature entitlement to remain effectively enabled for that tenant;
+disabled capabilities, unrecognized plans and any later plan version fail closed.
+It does not publish or mutate any old entitlement nor permit unlimited usage.
+No existing subscription is auto-migrated for the sake of new quota fields.
 For any rollout, create and publish new immutable ProductPlanVersion(s) with
 `ai.workout_monthly_max` and `ai.advisory_monthly_max` LIMIT entitlements,
 then migrate active tenants via the canonical FM Command/IRON subscription lifecycle.
