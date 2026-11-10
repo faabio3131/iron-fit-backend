@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "authority": "IRON_PRODUCT_PLAN_VERSION_WITH_FM_COMMAND_BILLING",
+  "status": "CANDIDATE_NOT_PUBLISHED",
+  "effectiveDate": null,
+  "description": "Proposta de quatro families comerciais. Proibido usar como entitlement/runtime ou checkout até criar versoes PUBLISHED, mapear oito preços e verificar limites.",
+  "trial": {
+    "days": 30,
+    "studentsMax": 15,
+    "chargedViaCakto": false,
+    "source": "config/commercial/iron-v1-launch.json"
+  },
+  "billing": {
+    "provider": "cakto",
+    "settlementAuthority": "FM_COMMAND_V1",
+    "checkoutFlow": "AUTHENTICATED_IRON_OWNER_TO_CANONICAL_INVOICE_TO_CAKTO_HOSTED_CHECKOUT",
+    "pricingCurrency": "BRL",
+    "hasOfficialOfferIds": false,
+    "notes": "O mesmo tier IRON pode possuir dois precos distintos via FM Command commercialPlanCode e mapeamento imutavel ao tier canônico; checkout publico estático não ativa licença."
+  },
+  "features": {
+    "policy": "CANONICAL_RELEASE_MATRIX_ONLY",
+    "noUnlimitedClaims": true,
+    "manualReviewWorkoutAI": true,
+    "noClaimUntilHomologated": [
+      "facial_access",
+      "wellhub",
+      "totalpass",
+      "whatsapp_automation",
+      "nfse_live",
+      "multiunit_bi",
+      "white_label",
+      "dedicated_account_manager"
+    ],
+    "monthlyQuotasNonCumulative": true,
+    "quotaLimitEntitlementKeys": [
+      "ai.workout_monthly_max",
+      "ai.advisory_monthly_max"
+    ]
+  },
+  "tiers": [
+    {
+      "code": "IRON_START",
+      "name": "Start",
+      "studentsMax": 100,
+      "workoutAiMonthlyMax": 50,
+      "unitsMax": 1,
+      "monthlyBRLMinor": 14700,
+      "annualBRLMinor": 142800,
+      "commercialMonthlyCode": "IRON_START_M_2026",
+      "commercialYearlyCode": "IRON_START_Y_2026",
+      "setupPolicy": "SELF_SERVICE_NO_FEE_ASSISTED_OPTIONAL",
+      "advisoryAiMonthlyMax": 100
+    },
+    {
+      "code": "IRON_GROWTH",
+      "name": "Growth",
+      "studentsMax": 300,
+      "workoutAiMonthlyMax": 200,
+      "unitsMax": 1,
+      "monthlyBRLMinor": 29700,
+      "annualBRLMinor": 296400,
+      "commercialMonthlyCode": "IRON_GROWTH_M_2026",
+      "commercialYearlyCode": "IRON_GROWTH_Y_2026",
+      "setupPolicy": "SELF_SERVICE_NO_FEE_ASSISTED_OPTIONAL",
+      "advisoryAiMonthlyMax": 400
+    },
+    {
+      "code": "IRON_SCALE",
+      "name": "Scale",
+      "studentsMax": 700,
+      "workoutAiMonthlyMax": 500,
+      "unitsMax": 1,
+      "monthlyBRLMinor": 49700,
+      "annualBRLMinor": 500400,
+      "commercialMonthlyCode": "IRON_SCALE_M_2026",
+      "commercialYearlyCode": "IRON_SCALE_Y_2026",
+      "setupPolicy": "SELF_SERVICE_NO_FEE_ASSISTED_OPTIONAL",
+      "advisoryAiMonthlyMax": 1000
+    },
+    {
+      "code": "IRON_ENTERPRISE",
+      "name": "Enterprise",
+      "studentsMax": 1500,
+      "workoutAiMonthlyMax": 750,
+      "unitsMax": 3,
+      "monthlyBRLMinor": 89700,
+      "annualBRLMinor": 896400,
+      "commercialMonthlyCode": "IRON_ENTERPRISE_M_2026",
+      "commercialYearlyCode": "IRON_ENTERPRISE_Y_2026",
+      "setupPolicy": "MULTIUNIT_REQUIRES_CERTIFICATION_AND_CONTRACT",
+      "advisoryAiMonthlyMax": 2500
+    }
+  ],
+  "caveats": [
+    "Os limites por aluno, consumo de IA e unidades são candidatos sujeitos a enforcement canônico no backend.",
+    "Não fazer cobrança/redirect Cakto sem fatura, binding do tenant e autorização do checkout.",
+    "Não publicar 4 planos enquanto não existir efetivamente revisão da Launch Matrix, roles, entitlements e testes e2e."
+  ],
+  "sources": [
+    "https://www.tecnofit.com.br/precos/",
+    "https://cloudgym.com.br/",
+    "https://unafit.com.br/",
+    "https://www.cakto.com.br/taxas",
+    "https://ajuda.cakto.com.br/pt-br/articles/72-quais-sao-as-taxas-da-plataforma-cakto",
+    "https://ajuda.cakto.com.br/pt-br/articles/30-como-me-cadastrar-na-cakto",
+    "https://ajuda.cakto.com.br/pt-br/articles/65-como-funciona-a-recorrencia-na-cakto"
+  ]
+}

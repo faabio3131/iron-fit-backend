@@ -80,6 +80,8 @@ test('existing active user is reused instead of creating a duplicate User', asyn
     student: { findFirst: async () => null },
     user: { findUnique: async () => existingUser },
     role: { findUnique: async () => studentRole() },
+    // Canonical subscription read used to distinguish paid four-tier limits from historical trials.
+    tenantProductSubscription: { findFirst: async () => null },
     commercialTrialProvisioning: { findFirst: async () => null },
     $transaction: async (callback) => callback(tx),
   };
@@ -145,6 +147,8 @@ test('new student receives a random one-time onboarding token and starts inactiv
     student: { findFirst: async () => null },
     user: { findUnique: async () => null },
     role: { findUnique: async () => studentRole() },
+    // Canonical subscription read used to distinguish paid four-tier limits from historical trials.
+    tenantProductSubscription: { findFirst: async () => null },
     commercialTrialProvisioning: { findFirst: async () => null },
     $transaction: async (callback) => callback(tx),
   };
@@ -261,6 +265,8 @@ test('paid/non-trial tenant does not receive the trial-only student cap', async 
     student: { findFirst: async () => null },
     user: { findUnique: async () => existingUser },
     role: { findUnique: async () => studentRole() },
+    // Canonical subscription read used to distinguish paid four-tier limits from historical trials.
+    tenantProductSubscription: { findFirst: async () => null },
     commercialTrialProvisioning: { findFirst: async () => null },
     $transaction: async (callback, options) => {
       assert.equal(options.isolationLevel, 'Serializable');
