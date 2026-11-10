@@ -11,7 +11,7 @@ No AI unlimited offering is permitted. Existing immutable published plan version
 | IRON_START | 50 | 100 |
 | IRON_GROWTH | 200 | 400 |
 | IRON_SCALE | 500 | 1000 |
-| IRON_ENTERPRISE | 1200 | 2500 |
+| IRON_ENTERPRISE | 750 | 2500 |
 
 These are **candidate** limits, not published/subscribed benefits. Source:
 `config/commercial/iron-four-tiers-2026.candidate.json`.
