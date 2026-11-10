@@ -10,7 +10,7 @@ const request = { studentId: 'student-1', requestId: 'req-c03-1', instructions: 
 const exerciseId = 'e9ce9011-b8d3-4bde-a926-3c030e2500b7';
 
 function harness(output) {
-  const events = { traces: [], workouts: [], audits: [], providerCalls: 0 };
+  const events = { traces: [], workouts: [], audits: [], providerCalls: 0, quotaRefunds: [] };
   const service = new AiWorkoutCandidateService(
     { auditLog: { create: async ({ data }) => { events.audits.push(data); } } },
     { assertAllowed: async () => undefined },
@@ -19,6 +19,8 @@ function harness(output) {
     { execute: async () => {
       events.providerCalls++;
       return { status: 'SUCCEEDED', output, flags: [], confidence: 0.95 };
+    }, releaseRejectedWorkout: async (tenantId, requestId) => {
+      events.quotaRefunds.push({ tenantId, requestId });
     } },
     { resolve: async () => ({
       available: true,
@@ -63,6 +65,7 @@ test('C03: provider response with no sessions is REJECTED before any successful 
   assert.equal(events.traces[0].output, undefined);
   assert.equal(events.workouts.length, 0);
   assert.equal(events.audits.length, 0);
+  assert.deepEqual(events.quotaRefunds, [{ tenantId: 'gym-1', requestId: request.requestId }]);
 });
 
 test('C03: forged or noncanonical exercise identifiers cannot produce a successful execution trace', async () => {
@@ -72,6 +75,7 @@ test('C03: forged or noncanonical exercise identifiers cannot produce a successf
   await assert.rejects(service.generate(identity, 'gym-1', request), /AI_WORKOUT_GENERATION_INVALID_RESPONSE|Bad Gateway/i);
   assert.deepEqual(events.traces.map((trace) => trace.status), ['REJECTED']);
   assert.equal(events.workouts.length, 0);
+  assert.equal(events.quotaRefunds.length, 1);
 });
 
 test('C03: valid candidate is normalized before SUCCESS and remains pending human review', async () => {
@@ -85,5 +89,6 @@ test('C03: valid candidate is normalized before SUCCESS and remains pending huma
   assert.equal(events.workouts[0].sessions[0].exercises[0].exerciseId, exerciseId);
   assert.equal(result.workout.status, 'PENDING_REVIEW');
   assert.equal(result.requiresHumanReview, true);
+  assert.equal(events.quotaRefunds.length, 0);
   assert.equal(events.audits[0].next.aiExecutionTraceId, 'trace-1');
 });

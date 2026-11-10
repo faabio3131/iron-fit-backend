@@ -39,3 +39,72 @@ test('CPF disclosure requires an explicit authorized projection and is hidden by
   assert.equal((await students.findOne('student', 'gym')).cpf, null);
   assert.equal((await students.findAll('gym', true))[0].cpf, row.cpf);
 });
+
+
+test('SERIALIZABLE reception race reconciles an already committed identical receipt',async()=>{
+  const { Prisma }=require('@prisma/client');
+  const {createHash}=require('node:crypto');
+  const dto={
+    requestId:'same-request',studentId:'student-a',planId:'plan-a',
+    dueDate:'2026-11-10',paymentMethod:'CASH',receivedConfirmed:true,
+  };
+  const fingerprint=createHash('sha256').update(JSON.stringify({
+    actor:'operator-a',studentId:dto.studentId,planId:dto.planId,
+    dueDate:new Date(dto.dueDate).toISOString(),paymentMethod:dto.paymentMethod,
+  })).digest('hex');
+  const expected={id:'desk-1',fingerprint,charge:{id:'charge-1'},subscription:{id:'sub-1'}};
+  let txCalls=0;
+  const db={
+    $transaction:async()=>{txCalls++;throw new Prisma.PrismaClientKnownRequestError(
+      'Serialization retry',{code:'P2034',clientVersion:'6.19.3'});
+    },
+    deskReceipt:{findUnique:async()=>expected},
+  };
+  const service=new ReceptionService(db,{},{});
+  const row=await service.enroll('gym-a','operator-a',dto);
+  assert.equal(txCalls,1);
+  assert.deepEqual(row,{id:'desk-1',charge:expected.charge,
+    subscription:expected.subscription,idempotent:true});
+});
+
+test('exhausted reception serialization retries return safe 409 rather than leaked 500',async()=>{
+  const { Prisma }=require('@prisma/client');
+  let attempted=0;
+  const db={
+    $transaction:async()=>{attempted++;throw new Prisma.PrismaClientKnownRequestError(
+      'Serialization retry',{code:'P2034',clientVersion:'6.19.3'});
+    },
+    deskReceipt:{findUnique:async()=>null},
+  };
+  const dto={
+    requestId:'retry-capped',studentId:'student-a',planId:'plan-a',
+    dueDate:'2026-11-10',paymentMethod:'CASH',receivedConfirmed:true,
+  };
+  const service=new ReceptionService(db,{},{});
+  await assert.rejects(()=>service.enroll('gym-a','operator-a',dto),error=>
+    error?.getStatus?.()===409 && /Conflito de concorrencia/.test(error.message));
+  assert.equal(attempted,6);
+});
+
+
+test('concurrent manual receipt reconciliation returns original payment once, not HTTP 500',async()=>{
+  const { Prisma }=require('@prisma/client');
+  const {createHash}=require('node:crypto');
+  const dto={requestId:'payment-request',paymentMethod:'PIX',receivedConfirmed:true};
+  const fingerprint=createHash('sha256').update(JSON.stringify({
+    actor:'reception-a',chargeId:'charge-a',paymentMethod:'PIX',
+  })).digest('hex');
+  const receipt={id:'receipt-a',fingerprint,charge:{id:'charge-a',status:'PAID'}};
+  let attempts=0;
+  const db={
+    $transaction:async()=>{attempts++;throw new Prisma.PrismaClientKnownRequestError(
+      'Serialization conflict',{code:'P2034',clientVersion:'6.19.3'});
+    },
+    deskReceipt:{findUnique:async()=>receipt},
+  };
+  const row=await new ReceptionService(db,{},{}).receive(
+    'gym-a','reception-a','charge-a',dto,
+  );
+  assert.equal(attempts,1);
+  assert.deepEqual(row,{id:'receipt-a',charge:receipt.charge,idempotent:true});
+});

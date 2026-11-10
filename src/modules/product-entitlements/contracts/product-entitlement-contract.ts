@@ -214,6 +214,20 @@ export const PRODUCT_FEATURE_CATALOG_V1 = Object.freeze([
     failClosedDefault: false,
   }),
   defineProductFeature({
+    key: 'ai.workout_monthly_max',
+    kind: 'LIMIT',
+    domain: 'AI',
+    description: 'Limite mensal de pedidos de geracao de treino por academia.',
+    failClosedDefault: 0,
+  }),
+  defineProductFeature({
+    key: 'ai.advisory_monthly_max',
+    kind: 'LIMIT',
+    domain: 'AI',
+    description: 'Limite mensal de outras acoes de IA por academia.',
+    failClosedDefault: 0,
+  }),
+  defineProductFeature({
     key: 'ai.workout_generation',
     kind: 'FEATURE',
     domain: 'AI',
