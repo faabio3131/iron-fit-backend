@@ -59,3 +59,18 @@ test('production Docker image includes ONLY the governed canonical plan publishe
   assert.match(stage, /AI_QUOTA_SUPER_ADMIN_REQUIRED/);
   assert.match(stage, /historicalPlanVersionsChanged:0/);
 });
+
+test('Contabo four-tier operator is read-only by default, checks deployed SHA, and backs up before apply', () => {
+  const path = resolve(root, 'ops/contabo/publish-four-tiers.sh');
+  const script = readFileSync(path, 'utf8');
+  const lint = spawnSync('bash', ['-n', path], {encoding: 'utf8'});
+  assert.equal(lint.status, 0, lint.stderr);
+  assert.match(script, /MODE=\$\{1:---check\}/);
+  assert.match(script, /IRON_AI_QUOTA_ROLLOUT_APPROVED/);
+  assert.match(script, /IRON_AI_QUOTA_ACTOR_USER_ID/);
+  assert.match(script, /sha256sum -c/);
+  assert.match(script, /CURRENT_ALREADY_COMPLIANT/);
+  assert.match(script, /\/api\/v1\/health\/ready/);
+  assert.match(script, /buildSha/);
+  assert.ok(script.indexOf('sha256sum -c') < script.indexOf('node scripts/stage-ai-monthly-plan-versions.mjs --apply'));
+});
