@@ -104,8 +104,53 @@ test('actual NestJS+PostgreSQL IRON exposes four immutable canonical tiers witho
   },key:'resume-'+randomUUID()});
   assert.equal(restored.status,201);
   assert.equal(restored.body.result.entitlementStatus,'ACTIVE');
+  // Exercise actual S2S delivery for ALL four published tiers. A successful
+  // catalog GET alone does not prove the license can be provisioned correctly.
+  let previousSubscriptionId=licensedId;
+  let previousCode='IRON_START';
+  const delivered=['IRON_START'];
+  for(const code of ['IRON_GROWTH','IRON_SCALE','IRON_ENTERPRISE']){
+    const next=await call('/subscription/commands',{method:'POST',
+      key:'qa-four-tier-transition-'+randomUUID(),
+      body:{
+        action:'subscription.plan.transition',
+        gymId:owner.gymId,expectedSubscriptionId:previousSubscriptionId,
+        commercialStatus:'upgrade',planCode:code,planVersion:versions[code],
+        transitionKind:'UPGRADE',reason:'isolated-ci-internal-no-real-payment',
+      },
+    });
+    assert.equal(next.status,201,JSON.stringify(next.body));
+    assert.equal(next.body.result.subscription.planVersion.productPlan.code,code);
+    const id=next.body.result.subscription.id;
+    assert.ok(id!==previousSubscriptionId);
+    const current=await call('/snapshot');
+    const prior=current.body.subscriptions.find(x=>x.external_id===previousSubscriptionId);
+    const active=current.body.subscriptions.find(x=>x.external_id===id);
+    assert.equal(prior.status,'CANCELED');
+    assert.equal(prior.plan_code,previousCode);
+    assert.equal(active.status,'ACTIVE');
+    assert.equal(active.plan_code,code);
+    assert.equal(active.plan_version,versions[code]);
+    const rights=current.body.entitlements.filter(x=>x.subscription_id===id);
+    for(const [key,max] of Object.entries({
+      'commercial.students_max':tiers[code].students,
+      'ai.workout_monthly_max':tiers[code].workout,
+      'ai.advisory_monthly_max':tiers[code].advisory,
+    })){
+      assert.equal(rights.find(x=>x.feature_key===key)?.limit_value,max,code+':'+key);
+    }
+    delivered.push(code);
+    previousCode=code;
+    previousSubscriptionId=id;
+  }
+  const lastSnapshot=await call('/snapshot');
+  const unmodifiedLegacy=lastSnapshot.body.subscriptions.find(x=>x.external_id===owner.subscriptionId);
+  assert.equal(unmodifiedLegacy.plan_code,historical.plan_code);
+  assert.equal(unmodifiedLegacy.plan_version,historical.plan_version);
+  assert.equal(unmodifiedLegacy.status,'CANCELED');
   console.log(JSON.stringify({event:'iron_four_tier_real_backend_contract_pass',
-    tiers:Object.keys(versions).length,legacySubscriptionPreserved:true,
-    realPostgresql:true,realNestHttp:true,verifiedS2S:true,duplicatesBlocked:true,
-    tenantSpoofingBlocked:true,externalCaktoUsed:false}));
+    tiers:Object.keys(versions).length,licensesDelivered:delivered,
+    legacySubscriptionPreserved:true,realPostgresql:true,realNestHttp:true,
+    verifiedS2S:true,duplicatesBlocked:true,tenantSpoofingBlocked:true,
+    externalCaktoUsed:false}));
 },{timeout:120000});
