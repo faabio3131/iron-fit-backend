@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { StepUpGuard } from '../auth/guards/step-up.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { resolveTenantOperationGymId } from '../../common/security/tenant-operation-scope';
+import { aiCreditCheckoutReady } from './ai-credit-checkout-readiness';
 
 class AiCreditCheckoutRequest {
   @IsIn(['IRON_AI_WORKOUT_100','IRON_AI_WORKOUT_300','IRON_AI_WORKOUT_1000'])
@@ -28,6 +29,8 @@ export class AiCreditCheckoutController {
       activeGymId: user.activeGymId ?? user.gymId,
       isSuperAdmin: user.isSuperAdmin === true,
     });
+    if (!aiCreditCheckoutReady())
+      throw new ServiceUnavailableException('Checkout de creditos IA nao habilitado');
     const endpoint = process.env.FMCC_IRON_CREDITS_CHECKOUT_URL;
     const token = process.env.FMCC_IRON_CREDITS_CHECKOUT_TOKEN?.trim();
     if (!endpoint || !token || token.length < 32)

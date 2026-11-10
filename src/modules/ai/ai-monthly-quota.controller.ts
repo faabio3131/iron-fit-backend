@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { resolveTenantOperationGymId } from '../../common/security/tenant-operation-scope';
 import { AiMonthlyQuotaService } from './runtime/ai-monthly-quota.service';
+import { aiCreditCheckoutReady } from './ai-credit-checkout-readiness';
 
 @Controller('ai/quota')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,7 +28,7 @@ export class AiMonthlyQuotaController {
       workouts, advisory,
       thresholds: { warning: 70, critical: 90, exhausted: 100 },
       rollover: false,
-      creditPurchaseStatus: 'NOT_CONFIGURED',
+      creditPurchaseStatus: aiCreditCheckoutReady() ? 'AVAILABLE' : 'NOT_CONFIGURED',
     };
   }
 }

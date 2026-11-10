@@ -21,3 +21,13 @@ test('AI credit S2S adapter fails closed except for fixed official FM Command ho
   assert.match(source, /'idempotency-key': dto\.requestId/);
   assert.match(source, /checkoutUrl\.hostname !== 'pay\.cakto\.com\.br'/);
 });
+
+test('AI credit purchase status is disabled by default and gated consistently with POST',async()=>{
+  const readiness=await readFile('src/modules/ai/ai-credit-checkout-readiness.ts','utf8');
+  const quota=await readFile('src/modules/ai/ai-monthly-quota.controller.ts','utf8');
+  const checkout=await readFile('src/modules/ai/ai-credit-checkout.controller.ts','utf8');
+  assert.match(readiness, /IRON_AI_CREDITS_PURCHASE_ENABLED === 'true'/);
+  assert.match(readiness, /target === 'https:\/\/app\.fmcommand\.com\.br\/api\/internal\/iron\/ai-credits\/checkout'/);
+  assert.match(quota, /creditPurchaseStatus: aiCreditCheckoutReady\(\) \? 'AVAILABLE' : 'NOT_CONFIGURED'/);
+  assert.match(checkout, /if \(!aiCreditCheckoutReady\(\)\)/);
+});

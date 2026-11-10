@@ -53,3 +53,13 @@ Após o staging, o FM Command exige seleção explícita da versão por `FMCC_IR
 ## Testes e go-live
 
 Reexecutar lint/typecheck/build, toda matriz backend e web, contrato S2S, Cakto HMAC/mismatch/replay, outbox/refund, concorrência e migrations isoladas. Verificar status real das PRs e resultados da CI, não confundir teste local/mock com transação Cakto. Nenhum merge/deploy até checks verdes, migração segura e verificação pós-merge. A transação com dinheiro real e oferta oficial requer configuração/homologação externas.
+
+## Habilitação comercial fail-closed (não habilitada por padrão)
+
+O endpoint e o indicador de disponibilidade dos pacotes utilizam **a mesma guarda**.
+A compra somente fica visível e executável quando `IRON_AI_CREDITS_PURCHASE_ENABLED=true`,
+`FMCC_IRON_CREDITS_CHECKOUT_URL=https://app.fmcommand.com.br/api/internal/iron/ai-credits/checkout`
+e `FMCC_IRON_CREDITS_CHECKOUT_TOKEN` secreto (mínimo de 32 caracteres) estiverem configurados.
+O operador só deve habilitar após a homologação do FM Command/Cakto; o próprio FM Command
+continua validando a oferta real, a assinatura paga e `FMCC_IRON_COMMERCIAL_SALES_ENABLED`.
+Ausência de qualquer elemento resulta em `creditPurchaseStatus=NOT_CONFIGURED` e POST indisponível.
