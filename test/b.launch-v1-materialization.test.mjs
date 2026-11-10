@@ -97,7 +97,10 @@ test('B trial student cap is a persisted LIMIT and enforced at student creation'
   assert.match(students, /commercial\.trial_students_max/);
   assert.match(students, /student\.count/);
   assert.match(students, /TransactionIsolationLevel\.Serializable/);
-  assert.match(students, /Trial limitado a \$\{trialStudentLimit\} alunos/);
+  assert.match(students, /Trial limitado a \\$\\{studentLimit.max\\} alunos/);
+  assert.match(students, /studentLimit\\.isTrial/);
+  assert.match(students, /commercial\\.students_max/);
+  assert.match(students, /Plano limitado a \\$\\{studentLimit.max\\} alunos ativos/);
 });
 
 test('B Launch Matrix exposes non-mutating draft validation before approval', async () => {
