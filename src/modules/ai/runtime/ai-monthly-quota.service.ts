@@ -11,6 +11,12 @@ const FEATURE_KEY: Record<QuotaGroup, string> = {
   ADVISORY: 'ai.advisory_monthly_max',
 };
 const MAX_RETRIES = 4;
+// Bounded compatibility for the two immutable launch plan versions.
+// Neither missing quota capability definitions nor legacy contracts imply unlimited AI.
+const LEGACY_V1_MONTHLY_ALLOWANCE: Readonly<Record<string, Readonly<Record<QuotaGroup, number>>>> = Object.freeze({
+  IRON_V1_TRIAL: Object.freeze({ WORKOUT: 10, ADVISORY: 20 }),
+  IRON_V1: Object.freeze({ WORKOUT: 50, ADVISORY: 100 }),
+});
 // Package codes are identifiers only. Prices and payment settlement belong exclusively to FM Command.
 export const WORKOUT_CREDIT_PACK_UNITS: Readonly<Record<string, number>> = Object.freeze({
   IRON_AI_WORKOUT_100: 100,
@@ -48,18 +54,33 @@ export class AiMonthlyQuotaService {
 
   async usage(tenantId: string, capability: AiCapability) {
     const group = quotaGroupFor(capability);
-    const featureKey = FEATURE_KEY[group];
-    const resolution = await this.entitlements.resolveFeature(tenantId, featureKey);
-    const includedAllowance = typeof resolution.value === 'number' && Number.isSafeInteger(resolution.value)
-      ? Math.max(0, resolution.value) : 0;
     const now = new Date();
     const subscription = await this.prisma.tenantProductSubscription.findFirst({
       where: { gymId: tenantId, status: TenantProductSubscriptionStatus.ACTIVE,
         effectiveFrom: { lte: now }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }] },
       orderBy: { effectiveFrom: 'desc' },
-      include: { saasBillingAgreement: { select: { currentPeriodStart: true, currentPeriodEnd: true } } },
+      include: {
+        saasBillingAgreement: { select: { currentPeriodStart: true, currentPeriodEnd: true } },
+        planVersion: { select: { version: true, productPlan: { select: { code: true } } } },
+      },
     });
     if (!subscription) return { group, allowance: 0, used: 0, remaining: 0, percent: 0, periodStart: null, periodEnd: null };
+    let includedAllowance = 0;
+    const currentCode = subscription.planVersion.productPlan.code;
+    const legacy = subscription.planVersion.version === 1 ? LEGACY_V1_MONTHLY_ALLOWANCE[currentCode] : undefined;
+    if (legacy) {
+      // Previous launch contracts never contained the new LIMIT keys. The
+      // effective *existing* AI feature must still be granted by the canonical
+      // resolver, including tenant-level narrowing and subscription status.
+      const gateKey = group === 'WORKOUT' ? 'ai.workout_generation' : 'ai.content_recommendation';
+      const feature = await this.entitlements.resolveFeature(tenantId, gateKey);
+      if (feature.value === true && feature.plan?.code === currentCode &&
+          feature.plan.version === 1) includedAllowance = legacy[group];
+    } else {
+      const resolution = await this.entitlements.resolveFeature(tenantId, FEATURE_KEY[group]);
+      includedAllowance = typeof resolution.value === 'number' && Number.isSafeInteger(resolution.value)
+        ? Math.max(0, resolution.value) : 0;
+    }
     const billing = subscription.saasBillingAgreement;
     // Never reset consumption simply because a plan transition creates a new subscription row.
     const firstSubscription = await this.prisma.tenantProductSubscription.findFirst({
