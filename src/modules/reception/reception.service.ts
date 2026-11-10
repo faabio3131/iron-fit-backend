@@ -86,7 +86,7 @@ export class ReceptionService {
     const due = new Date(dto.dueDate);
     if (!Number.isFinite(due.getTime())) throw new BadRequestException('Vencimento invalido');
     const fingerprint = createHash('sha256').update(JSON.stringify({ actor, studentId: dto.studentId, planId: dto.planId, dueDate: due.toISOString(), paymentMethod: dto.paymentMethod })).digest('hex');
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 6; attempt++) {
       try {
         return await this.db.$transaction(async tx => {
           await this.authorize(tx, gymId, actor);
@@ -114,7 +114,26 @@ export class ReceptionService {
           return { id: receipt.id, charge: settled.charge, subscription, idempotent: false };
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
       } catch (error) {
-        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || !['P2034', 'P2002'].includes(error.code) || attempt === 2) throw error;
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) ||
+            !['P2034', 'P2002'].includes(error.code)) throw error;
+        // Another request with the same idempotency key may have already
+        // committed while SERIALIZABLE aborted this transaction. Reconcile
+        // the canonical receipt instead of returning an accidental HTTP 500.
+        const committed = await this.db.deskReceipt.findUnique({
+          where: { gymId_requestId: { gymId, requestId: dto.requestId } },
+          include: { charge: true, subscription: true },
+        });
+        if (committed) {
+          if (committed.fingerprint !== fingerprint)
+            throw new ConflictException('Chave reutilizada com outros dados');
+          return { id: committed.id, charge: committed.charge,
+            subscription: committed.subscription, idempotent: true };
+        }
+        if (attempt === 5)
+          throw new ConflictException('Conflito de concorrencia ao registrar matricula');
+        // Bounded backoff improves liveness without broadening permissions,
+        // relaxing the isolation level or duplicating financial settlement.
+        await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 15));
       }
     }
     throw new ConflictException('Conflito ao registrar matricula');
