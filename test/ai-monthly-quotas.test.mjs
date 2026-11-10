@@ -11,11 +11,15 @@ test('AI monthly billing anniversary clamps month-end and never accumulates unus
   assert.equal(monthlyCycle(anchor, new Date('2027-01-30T15:20:01Z')).start.toISOString(), '2026-12-31T15:20:00.000Z');
 });
 
-function harness(allowance = 2) {
+function harness(allowance = 2, options = {}) {
   const rows = [];
   const subscription = {
     effectiveFrom: new Date('2026-01-17T00:00:00.000Z'),
     saasBillingAgreement: null,
+    planVersion: {
+      version: options.version ?? 2,
+      productPlan: { code: options.planCode ?? 'IRON_B6_BASIC' },
+    },
   };
   const count = async ({ where }) => rows.filter((r) =>
     r.tenantId === where.tenantId && r.group === where.group &&
@@ -77,6 +81,14 @@ function harness(allowance = 2) {
     }
   };
   const entitlements = { resolveFeature: async (_, key) => {
+    if (key === 'ai.workout_generation' || key === 'ai.content_recommendation') {
+      return {
+        value: options.featureEnabled ?? true,
+        plan: options.mismatchPlan
+          ? { code: 'IRON_OTHER', version: 1 }
+          : { code: options.planCode, version: options.version ?? 1 },
+      };
+    }
     assert.ok(['ai.workout_monthly_max','ai.advisory_monthly_max'].includes(key));
     return { value: allowance };
   }};
@@ -151,4 +163,35 @@ test('FMCC credit import rejects unpaid, unknown and forged package requests', a
     }));
   }
   assert.equal(grants.length,0);
+});
+
+test('immutable historical V1 and V1_TRIAL retain bounded monthly AI access',async()=>{
+  for(const [planCode,workouts,advisory] of [
+    ['IRON_V1_TRIAL',10,20],
+    ['IRON_V1',50,100],
+  ]) {
+    const {service}=harness(0,{planCode,version:1});
+    const workout=await service.usage('gym-a','WORKOUT_GENERATION');
+    const chat=await service.usage('gym-a','ADVISORY_CHAT');
+    assert.equal(workout.allowance,workouts,planCode);
+    assert.equal(chat.allowance,advisory,planCode);
+    assert.equal(workout.extraAllowance,0);
+  }
+});
+
+test('legacy fallback is not an entitlement escalation or a path to unlimited AI',async()=>{
+  for(const options of [
+    {planCode:'IRON_V1',version:1,featureEnabled:false},
+    {planCode:'IRON_V1_TRIAL',version:1,mismatchPlan:true},
+  ]) {
+    const {service}=harness(1000,options);
+    assert.equal((await service.usage('gym-a','WORKOUT_GENERATION')).allowance,0);
+    assert.equal((await service.reserve('gym-a','WORKOUT_GENERATION','one')).allowed,false);
+  }
+  // A later published plan version without explicit LIMIT does NOT inherit v1 fallback.
+  const upgraded=harness(0,{planCode:'IRON_V1',version:2});
+  assert.equal((await upgraded.service.usage('gym-a','WORKOUT_GENERATION')).allowance,0);
+  // A forged commercial SKU also cannot claim legacy V1 allowance.
+  const commercial=harness(0,{planCode:'IRON_START',version:1});
+  assert.equal((await commercial.service.usage('gym-a','WORKOUT_GENERATION')).allowance,0);
 });
