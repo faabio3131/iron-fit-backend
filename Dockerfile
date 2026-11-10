@@ -22,6 +22,9 @@ COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/dist ./dist
+# Narrowly ship the governed, idempotent commercial plan publisher; no secrets or dev scripts.
+COPY --chown=node:node scripts/stage-ai-monthly-plan-versions.mjs ./scripts/stage-ai-monthly-plan-versions.mjs
+COPY --chown=node:node config/commercial/iron-four-tiers-2026.candidate.json ./config/commercial/iron-four-tiers-2026.candidate.json
 USER node
 EXPOSE 3333
 CMD ["node", "dist/src/main.js"]
