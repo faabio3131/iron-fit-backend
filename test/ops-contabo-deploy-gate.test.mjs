@@ -47,3 +47,30 @@ test('stale running image versus built image prevents success despite all health
   assert.equal(run.status, 75, run.stdout + run.stderr);
   assert.doesNotMatch(run.stdout, /INVALID_DEPLOY_OK/);
 });
+
+test('production Docker image includes ONLY the governed canonical plan publisher and its reviewed manifest', () => {
+  const dockerfile = readFileSync(resolve(root, 'Dockerfile'), 'utf8');
+  assert.match(dockerfile, /COPY --chown=node:node scripts\/stage-ai-monthly-plan-versions\.mjs \.\/scripts\/stage-ai-monthly-plan-versions\.mjs/);
+  assert.match(dockerfile, /COPY --chown=node:node config\/commercial\/iron-four-tiers-2026\.candidate\.json \.\/config\/commercial\/iron-four-tiers-2026\.candidate\.json/);
+  assert.doesNotMatch(dockerfile, /COPY (?:\.\/)?scripts(?:\s|\/\s)/);
+  assert.doesNotMatch(dockerfile, /COPY (?:\.\/)?\.env(?:\s|$)/m);
+  const stage = readFileSync(resolve(root, 'scripts/stage-ai-monthly-plan-versions.mjs'), 'utf8');
+  assert.match(stage, /IRON_AI_QUOTA_ROLLOUT_APPROVED/);
+  assert.match(stage, /AI_QUOTA_SUPER_ADMIN_REQUIRED/);
+  assert.match(stage, /historicalPlanVersionsChanged:0/);
+});
+
+test('Contabo four-tier operator is read-only by default, checks deployed SHA, and backs up before apply', () => {
+  const path = resolve(root, 'ops/contabo/publish-four-tiers.sh');
+  const script = readFileSync(path, 'utf8');
+  const lint = spawnSync('bash', ['-n', path], {encoding: 'utf8'});
+  assert.equal(lint.status, 0, lint.stderr);
+  assert.match(script, /MODE=\$\{1:---check\}/);
+  assert.match(script, /IRON_AI_QUOTA_ROLLOUT_APPROVED/);
+  assert.match(script, /IRON_AI_QUOTA_ACTOR_USER_ID/);
+  assert.match(script, /sha256sum -c/);
+  assert.match(script, /CURRENT_ALREADY_COMPLIANT/);
+  assert.match(script, /\/api\/v1\/health\/ready/);
+  assert.match(script, /buildSha/);
+  assert.ok(script.indexOf('sha256sum -c') < script.indexOf('node scripts/stage-ai-monthly-plan-versions.mjs --apply'));
+});
