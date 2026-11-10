@@ -488,3 +488,14 @@ jobs:
 
       - name: Build production container image
         run: docker build --pull -t iron-fit-backend-ci:${{ github.sha }} .
+
+      - name: Prove canonical plan rollout artifacts exist in actual non-root PROD image
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint sh iron-fit-backend-ci:${{ github.sha }} -ec '
+            test -r /app/scripts/stage-ai-monthly-plan-versions.mjs
+            test -r /app/config/commercial/iron-four-tiers-2026.candidate.json
+            test -d /app/dist/src/modules/product-entitlements
+            test "$(id -un)" = node
+          '
+
