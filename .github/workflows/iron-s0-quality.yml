@@ -176,6 +176,21 @@ jobs:
           IRON_LAUNCH_ACTOR_EMAIL: b6-admin@example.com
         run: npm run commercial:materialize-v1
 
+      - name: Materialize four immutable commercial tiers on disposable PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$NODE_ENV" = test
+          test "$IRON_RUNTIME_ENV" = HOMOLOG
+          case "$DATABASE_URL" in
+            postgresql://postgres:postgres@localhost:5432/iron_ci?schema=public) ;;
+            *) echo 'Refusing canonical tier staging outside disposable CI'; exit 1 ;;
+          esac
+          ACTOR="$(node -e "const {PrismaClient}=require('@prisma/client');const db=new PrismaClient();db.user.findUnique({where:{email:'b6-admin@example.com'}}).then(x=>{if(!x?.id)throw Error('Missing CI SUPER_ADMIN');process.stdout.write(x.id)}).finally(()=>db.$disconnect()).catch(()=>process.exit(1))")"
+          IRON_AI_QUOTA_ACTOR_USER_ID="$ACTOR" IRON_AI_QUOTA_ROLLOUT_APPROVED=YES node scripts/stage-ai-monthly-plan-versions.mjs --apply
+          IRON_AI_QUOTA_ACTOR_USER_ID="$ACTOR" IRON_AI_QUOTA_ROLLOUT_APPROVED=YES node scripts/stage-ai-monthly-plan-versions.mjs --apply
+          node --test test/ai-quota-plan-stage-policy.test.mjs test/ai-commercial-student-limits.test.mjs
+
       - name: Start live backend for integrated E2E
         run: |
           node dist/src/main.js > /tmp/iron-b6-backend.log 2>&1 &
@@ -188,6 +203,9 @@ jobs:
           done
           cat /tmp/iron-b6-backend.log
           exit 1
+
+      - name: Real four-tier license delivery E2E without external Cakto
+        run: node --test --test-concurrency=1 test/iron-four-tier-license-live.e2e.mjs
 
       - name: Integrated live E2E
         run: node --test --test-concurrency=1 test/b6.*.e2e.mjs
