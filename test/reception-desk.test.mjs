@@ -85,3 +85,26 @@ test('exhausted reception serialization retries return safe 409 rather than leak
     error?.getStatus?.()===409 && /Conflito de concorrencia/.test(error.message));
   assert.equal(attempted,6);
 });
+
+
+test('concurrent manual receipt reconciliation returns original payment once, not HTTP 500',async()=>{
+  const { Prisma }=require('@prisma/client');
+  const {createHash}=require('node:crypto');
+  const dto={requestId:'payment-request',paymentMethod:'PIX',receivedConfirmed:true};
+  const fingerprint=createHash('sha256').update(JSON.stringify({
+    actor:'reception-a',chargeId:'charge-a',paymentMethod:'PIX',
+  })).digest('hex');
+  const receipt={id:'receipt-a',fingerprint,charge:{id:'charge-a',status:'PAID'}};
+  let attempts=0;
+  const db={
+    $transaction:async()=>{attempts++;throw new Prisma.PrismaClientKnownRequestError(
+      'Serialization conflict',{code:'P2034',clientVersion:'6.19.3'});
+    },
+    deskReceipt:{findUnique:async()=>receipt},
+  };
+  const row=await new ReceptionService(db,{},{}).receive(
+    'gym-a','reception-a','charge-a',dto,
+  );
+  assert.equal(attempts,1);
+  assert.deepEqual(row,{id:'receipt-a',charge:receipt.charge,idempotent:true});
+});
