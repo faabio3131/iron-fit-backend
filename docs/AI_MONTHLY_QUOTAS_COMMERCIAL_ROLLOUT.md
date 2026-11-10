@@ -65,3 +65,41 @@ execution should be reconciled so users do not lose a credit for unusable output
 6. No production claim until real provider authorization, payment and production smoke are validated.
 
 Do not merge/deploy as full commercial feature until these gates are met.
+
+## Contabo production operator gate (protected, not auto-enabled)
+
+The PROD Docker image now carries only the approved read-only-by-default rollout
+tool and its public candidate manifest. **No tenant, checkout, payment, or historic
+subscription is touched by image deployment.** The runbook lives in
+`ops/contabo/publish-four-tiers.sh` and must be run on the existing Contabo host,
+not in a new application.
+
+After GitHub `production` promotion and successful deployment, inspect:
+```bash
+cd /opt/fm/ironfit
+bash src/backend/ops/contabo/deploy.sh status
+bash src/backend/ops/contabo/publish-four-tiers.sh --check
+```
+The --check command verifies current checkout SHA, readiness of API and Web,
+backend build identity, complete Prisma migrations, published legacy baseline and
+the exact four planned changes **without writing anything**.
+
+Only after a named authorized global SUPER_ADMIN is verified, operator approval
+is recorded and a successful backup can be created:
+```bash
+export IRON_AI_QUOTA_ROLLOUT_APPROVED=YES
+export IRON_AI_QUOTA_ACTOR_USER_ID='<existing-global-SUPER_ADMIN-UUID>'
+bash src/backend/ops/contabo/publish-four-tiers.sh --apply
+unset IRON_AI_QUOTA_ROLLOUT_APPROVED IRON_AI_QUOTA_ACTOR_USER_ID
+```
+The apply script revalidates deployment, migration state and the actor via the
+canonical userRole table, takes a SHA256-verified backup and publishes immutable
+versions through ProductEntitlements. It then performs a read-only verification
+that exactly four tiers are CURRENT_ALREADY_COMPLIANT, with zero subscription
+transitions and no historical plan version mutation.
+
+Never infer the actor UUID or turn a candidate plan into a paid subscription
+manually. FM Command remains the sole billing authority; Cakto sales remain
+disabled until verified provider credentials, offer IDs, signed webhook and
+authorized payment are independently homologated. A successful offline/PostgreSQL
+CI or publication in a local test database is not production certification.
