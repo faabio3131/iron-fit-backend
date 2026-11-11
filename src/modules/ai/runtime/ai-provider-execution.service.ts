@@ -9,6 +9,9 @@ import { AiMonthlyQuotaService } from './ai-monthly-quota.service';
 
 const TRANSIENT = new Set(['RATE_LIMIT', 'PROVIDER_INTERNAL_ERROR', 'OFFLINE', 'TIMEOUT']);
 
+// Internal-only quota identity from the durable reservation, never supplied by the browser/provider.
+type QuotaBoundAiResponse<TOutput> = AiNormalizedResponse<TOutput> & { quotaPeriodStart?: Date };
+
 @Injectable()
 export class AiProviderExecutionService {
   // Availability optimization only. Durable budget/idempotency remains in PostgreSQL across replicas/restarts.
@@ -21,7 +24,7 @@ export class AiProviderExecutionService {
     private readonly monthlyQuota: AiMonthlyQuotaService,
   ) {}
 
-  async execute<TInput = unknown, TOutput = unknown>(request: AiNormalizedRequest<TInput>): Promise<AiNormalizedResponse<TOutput>> {
+  async execute<TInput = unknown, TOutput = unknown>(request: AiNormalizedRequest<TInput>): Promise<QuotaBoundAiResponse<TOutput>> {
     const tenantId = request.context?.tenantId;
     const requestId = request.context?.requestId;
     if (!tenantId || !requestId || requestId.length > 160) return this.denied('AI_REQUEST_CONTEXT_INVALID');
@@ -34,7 +37,7 @@ export class AiProviderExecutionService {
     try {
       const response = await this.executeWithReservedQuota<TInput, TOutput>(request);
       success = response.status === 'SUCCEEDED';
-      return response;
+      return { ...response, quotaPeriodStart: reservation.periodStart };
     } finally {
       // Failure and timeout release commercial quota; provider-attempt cost remains auditable.
       await this.monthlyQuota.finalize(tenantId, request.capability, requestId, reservation.periodStart, success);
@@ -119,8 +122,8 @@ export class AiProviderExecutionService {
   }
 
   /** Provider SUCCEEDED alone does not bill a rejected workout-sheet candidate. */
-  async releaseRejectedWorkout(tenantId: string, requestId: string) {
-    await this.monthlyQuota.releaseRejectedWorkout(tenantId, requestId);
+  async releaseRejectedWorkout(tenantId: string, requestId: string, periodStart: Date | undefined) {
+    await this.monthlyQuota.releaseRejectedWorkout(tenantId, requestId, periodStart);
   }
 
   private denied<T> (flag: string): AiNormalizedResponse<T> {
