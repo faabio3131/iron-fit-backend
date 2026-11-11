@@ -151,11 +151,13 @@ export class AiMonthlyQuotaService {
     });
   }
 
-  /** A model answer rejected before a usable workout candidate exists is not a generated sheet. */
-  async releaseRejectedWorkout(tenantId: string, requestId: string) {
-    if (!tenantId?.trim() || !requestId?.trim()) return;
+  /** Release only the exact monthly reservation that produced the rejected candidate. */
+  async releaseRejectedWorkout(tenantId: string, requestId: string, periodStart: Date | undefined) {
+    // Never derive the period from today's date: provider responses can cross a billing-cycle boundary.
+    if (!tenantId?.trim() || !requestId?.trim()
+      || !(periodStart instanceof Date) || !Number.isFinite(periodStart.getTime())) return;
     await this.prisma.aiMonthlyConsumption.updateMany({
-      where: { tenantId, group: 'WORKOUT', requestId, state: 'CONSUMED' },
+      where: { tenantId, group: 'WORKOUT', requestId, periodStart, state: 'CONSUMED' },
       data: { state: 'RELEASED', finishedAt: new Date() },
     });
   }
