@@ -8,12 +8,14 @@ on:
       - 'certification/**'
     paths:
       - '.github/workflows/iron-public-edge-homolog.yml'
+      - 'scripts/public-trial-browser-smoke.mjs'
   pull_request:
     branches:
       - main
       - production
     paths:
       - '.github/workflows/iron-public-edge-homolog.yml'
+      - 'scripts/public-trial-browser-smoke.mjs'
   workflow_dispatch:
     inputs:
       expected_backend_sha:
@@ -56,3 +58,7 @@ jobs:
           node-version: 22
       - name: Verify external Web/API DNS, HTTPS, health, CORS and deployed build identity
         run: node scripts/public-edge-preflight.mjs
+      - name: Install isolated public browser driver
+        run: npm install --prefix /tmp/iron-public-browser --no-save --no-audit --no-fund playwright-core@1.57.0
+      - name: Verify real public guest CTA and trial form without creating data
+        run: node scripts/public-trial-browser-smoke.mjs
