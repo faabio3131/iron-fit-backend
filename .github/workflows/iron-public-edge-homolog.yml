@@ -44,9 +44,9 @@ jobs:
     env:
       IRON_PUBLIC_API_URL: https://api.ironfitcore.com.br
       IRON_PUBLIC_WEB_URL: https://app.ironfitcore.com.br
-      # Fallback only certifies the runtime verified in the operator's 16 Nov
+      # Fallback only certifies the runtime verified in the public November 16
       # .deployed evidence. Manual dispatch must provide the current SHA.
-      IRON_EXPECTED_BUILD_SHA: ${{ inputs.expected_backend_sha || '76774df987cf2dadf37ebdf142c6e057f04414b9' }}
+      IRON_EXPECTED_BUILD_SHA: ${{ inputs.expected_backend_sha || '6222d2ce345e9fa9112e41fb34ca65658dbaee38' }}
       IRON_EXPECTED_RUNTIME_ENV: ${{ inputs.expected_runtime || 'HOMOLOG' }}
       IRON_EDGE_PREFLIGHT_TIMEOUT_MS: '15000'
     steps:
