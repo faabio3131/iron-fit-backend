@@ -51,8 +51,17 @@ counts for the tenant's authorized staff, including 70/90/100 percent alert thre
 `AiMonthlyConsumption` is a commercial ledger; `AiProviderAttempt` remains
 the separately audited provider-token/cost ledger (provider retries are not extra
 commercial requests). Completed provider requests consume quota; failures release it.
-**Open engineering gap**: downstream rejected candidates after successful provider
-execution should be reconciled so users do not lose a credit for unusable output.
+**Implemented internally, not externally homologated**: after successful provider
+execution, a workout candidate rejected by advisory/domain validation releases
+only the consumed reservation identified by the original
+`tenantId + WORKOUT + requestId + periodStart`. The service never derives this
+billing-cycle identifier from the wall clock during rejection, preventing
+cross-month releases when a request ID is reused. The permanent regression
+`test/ai-workout-quota-rejected.test.mjs` covers same-ID reuse across months,
+cross-tenant and cross-group isolation, missing-period fail-closed behavior,
+reservation period propagation, and both rejection branches. The presence of
+code and regression does **not** demonstrate real provider execution or
+production homologation.
 
 ## Release gates
 
