@@ -1,0 +1,64 @@
+name: IRON P Public HOMOLOG Edge Preflight
+
+# Read-only public probes. Never sends credentials or changes customers,
+# entitlements, billing, financial records, secrets or server configuration.
+on:
+  push:
+    branches:
+      - 'certification/**'
+    paths:
+      - '.github/workflows/iron-public-edge-homolog.yml'
+      - 'scripts/public-trial-browser-smoke.mjs'
+  pull_request:
+    branches:
+      - main
+      - production
+    paths:
+      - '.github/workflows/iron-public-edge-homolog.yml'
+      - 'scripts/public-trial-browser-smoke.mjs'
+  workflow_dispatch:
+    inputs:
+      expected_backend_sha:
+        description: 'Backend SHA currently recorded by Contabo .deployed'
+        type: string
+        required: true
+      expected_runtime:
+        description: 'Expected public runtime (HOMOLOG/PROD)'
+        type: choice
+        options:
+          - HOMOLOG
+          - PROD
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iron-public-edge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      IRON_PUBLIC_API_URL: https://api.ironfitcore.com.br
+      IRON_PUBLIC_WEB_URL: https://app.ironfitcore.com.br
+      # Fallback only certifies the runtime verified in the operator's 16 Nov
+      # .deployed evidence. Manual dispatch must provide the current SHA.
+      IRON_EXPECTED_BUILD_SHA: ${{ inputs.expected_backend_sha || '76774df987cf2dadf37ebdf142c6e057f04414b9' }}
+      IRON_EXPECTED_RUNTIME_ENV: ${{ inputs.expected_runtime || 'HOMOLOG' }}
+      IRON_EDGE_PREFLIGHT_TIMEOUT_MS: '15000'
+    steps:
+      - name: Checkout official backend read-only public edge preflight
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify external Web/API DNS, HTTPS, health, CORS and deployed build identity
+        run: node scripts/public-edge-preflight.mjs
+      - name: Install isolated public browser driver
+        run: npm install --prefix /tmp/iron-public-browser --no-save --no-audit --no-fund playwright-core@1.57.0
+      - name: Verify real public guest CTA and trial form without creating data
+        run: node scripts/public-trial-browser-smoke.mjs
