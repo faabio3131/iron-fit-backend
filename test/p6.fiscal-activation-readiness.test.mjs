@@ -137,3 +137,65 @@ test('P6 status API retains financial OWNER/SUPER_ADMIN guards and canonical gym
     /fiscalActivationReadiness\([\s\S]*?this\.fiscalBridgeDispatch\.inspectActivationReadiness\(\s*this\.resolveGymId\(user, requestedGymId\)/,
   );
 });
+
+test('P6 operational usage counts only confirmed per-tenant handoffs in the UTC month', async () => {
+  const { FiscalReconciliationCancellationService } = require(
+    '../dist/src/modules/financial/fiscal-reconciliation-cancellation.service.js',
+  );
+  const queries = [];
+  const service = new FiscalReconciliationCancellationService(
+    {
+      fiscalHandoff: {
+        count: async (args) => {
+          queries.push(args);
+          return queries.length === 1 ? 4 : 1;
+        },
+      },
+    },
+    {},
+    {},
+    {},
+    {},
+  );
+  const result = await service.getTenantOperationalUsage(
+    'gym-canonical',
+    new Date('2026-11-16T12:00:00Z'),
+  );
+  assert.deepEqual(result, {
+    periodStart: '2026-11-01T00:00:00.000Z',
+    periodEndExclusive: '2026-12-01T00:00:00.000Z',
+    timezone: 'UTC',
+    authorizedCount: 4,
+    cancelledCount: 1,
+    source: 'IRON_FISCAL_HANDOFF',
+    billingStatus: 'NOT_A_COMMERCIAL_METER',
+  });
+  assert.equal(queries.length, 2);
+  assert.deepEqual(queries[0].where, {
+    gymId: 'gym-canonical',
+    authorizedAt: {
+      gte: new Date('2026-11-01T00:00:00.000Z'),
+      lt: new Date('2026-12-01T00:00:00.000Z'),
+    },
+  });
+  assert.deepEqual(queries[1].where, {
+    gymId: 'gym-canonical',
+    cancelledAt: {
+      gte: new Date('2026-11-01T00:00:00.000Z'),
+      lt: new Date('2026-12-01T00:00:00.000Z'),
+    },
+  });
+  assert.equal(JSON.stringify(result).includes('gym-canonical'), false);
+});
+
+test('P6 usage endpoint is OWNER/SUPER_ADMIN and always derives tenant from auth', async () => {
+  const controller = await readFile(
+    new URL('../src/modules/financial/financial.controller.ts', import.meta.url),
+    'utf8',
+  );
+  assert.match(controller, /@Get\\('fiscal\\/usage'\\)\\s*@Roles\\('SUPER_ADMIN', 'OWNER'\\)/);
+  assert.match(
+    controller,
+    /fiscalOperationalUsage\\([\\s\\S]*?this\\.fiscalLifecycle\\.getTenantOperationalUsage\\(\\s*this\\.resolveGymId\\(user, requestedGymId\\)/,
+  );
+});
