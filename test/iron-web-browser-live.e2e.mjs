@@ -183,9 +183,32 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
     const remove = page.getByTestId(`equipment-remove-${catalogId}`);
     await remove.waitFor({ timeout: 20000 });
     await remove.click();
-    await page.getByTestId(`equipment-remove-confirm-${catalogId}`).click();
+    // The remove button can disappear before inventory/catalog readback finishes.
+    // Prove DELETE persistence and both canonical GETs before attempting reselection.
+    const [removedResponse, inventoryAfterRemove, catalogAfterRemove] = await Promise.all([
+      page.waitForResponse((response) => new URL(response.url()).pathname ===
+        `/api/v1/equipments/catalog/${catalogId}/selection` && response.request().method() === 'DELETE'),
+      page.waitForResponse((response) => new URL(response.url()).pathname ===
+        '/api/v1/equipments' && response.request().method() === 'GET'),
+      page.waitForResponse((response) => new URL(response.url()).pathname ===
+        '/api/v1/equipments/catalog' && response.request().method() === 'GET'),
+      page.getByTestId(`equipment-remove-confirm-${catalogId}`).click(),
+    ]);
+    assert.ok(removedResponse.ok(), 'Equipment removal must persist in the canonical backend');
+    assert.equal(inventoryAfterRemove.status(), 200, 'Inventory readback must succeed after removal');
+    assert.equal(catalogAfterRemove.status(), 200, 'Catalog readback must succeed after removal');
+    const inventoryReadback = await inventoryAfterRemove.json();
+    const inventoryRows = Array.isArray(inventoryReadback) ? inventoryReadback :
+      inventoryReadback?.items ?? inventoryReadback?.data ?? inventoryReadback?.results;
+    assert.ok(Array.isArray(inventoryRows), 'Inventory response must have a recognizable list');
+    assert.equal(inventoryRows.some((item) => item.catalogItemId === catalogId), false,
+      'Removed catalog item must not remain in persisted inventory');
+    await page.getByText('Carregando dados canônicos…', { exact: true })
+      .waitFor({ state: 'hidden', timeout: 20000 });
     await remove.waitFor({ state: 'hidden', timeout: 20000 });
-    await catalogItem.click();
+    const currentCatalogItem = page.getByTestId(`equipment-item-${catalogId}`);
+    await currentCatalogItem.waitFor({ timeout: 20000 });
+    await currentCatalogItem.click();
     await page.getByTestId('equipment-catalog-select').waitFor({ timeout: 20000 });
 
     await page.getByTestId('nav-financial').click();
