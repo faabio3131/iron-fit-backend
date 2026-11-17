@@ -169,12 +169,32 @@ export class IronCommercialCheckoutService {
     if (!PLAN.test(planCode) || !UUID.test(requestId))
       throw new BadRequestException('Plano ou chave de requisicao invalida');
 
+    // Choose the canonical latest entitlement record, never an older ACTIVE row.
+    // An expired trial may be SUSPENDED, but a fraud/admin/billing suspension is
+    // not enough to authorize a new invoice. Audit provenance must prove that
+    // the last subscription change was the canonical trial-expiration event.
     const current = await this.prisma.tenantProductSubscription.findFirst({
-      where: { gymId, status: TenantProductSubscriptionStatus.ACTIVE },
-      select: { id: true },
+      where: { gymId },
+      select: { id: true, status: true, effectiveUntil: true },
       orderBy: { effectiveFrom: 'desc' },
     });
-    if (!current) throw new ConflictException('Academia sem assinatura ativa para contratar');
+    if (!current) throw new ConflictException('Vinculo comercial da academia nao encontrado');
+    if (current.status !== TenantProductSubscriptionStatus.ACTIVE) {
+      if (current.status !== TenantProductSubscriptionStatus.SUSPENDED ||
+          !current.effectiveUntil || current.effectiveUntil.getTime() > Date.now())
+        throw new ConflictException('Assinatura nao elegivel para contratacao direta');
+      const trial = await this.prisma.commercialTrialProvisioning.findFirst({
+        where: { gymId, subscriptionId: current.id, trialEndsAt: { lte: new Date() } },
+        select: { subscriptionId: true },
+      });
+      const lastAudit = await this.prisma.auditLog.findFirst({
+        where: { gymId, entity: 'TenantProductSubscription', entityId: current.id },
+        orderBy: { createdAt: 'desc' },
+        select: { action: true },
+      });
+      if (!trial || lastAudit?.action !== 'COMMERCIAL_TRIAL_EXPIRED')
+        throw new ConflictException('Suspensao sem prova de expiracao de trial autorizada');
+    }
     const conf = this.config();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 12_000);
