@@ -77,3 +77,59 @@ test('checkout refuses URL spoofing, fake invoice links, unconfigured provider o
     await assert.rejects(() => service.prepare(gymId, 'IRON_PRO', requestId), (e) => e.getStatus?.() === 503);
   } finally { globalThis.fetch = oldFetch; restore(); }
 });
+
+test('canonical Command subscription readback is scoped to the current gym and does not imply payment', async () => {
+  const restore = setEnv(), oldFetch = globalThis.fetch;
+  const prisma = { tenantProductSubscription: { findFirst: async (query) => {
+    assert.deepEqual(query.where, { gymId });
+    assert.equal(query.select.id, true);
+    assert.equal(query.orderBy.effectiveFrom, 'desc');
+    return { id: subscriptionId };
+  }}};
+  globalThis.fetch = async (url, init) => {
+    const target = new URL(url);
+    assert.equal(target.origin + target.pathname, 'https://app.fmcommand.com.br/api/internal/iron/commerce/subscription');
+    assert.equal(target.searchParams.get('gymId'), gymId);
+    assert.equal(target.searchParams.get('expectedSubscriptionId'), subscriptionId);
+    assert.equal(init.method, 'GET');
+    assert.ok(init.headers.Authorization.startsWith('Bearer isolated-ci-iron-command-'));
+    return new Response(JSON.stringify({
+      source: 'FM_COMMAND_CANONICAL', authority: 'FM_COMMAND', productCode: 'IRON_FIT_CORE',
+      gymId, checkedAt: '2026-11-17T15:00:00.000Z', settlementConfirmedByThisView: false,
+      subscription: { planCode: 'IRON_PRO_MONTHLY', status: 'pending', paidThrough: null },
+      invoices: [{ status: 'pending', amountMinor: 26900, currency: 'BRL', periodEnd: null }],
+    }), { status: 200 });
+  };
+  try {
+    const service = new IronCommercialCheckoutService(prisma);
+    const result = await service.readCurrent(gymId);
+    assert.equal(result.source, 'FM_COMMAND_CANONICAL');
+    assert.equal(result.subscription.status, 'pending');
+    assert.equal(result.invoices[0].amountMinor, 26900);
+    assert.equal(result.settlementConfirmedByThisView, false);
+    assert.equal(Object.hasOwn(result, 'paid'), false);
+    assert.equal(Object.hasOwn(result, 'entitlement'), false);
+  } finally { globalThis.fetch = oldFetch; restore(); }
+});
+
+test('Command readback rejects foreign gym or malformed paid facts; never uses local billing as truth', async () => {
+  const restore = setEnv(), oldFetch = globalThis.fetch;
+  const prisma = { tenantProductSubscription: { findFirst: async () => ({ id: subscriptionId }) }};
+  try {
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      source: 'FM_COMMAND_CANONICAL', authority: 'FM_COMMAND', productCode: 'IRON_FIT_CORE',
+      gymId: randomUUID(), checkedAt: '2026-11-17T15:00:00.000Z',
+      settlementConfirmedByThisView: false, subscription: null, invoices: [],
+    }), {status:200});
+    const service = new IronCommercialCheckoutService(prisma);
+    await assert.rejects(() => service.readCurrent(gymId), (e) => e.getStatus?.() === 503);
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      source: 'FM_COMMAND_CANONICAL', authority: 'FM_COMMAND', productCode: 'IRON_FIT_CORE',
+      gymId, checkedAt: '2026-11-17T15:00:00.000Z',
+      settlementConfirmedByThisView: false, subscription: null,
+      invoices: [{ status: 'paid', amountMinor: '26900', currency:'BRL', periodEnd:null }],
+    }), {status:200});
+    await assert.rejects(() => service.readCurrent(gymId), (e) => e.getStatus?.() === 503);
+    await assert.rejects(() => service.readCurrent('foreign'), (e) => e.getStatus?.() === 400);
+  } finally { globalThis.fetch = oldFetch; restore(); }
+});
