@@ -257,6 +257,17 @@ export class FinancialController {
     );
   }
 
+  @Get('fiscal/usage')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  fiscalOperationalUsage(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.fiscalLifecycle.getTenantOperationalUsage(
+      this.resolveGymId(user, requestedGymId),
+    );
+  }
+
   @Get('fiscal/handoffs')
   @Roles('SUPER_ADMIN', 'OWNER')
   listFiscalHandoffs(
