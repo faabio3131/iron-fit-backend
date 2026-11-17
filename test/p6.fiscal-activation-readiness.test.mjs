@@ -193,9 +193,9 @@ test('P6 usage endpoint is OWNER/SUPER_ADMIN and always derives tenant from auth
     new URL('../src/modules/financial/financial.controller.ts', import.meta.url),
     'utf8',
   );
-  assert.match(controller, /@Get\\('fiscal\\/usage'\\)\\s*@Roles\\('SUPER_ADMIN', 'OWNER'\\)/);
+  assert.match(controller, /@Get\('fiscal\/usage'\)\s*@Roles\('SUPER_ADMIN', 'OWNER'\)/);
   assert.match(
     controller,
-    /fiscalOperationalUsage\\([\\s\\S]*?this\\.fiscalLifecycle\\.getTenantOperationalUsage\\(\\s*this\\.resolveGymId\\(user, requestedGymId\\)/,
+    /fiscalOperationalUsage\([\s\S]*?this\.fiscalLifecycle\.getTenantOperationalUsage\(\s*this\.resolveGymId\(user, requestedGymId\)/,
   );
 });
