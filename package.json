@@ -6,15 +6,15 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc --incremental false",
     "typecheck": "tsc --noEmit --pretty false",
     "lint": "node scripts/lint.mjs && npm run typecheck",
     "test": "npm run build && node --test test/*.test.mjs",
     "test:smoke": "node --test test/*.test.mjs",
     "test:cov": "npm run build && node --experimental-test-coverage --test test/*.test.mjs",
     "ci": "npm run lint && npm run build && npm run test:smoke",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
+    "start": "node dist/src/main.js",
+    "start:dev": "npm run build && node --watch dist/src/main.js",
     "start:prod": "node dist/src/main.js",
     "commercial:materialize-v1": "node scripts/materialize-launch-v1.mjs",
     "readiness:edge-preflight": "node scripts/public-edge-preflight.mjs",
@@ -43,7 +43,6 @@
     "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "@nestjs/cli": "^11.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
@@ -60,7 +59,8 @@
     "multer": "2.5.0",
     "proxy-addr": "2.0.8",
     "fast-uri": "3.1.9",
-    "body-parser": "2.4.0"
+    "body-parser": "2.4.0",
+    "qs": "6.16.1"
   },
   "prisma": {
     "schema": "./prisma",
