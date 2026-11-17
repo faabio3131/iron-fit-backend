@@ -1,6 +1,6 @@
 # O12 — Billing IRON / Assinatura IRON
 
-Status: **RECONCILED — FM COMMAND AUTHORITY**
+Status: **RECONCILED — FM COMMAND AUTHORITY ONLY; P3 CLIENT COMMERCIAL E2E OPEN**
 
 Escopo: FM Tecnologia → academia. Este domínio permanece separado do Financeiro Academia (academia → aluno).
 
@@ -79,3 +79,42 @@ Fechar a jornada canônica no Command:
 **plano → subscription → invoice → gateway FM → payment confirmation → Command → entitlement/licença IRON**
 
 Somente então a UI “Assinatura IRON” poderá reativar ações comerciais através de contrato governado do Command.
+
+---
+
+## 2026-11-17 — P3 / Assinatura IRON: pendências descobertas em teste visual real
+
+**Estado:** `OPEN — COMMERCIAL CLIENT JOURNEY NOT CERTIFIED` (autoridade FM Command reconciliada; produto cliente e integração física não certificados).
+**Origem:** navegação autenticada como QA IRON OWNER em `app.ironfitcore.com.br`, 17/11/2026; ver código `iron-fit-app/src/components/SaasBillingPanel.tsx` e `src/web/CommercialWebApp.tsx` em `production`, backend `src/modules/commercial/iron-commercial-checkout.{controller,service}.ts` em `production`, FM Command `src/application/billing/iron-commerce-provisioning.ts` e `src/app/api/internal/iron/commerce/checkout/route.ts` em `main`.
+**Responsabilidade:** backend IRON = autenticação, tenant, entitlement e proxy mínimo; Web IRON = autosserviço do proprietário; FM Command = autoridade de plano, fatura, pagamento, assinatura e licença; Cakto = checkout e evento de pagamento. **Financeiro academia→aluno não participa dessa jornada.**
+
+### Evidências reproduzíveis — NÃO declarar concluído
+
+1. A Web mostra **“Contratação indisponível até a configuração comercial dos planos”**, sem ofertas nem botões de compra. No `SaasBillingPanel.tsx`, o mesmo texto é usado quando `GET /commercial/billing/offers` falha, retorna lista inválida ou não há ofertas: **causa específica em Contabo não comprovada**; investigar resposta real e logs sanitizados, não presumir ausência de cadastro.
+2. O cartão “Situação conhecida no IRON” consulta `GET /saas-billing/current` (`LEGACY_READ_ONLY`). Mostra “Não registrado / Não informado / nenhuma fatura histórica”, que **não é consulta canônica do Command** e não prova falta de assinatura/entitlement do cliente.
+3. O fluxo normal renderiza `<SaasBillingPanel canPurchase={can('OWNER')} ... />`. Porém, no ramo `blocked` de `CommercialWebApp.tsx`, renderiza `<SaasBillingPanel ... />` **sem `canPurchase`**, deixando-o `false`: proprietário com trial vencido/suspenso pode ficar sem contratação para regularização. Corrigir preservando proteção server-side e política comercial canônica.
+4. O endpoint `GET /commercial/billing/offers` exige JWT, OWNER e step-up. O proxy exige configuração `IRON_FMCC_COMMERCE_URL`/`IRON_FMCC_COMMERCE_TOKEN`; o Command exige sua rota Cakto ativa PROD, controle S2S, ofertas Cakto oficiais, mapeamentos `commercialPlanCode -> IRON plan/version` publicados. A existência do código **não confirma** essas condições no runtime.
+5. O endpoint `POST /commercial/billing/checkout` aceita oferta validada, usa idempotência e devolve URL Cakto com fatura canônica; redirecionamento **não concede licença**. Testes unitários/mockados não substituem compra, webhook, outbox e readback reais.
+6. A tela mostra texto de arquitetura (autoridade corporativa, engine antigo e “registro local”), em vez de uma experiência comercial clara para proprietário: lacuna de UX mesmo quando backend está correto.
+
+### WPs obrigatórios — ordem de dependência
+
+- [ ] **P3-IRON-01 — Diagnóstico físico sem mutação:** consultar `GET /commercial/billing/offers` com sessão QA OWNER e step-up ativo; diferenciar 401/403, 503, catálogo vazio e falha de contrato; conferir conectividade S2S IRON→Command, estado do catálogo, status de rota e mapeamentos, sem imprimir/alterar secrets. Evidenciar resposta sanitizada, runtime SHA e ambiente.
+- [ ] **P3-IRON-02 — Catálogo comercial canônico:** reconciliar quatro planos IRON e ofertas mensais/anuais oficiais, preços, entitlements e versões publicadas; comparar `Command product plan mapping` ↔ `IRON plan/version` ↔ `Cakto offer`; evitar oferta órfã, valor divergente e troca entre mensal/anual. Habilitação comercial externa somente com configuração/credenciais oficiais e gate de segurança.
+- [ ] **P3-IRON-03 — Read-model oficial por academia:** fornecer/consumir contrato autenticado S2S **canônico** para plano, status, período, próxima cobrança, faturas/pagamentos e histórico do cliente. Verificar antes se contrato já existe; não inventar API. Distinguir fonte, freshness e `unknown`; não fazer “Não registrado” de dados legados parecer ausência de assinatura real. O Command continua fonte de verdade de billing.
+- [ ] **P3-IRON-04 — Recuperação comercial bloqueada:** garantir que OWNER autenticado consiga consultar ofertas e solicitar contratação/regularização mesmo com trial expirado ou assinatura suspensa quando permitido pelo Command; step-up ativo e autorização backend obrigatórios; impedir bypass de acesso operacional/entitlement até pagamento verificado.
+- [ ] **P3-IRON-05 — Área do cliente utilizável:** mostrar comparador de planos/preços e periodicidade reais; plano/status atual; próxima renovação; faturas e recibos; histórico; ações de contratar, trocar plano ou cancelar **somente via contratos reais e autorização**. Falhas devem ter mensagens específicas e seguras. Remover jargão interno, JSON, indicadores enganadores; não criar botão inerte.
+- [ ] **P3-IRON-06 — Ciclo comercial E2E:** testar cadastro/trial → OWNER → seleção da oferta → fatura idempotente → Cakto real autorizado → webhook assinado validado → ledger/outbox Command → entitlement IRON → atualização da UI; incluir renovação, falha/atraso, grace, suspensão, reativação, upgrade/downgrade, cancelamento/refund quando política autorizar. Sem transação real, `IMPLEMENTED / EXTERNAL BLOCKER`, nunca `PRODUCTION HOMOLOGATED`.
+- [ ] **P3-IRON-07 — Segurança, CI e publicação:** regressões de role (OWNER, SUPER_ADMIN, MANAGER, RECEPTION, TRAINER, STUDENT), step-up/MFA, tenant mismatch, spoofing, replay, idempotência, URL de checkout, assinaturas webhook, duplicate/reordered events, valor/ciclo divergentes, cross-tenant, falhas S2S, expiração de sessão. Executar CI backend/Web/Command; auditar diff; merge com gate; conferir versão real Contabo/health; smoke autenticado por academia. Nenhum ambiente é homologado pela aprovação da CI isolada.
+
+### Definition of Done específico / gate de release
+
+- [ ] Na conta QA OWNER, ofertas elegíveis exibidas com **valores e ciclos oficiais verificáveis**, ou estado indisponível com **motivo real e seguro**; erros 401/403/503 não mascarados como “planos não configurados”.
+- [ ] Contratação/regularização pelo proprietário funciona inclusive em estado comercial bloqueado, quando elegível; role/step-up/tenant e entitlement não podem ser burlados.
+- [ ] Assinatura, faturas e renovação são lidas do Command e correspondem à academia autenticada; projeções legadas identificadas e nunca apresentadas como verdade canônica.
+- [ ] Compra real autorizada, webhook, licença e readback certificados em ambiente apropriado; sem evidência externa o gate P3 e `COMMERCIAL E2E PASS` **continuam ABERTOS**.
+- [ ] CI e E2E de regressão verdes nos SHAs finais; deploy físico verificado por SHA, health e navegação real; sem cobrança/ativação duplicada nem segredo em logs.
+
+**Dependências:** [Macro P #243](https://github.com/faabio3131/iron-fit-backend/issues/243); [FM Command — código canônico](https://github.com/faabio3131/FM-CONTROL-CENTER); [IRON app — painel atual](https://github.com/faabio3131/iron-fit-app/blob/production/src/components/SaasBillingPanel.tsx).
+
+**Não confundir:** esta atualização é **documentação de gaps**, não implementação, PASS, deploy ou autorização para cobrança real.
