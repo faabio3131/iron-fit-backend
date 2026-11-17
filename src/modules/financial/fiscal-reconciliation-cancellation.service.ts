@@ -113,6 +113,41 @@ export class FiscalReconciliationCancellationService {
     });
   }
 
+  /**
+   * Operational evidence only, not the FM Command chargeable meter.
+   * Count distinct canonical handoffs with provider-confirmed timestamps
+   * in the current UTC calendar month for this authenticated gym.
+   * A cancelled document can be present in both counters.
+   */
+  async getTenantOperationalUsage(gymId: string, at = new Date()) {
+    const start = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
+    const end = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1));
+    const [authorizedCount, cancelledCount] = await Promise.all([
+      this.prisma.fiscalHandoff.count({
+        where: {
+          gymId,
+          authorizedAt: { gte: start, lt: end },
+        },
+      }),
+      this.prisma.fiscalHandoff.count({
+        where: {
+          gymId,
+          cancelledAt: { gte: start, lt: end },
+        },
+      }),
+    ]);
+
+    return {
+      periodStart: start.toISOString(),
+      periodEndExclusive: end.toISOString(),
+      timezone: 'UTC' as const,
+      authorizedCount,
+      cancelledCount,
+      source: 'IRON_FISCAL_HANDOFF' as const,
+      billingStatus: 'NOT_A_COMMERCIAL_METER' as const,
+    };
+  }
+
   private async scheduleReconciliationRetry(
     row: any,
     leaseOwner: string,

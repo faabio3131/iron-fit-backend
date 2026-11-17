@@ -17,6 +17,7 @@ import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
 import { UpsertFiscalScopeBindingDto } from './dto/upsert-fiscal-scope-binding.dto';
 import { CancelFiscalHandoffDto } from './dto/cancel-fiscal-handoff.dto';
 import { FiscalReconciliationCancellationService } from './fiscal-reconciliation-cancellation.service';
+import { FiscalBridgeDispatchService } from './fiscal-bridge-dispatch.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { StepUpGuard } from '../auth/guards/step-up.guard';
@@ -36,6 +37,7 @@ export class FinancialController {
     private paymentAutomation: TenantPaymentReconciliationAutomationService,
     private fiscalScopeBinding: FiscalScopeBindingService,
     private fiscalLifecycle: FiscalReconciliationCancellationService,
+    private fiscalBridgeDispatch: FiscalBridgeDispatchService,
   ) {}
 
   private resolveGymId(user: any, requestedGymId?: string) {
@@ -240,6 +242,28 @@ export class FinancialController {
     @Query('gymId') requestedGymId?: string,
   ) {
     return this.fiscalScopeBinding.getSafe(
+      this.resolveGymId(user, requestedGymId),
+    );
+  }
+
+  @Get('fiscal/readiness')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  fiscalActivationReadiness(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.fiscalBridgeDispatch.inspectActivationReadiness(
+      this.resolveGymId(user, requestedGymId),
+    );
+  }
+
+  @Get('fiscal/usage')
+  @Roles('SUPER_ADMIN', 'OWNER')
+  fiscalOperationalUsage(
+    @CurrentUser() user: any,
+    @Query('gymId') requestedGymId?: string,
+  ) {
+    return this.fiscalLifecycle.getTenantOperationalUsage(
       this.resolveGymId(user, requestedGymId),
     );
   }
