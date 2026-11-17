@@ -281,6 +281,12 @@ Eliminar duas autoridades concorrentes.
 
 A área "Assinatura IRON" pode continuar no produto, mas deve consumir a autoridade financeira canônica.
 
+
+**Checkpoint 2026-11-17 — P3 COMERCIAL / CLIENTE — OPEN:** não encerrar D10/D11 apenas com `FM_COMMAND` como autoridade ou CI verde. A área real `Assinatura IRON` foi observada autenticada como QA OWNER sem ofertas, mostrando somente read-model legado e nenhuma fatura. O componente Web mascara causas distintas da falha de ofertas com uma única mensagem e, quando o acesso operacional está bloqueado, não habilita `canPurchase`. O diagnóstico físico ainda deve confirmar se faltam configuração/credenciais, mapeamento, ofertas ativas ou se há falha de API.
+
+**Documento obrigatório do WP:** [`docs/O12_BILLING_IRON.md`](docs/O12_BILLING_IRON.md), seção **2026-11-17 — P3 / Assinatura IRON**, contém P3-IRON-01…07 e Definition of Done: diagnóstico no runtime; planos/ciclos/entitlements reconciliados; read-model canônico Command por academia; contratação segura e recuperação de trial expirado; UI de autosserviço; checkout Cakto + webhook + outbox + licença; regressões/CI/merge/deploy/QA. Respeitar `OWNER`+step-up, S2S, tenant, arquitetura canônica e política de acesso; não ativar licença no redirect nem inventar oferta. **Status não é PASS nem PRODUCTION HOMOLOGATED.** Relacionar com [Macro P #243](https://github.com/faabio3131/iron-fit-backend/issues/243).
+
+
 ## D11 — Command → IRON: licença e entitlement
 
 Implementar o fluxo governado:
