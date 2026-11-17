@@ -13,9 +13,9 @@ const requestId = randomUUID();
 const URL_KEY = 'IRON_FMCC_COMMERCE_URL';
 const TOKEN_KEY = 'IRON_FMCC_COMMERCE_TOKEN';
 const active = { tenantProductSubscription: { findFirst: async (query) => {
-  assert.equal(query.where.gymId, gymId);
-  assert.equal(query.where.status, 'ACTIVE');
-  return { id: subscriptionId };
+  assert.deepEqual(query.where, { gymId });
+  assert.deepEqual(query.select, { id: true, status: true, effectiveUntil: true });
+  return { id: subscriptionId, status: 'ACTIVE', effectiveUntil: null };
 }}};
 
 function setEnv() {
@@ -132,4 +132,69 @@ test('Command readback rejects foreign gym or malformed paid facts; never uses l
     await assert.rejects(() => service.readCurrent(gymId), (e) => e.getStatus?.() === 503);
     await assert.rejects(() => service.readCurrent('foreign'), (e) => e.getStatus?.() === 400);
   } finally { globalThis.fetch = oldFetch; restore(); }
+});
+
+const expired = new Date('2025-11-17T00:00:00.000Z');
+const future = new Date('2099-11-17T00:00:00.000Z');
+function suspendedTrialFixture({
+  status = 'SUSPENDED', effectiveUntil = expired, trial = true, audit = 'COMMERCIAL_TRIAL_EXPIRED',
+} = {}) {
+  return {
+    tenantProductSubscription: {findFirst: async (query) => {
+      assert.deepEqual(query.where, { gymId });
+      return {id:subscriptionId,status,effectiveUntil};
+    }},
+    commercialTrialProvisioning: {findFirst: async (query) => {
+      assert.deepEqual(query.where.gymId, gymId);
+      assert.equal(query.where.subscriptionId, subscriptionId);
+      assert.ok(query.where.trialEndsAt.lte instanceof Date);
+      return trial ? {subscriptionId} : null;
+    }},
+    auditLog: {findFirst: async (query) => {
+      assert.equal(query.where.gymId, gymId);
+      assert.equal(query.where.entityId, subscriptionId);
+      return audit ? {action:audit} : null;
+    }},
+  };
+}
+
+test('expired trial with canonical expiry audit can prepare checkout but never activate entitlement', async () => {
+  const restore = setEnv(), previous = globalThis.fetch;
+  let prepared = false;
+  globalThis.fetch = async (url, init) => {
+    prepared = true;
+    assert.equal(init.method,'POST');
+    assert.equal(JSON.parse(init.body).expectedSubscriptionId,subscriptionId);
+    return new Response(JSON.stringify({
+      checkoutUrl: 'https://pay.cakto.com.br/official-offer?sck='+invoiceId,
+      invoiceId, productCode:'IRON_FIT_CORE',
+    }),{status:200});
+  };
+  try {
+    const service = new IronCommercialCheckoutService(suspendedTrialFixture());
+    const result = await service.prepare(gymId,'IRON_PRO',requestId);
+    assert.equal(prepared,true);
+    assert.equal(result.pendingConfirmation,true);
+    assert.equal(Object.hasOwn(result,'paid'),false);
+    assert.equal(Object.hasOwn(result,'entitlementStatus'),false);
+  } finally {globalThis.fetch=previous;restore();}
+});
+
+test('non-trial/admin/canceled/future suspended records fail closed before calling FM Command', async () => {
+  const restore=setEnv(),previous=globalThis.fetch;
+  globalThis.fetch=async()=>{throw new Error('Forbidden: should fail before external call');};
+  const cases=[
+    suspendedTrialFixture({trial:false}),
+    suspendedTrialFixture({audit:'ADMIN_SUSPENDED'}),
+    suspendedTrialFixture({audit:null}),
+    suspendedTrialFixture({status:'CANCELED'}),
+    suspendedTrialFixture({effectiveUntil:future}),
+  ];
+  try {
+    for (const prisma of cases) {
+      const service=new IronCommercialCheckoutService(prisma);
+      await assert.rejects(()=>service.prepare(gymId,'IRON_PRO',requestId),
+        e=>e.getStatus?.()===409);
+    }
+  } finally {globalThis.fetch=previous;restore();}
 });
