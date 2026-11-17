@@ -26,6 +26,13 @@ export class IronCommercialCheckoutController {
     return this.checkout.offers(user?.activeGymId ?? user?.gymId);
   }
 
+  /** Only verified OWNER with an active step-up can read Command billing status for this gym. */
+  @Roles('OWNER')
+  @Get('current')
+  current(@CurrentUser() user: any) {
+    return this.checkout.readCurrent(user?.activeGymId ?? user?.gymId);
+  }
+
   /** Only the verified tenant OWNER may initiate an FM-owned checkout. */
   @Roles('OWNER')
   @Post('checkout')
