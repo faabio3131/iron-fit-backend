@@ -59,7 +59,8 @@
     "multer": "2.5.0",
     "proxy-addr": "2.0.8",
     "fast-uri": "3.1.9",
-    "body-parser": "2.4.0"
+    "body-parser": "2.4.0",
+    "qs": "6.16.1"
   },
   "prisma": {
     "schema": "./prisma",
