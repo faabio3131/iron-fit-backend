@@ -1,5 +1,6 @@
 import {
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
@@ -134,6 +135,86 @@ export class FiscalBridgeDispatchService {
         credential,
       },
     };
+  }
+
+  /**
+   * Read-only, tenant-scoped readiness projection. The Fiscal Bridge is the
+   * authority for its capabilities; this does not certify municipal coverage
+   * or the existence/validity of a certificate A1.
+   *
+   * Never expose a fiscal workload secret or external tenant identifiers.
+   * Fail closed on unknown provider states and transport failures.
+   */
+  async inspectActivationReadiness(gymId: string) {
+    const environment = this.runtime.current() as IntegrationEnvironment;
+    const base = {
+      environment,
+      documentKind: 'nfse' as const,
+      bindingConfigured: false,
+      bridgeReachable: false,
+      certificateStatus: 'NOT_VERIFIED' as const,
+      municipalityStatus: 'NOT_VERIFIED' as const,
+      capabilityReadiness: null as string | null,
+      capabilityVersion: null as string | null,
+      checkedAt: null as string | null,
+    };
+
+    try {
+      await this.bindings.resolve(gymId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return { ...base, status: 'SCOPE_BINDING_REQUIRED' as const };
+      }
+      throw error;
+    }
+
+    let resolved: Awaited<ReturnType<typeof this.resolveBridgeContext>>;
+    try {
+      resolved = await this.resolveBridgeContext(gymId);
+    } catch {
+      return {
+        ...base,
+        bindingConfigured: true,
+        status: 'BRIDGE_UNAVAILABLE' as const,
+      };
+    }
+
+    try {
+      const payload = await this.http.post(
+        '/v1/capabilities/query',
+        { document_kind: 'nfse' },
+        resolved.context,
+        randomUUID(),
+      );
+      const capability = this.http.parseCapability(payload);
+      const names = new Set(
+        capability.capabilities.map((name) => name.toLowerCase()),
+      );
+      const ready =
+        names.has('nfse') &&
+        names.has('issue') &&
+        this.readinessAllowsIssue(
+          resolved.context.environment,
+          capability.readiness,
+        );
+      return {
+        ...base,
+        bindingConfigured: true,
+        bridgeReachable: true,
+        status: ready
+          ? ('CAPABILITY_READY' as const)
+          : ('CAPABILITY_NOT_READY' as const),
+        capabilityReadiness: capability.readiness,
+        capabilityVersion: capability.capabilityVersion,
+        checkedAt: new Date().toISOString(),
+      };
+    } catch {
+      return {
+        ...base,
+        bindingConfigured: true,
+        status: 'CAPABILITY_UNAVAILABLE' as const,
+      };
+    }
   }
 
   private readinessAllowsIssue(
