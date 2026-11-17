@@ -385,10 +385,10 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
         ]);
         assert.equal(activation.status(), 200);
       }
-      // Mutation completion is followed by canonical permission/tenant refresh.
-      // Assert the settled authenticated shell, preserving the exact RBAC check.
-      await page.getByTestId('nav-security').waitFor({ timeout: 20000 });
-      assert.equal(await page.getByTestId('nav-security').count(), 1);
+      // A separate count() can race with shell remount after tenant/role refresh.
+      // A real click is a stronger browser/RBAC assertion: it auto-waits for the
+      // permitted navigation control to become attached, visible, and actionable.
+      await page.getByTestId('nav-security').click({ timeout: 20000 });
       await page.getByTestId('commercial-logout').click();
       await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
     }
