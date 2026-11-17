@@ -118,17 +118,24 @@ export class IronCommercialCheckoutService {
         data.invoices.length > 24 || data.settlementConfirmedByThisView !== false)
       throw new ServiceUnavailableException('Contrato comercial inesperado');
 
-    let commercialSubscription: { planCode: string; status: string; paidThrough: string | null } | null = null;
+    let commercialSubscription: {
+      planCode: string; planName: string | null; interval: 'monthly' | 'yearly' | null;
+      status: string; paidThrough: string | null;
+    } | null = null;
     if (data.subscription !== null) {
       if (!data.subscription || typeof data.subscription !== 'object' || Array.isArray(data.subscription))
         throw new ServiceUnavailableException('Contrato de assinatura invalido');
       const item = data.subscription as Record<string, unknown>;
       if (typeof item.planCode !== 'string' || !PLAN.test(item.planCode) ||
           typeof item.status !== 'string' || item.status.length > 40 ||
-          (item.paidThrough !== null && typeof item.paidThrough !== 'string'))
+          (item.paidThrough !== null && typeof item.paidThrough !== 'string') ||
+          (item.planName != null && (typeof item.planName !== 'string' || item.planName.length > 120)) ||
+          (item.interval != null && item.interval !== 'monthly' && item.interval !== 'yearly'))
         throw new ServiceUnavailableException('Contrato de assinatura invalido');
       commercialSubscription = {
         planCode: item.planCode,
+        planName: typeof item.planName === 'string' ? item.planName : null,
+        interval: item.interval === 'monthly' || item.interval === 'yearly' ? item.interval : null,
         status: item.status,
         paidThrough: item.paidThrough as string | null,
       };
