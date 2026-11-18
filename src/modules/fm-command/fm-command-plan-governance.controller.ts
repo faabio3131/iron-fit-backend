@@ -11,7 +11,7 @@ import { FmCommandPlanGovernanceGuard } from './fm-command-plan-governance.guard
 
 /** This is not the browser product-entitlements API. The separate S2S guard
  * and dedicated token only allow FM's governed server to invoke the existing
- * IRON canonical plan engine. No gymId or entitlement overrides are accepted.
+ * IRON canonical plan engine. No academy or entitlement overrides are accepted.
  */
 @Controller('control-plane/fmcc/plan-governance')
 @UseGuards(FmCommandPlanGovernanceGuard)
