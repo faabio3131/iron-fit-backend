@@ -730,6 +730,7 @@ model Gym {
   receptionDeskPolicy ReceptionDeskPolicy?
   deskReceipts DeskReceipt[]
   students  Student[]
+  workoutExecutions WorkoutExecution[]
   equipments Equipment[]
   equipmentCatalogCandidates EquipmentCatalogCandidate[]
   scheduleSlots ScheduleSlot[]
@@ -784,6 +785,7 @@ model Student {
   deskReceipts DeskReceipt[]
   assessments     Assessment[]
   workouts        Workout[]
+  workoutExecutions WorkoutExecution[]
   schedules       StudentSchedule[]
   accessCredentials AccessCredential[]
   accessEvents    AccessEvent[]
@@ -941,6 +943,28 @@ model WorkoutExercise {
   session       WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise      Exercise       @relation(fields: [exerciseId], references: [id])
   equipment     Equipment?     @relation(fields: [equipmentId], references: [id])
+}
+
+// A self-reported completion is not physical attendance and never updates a workout prescription.
+// Snapshot fields preserve the historical result even if a prescribed session later changes.
+model WorkoutExecution {
+  id            String   @id @default(uuid())
+  gymId         String
+  studentId     String
+  workoutId     String
+  sessionId     String
+  sessionName   String
+  workoutGoal   String?
+  completedSets Int
+  requestId     String
+  source        String   @default("STUDENT_SELF_REPORTED")
+  completedAt   DateTime @default(now())
+  gym           Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, requestId])
+  @@index([gymId, studentId, completedAt])
+  @@index([workoutId, sessionId])
 }
 
 model ScheduleSlot {
