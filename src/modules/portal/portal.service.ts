@@ -68,6 +68,125 @@ export class PortalService {
     });
   }
 
+
+  // Self-reported guided session results. Never equate this record with physical check-in.
+  async getWorkoutExecutions(userId: string, gymId?: string | null) {
+    const student = await this.getStudentByUserId(userId, gymId);
+    return this.prisma.workoutExecution.findMany({
+      where: { studentId: student.id, gymId: student.gymId },
+      orderBy: { completedAt: 'desc' },
+      take: 30,
+      select: {
+        id: true, workoutId: true, sessionId: true, sessionName: true,
+        workoutGoal: true, completedSets: true, completedAt: true, source: true,
+      },
+    });
+  }
+
+  async completeWorkoutSession(
+    userId: string, gymId: string | null | undefined,
+    workoutId: string, sessionId: string, requestId: string,
+  ) {
+    const student = await this.getStudentByUserId(userId, gymId);
+    if (!/^[A-Za-z0-9_-]{20,96}$/.test(requestId)) {
+      throw new BadRequestException('Identificador de execucao invalido');
+    }
+
+    const response = (row: {
+      id: string; workoutId: string; sessionId: string; sessionName: string;
+      completedSets: number; completedAt: Date; source: string;
+    }, replayed: boolean) => ({
+      id: row.id, workoutId: row.workoutId, sessionId: row.sessionId,
+      sessionName: row.sessionName, completedSets: row.completedSets,
+      completedAt: row.completedAt, source: row.source, replayed,
+    });
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          // Idempotency lookup comes first: an already-committed receipt remains
+          // readable if the plan is subsequently expired or revised.
+          const old = await tx.workoutExecution.findUnique({
+            where: { studentId_requestId: { studentId: student.id, requestId } },
+          });
+          if (old) {
+            if (old.workoutId !== workoutId || old.sessionId !== sessionId ||
+                old.gymId !== student.gymId) {
+              throw new ConflictException('Identificador ja utilizado para outra sessao');
+            }
+            return response(old, true);
+          }
+
+          const activeStudent = await tx.student.findFirst({
+            where: { id: student.id, userId, gymId: student.gymId, status: 'ACTIVE' },
+            select: { id: true },
+          });
+          if (!activeStudent) throw new BadRequestException('Matricula inativa nao permite concluir treino');
+
+          const workout = await tx.workout.findFirst({
+            where: {
+              id: workoutId, studentId: student.id,
+              student: { gymId: student.gymId, userId },
+              status: 'ACTIVE',
+              OR: [{ validUntil: null }, { validUntil: { gte: new Date() } }],
+            },
+            select: {
+              goal: true,
+              sessions: {
+                where: { id: sessionId },
+                select: {
+                  id: true, name: true,
+                  exercises: { select: { sets: true } },
+                },
+              },
+            },
+          });
+          const session = workout?.sessions[0];
+          if (!session) throw new NotFoundException('Sessao ativa do aluno nao encontrada');
+          if (!session.exercises.length || session.exercises.some((ex) =>
+            !Number.isInteger(ex.sets) || (ex.sets ?? 0) <= 0 || (ex.sets ?? 0) > 100
+          )) {
+            throw new BadRequestException('Prescricao incompleta; peca revisao ao professor');
+          }
+
+          // Derived exclusively from the approved server prescription. A browser
+          // cannot claim more completed sets or change the workout plan.
+          const completedSets = session.exercises.reduce((sum, ex) => sum + (ex.sets ?? 0), 0);
+          const saved = await tx.workoutExecution.create({
+            data: {
+              gymId: student.gymId, studentId: student.id,
+              workoutId, sessionId, sessionName: session.name,
+              workoutGoal: workout?.goal ?? null, completedSets, requestId,
+            },
+          });
+          await this.audit.record({
+            gymId: student.gymId, userId,
+            action: 'STUDENT_WORKOUT_SESSION_SELF_REPORTED',
+            entity: 'WorkoutExecution', entityId: saved.id,
+            next: { workoutId, sessionId, completedSets, source: 'STUDENT_SELF_REPORTED' },
+          }, tx);
+          return response(saved, false);
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (error: any) {
+        if (error?.code !== 'P2002' && error?.code !== 'P2034') throw error;
+        const existing = await this.prisma.workoutExecution.findUnique({
+          where: { studentId_requestId: { studentId: student.id, requestId } },
+        });
+        if (existing) {
+          if (existing.gymId !== student.gymId ||
+              existing.workoutId !== workoutId || existing.sessionId !== sessionId) {
+            throw new ConflictException('Identificador ja utilizado para outra sessao');
+          }
+          return response(existing, true);
+        }
+        if (attempt === 2) {
+          throw new ConflictException('Execucao concorrente; tente novamente com o mesmo identificador');
+        }
+      }
+    }
+    throw new ConflictException('Nao foi possivel registrar a execucao');
+  }
+
   async getAssessments(userId: string, gymId?: string | null) {
     const s = await this.getStudentByUserId(userId, gymId);
 
