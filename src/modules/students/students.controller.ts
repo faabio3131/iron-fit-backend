@@ -43,6 +43,15 @@ export class StudentsController {
     );
   }
 
+  // The student owns the report; staff only reads it inside the authenticated gym.
+  @Get(':id/workout-executions')
+  @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'TRAINER')
+  getWorkoutExecutions(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.studentsService.getWorkoutExecutions(
+      id, user.activeGymId ?? user.gymId,
+    );
+  }
+
   @Patch(':id/consents')
   @Roles('SUPER_ADMIN', 'OWNER', 'MANAGER', 'RECEPTION')
   updateConsents(
