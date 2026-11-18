@@ -393,6 +393,25 @@ export class StudentsService {
     };
   }
 
+  // Read-only coach/management projection; do not expose requestId, secrets, or raw session notes.
+  async getWorkoutExecutions(studentId: string, gymId?: string | null) {
+    if (!gymId) throw new NotFoundException('Aluno nao encontrado');
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, gymId },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException('Aluno nao encontrado');
+    return this.prisma.workoutExecution.findMany({
+      where: { studentId: student.id, gymId },
+      orderBy: { completedAt: 'desc' },
+      take: 30,
+      select: {
+        id: true, workoutId: true, sessionId: true, sessionName: true,
+        workoutGoal: true, completedSets: true, completedAt: true, source: true,
+      },
+    });
+  }
+
   async updateConsents(
     id: string,
     dto: UpdateConsentsDto,
