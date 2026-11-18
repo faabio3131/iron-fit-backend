@@ -88,6 +88,6 @@ export class FmCommandPlanGovernanceController {
     @Param('planId', new ParseUUIDPipe()) planId: string,
     @Param('version', ParseIntPipe) version: number,
   ) {
-    return this.plans.retireVersion(planId, version);
+    return this.plans.retireVersion(planId, version, undefined, true);
   }
 }
