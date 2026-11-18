@@ -108,7 +108,7 @@ export class FiscalA1DelegationService {
     await this.audit.record({
       gymId, userId: actorUserId,
       action: 'FISCAL_A1_DELEGATION_PREPARED',
-      entity: 'FiscalScopeBinding', entityId: connection.connectionId,
+      entity: 'IntegrationConnection', entityId: connection.connectionId,
       next: { environment: IntegrationEnvironment.HOMOLOG, pendingHumanUpload: true },
     });
     return {
