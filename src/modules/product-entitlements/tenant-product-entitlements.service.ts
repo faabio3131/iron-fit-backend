@@ -728,14 +728,23 @@ export class TenantProductEntitlementsService {
       });
       if (rows.length > 512) throw new ConflictException('Limites legados excedem a janela de revisao');
       const definitions = await this.capabilities.listForResolution(tx);
-      return rows.map((row) => {
+      return Promise.all(rows.map(async (row) => {
         const definition = definitions.find((item) => item.key === row.featureKey);
+        let active = false;
+        if (definition?.kind === 'LIMIT') {
+          try {
+            await this.capabilities.requireActive(row.featureKey, tx);
+            active = true;
+          } catch (error) {
+            if (!(error instanceof BadRequestException) && !(error instanceof ConflictException)) throw error;
+          }
+        }
         const parent = definition?.kind === 'LIMIT'
           ? this.resolvePlanFromContext(definition, context) : null;
         const effective = parent && definition
           ? this.applyConfigurationLayer(definition, parent, row, 'TENANT_CONFIGURATION')
           : null;
-        const ready = parent?.source === 'PLAN_ENTITLEMENT' &&
+        const ready = active && parent?.source === 'PLAN_ENTITLEMENT' &&
           effective?.source === 'TENANT_CONFIGURATION' &&
           typeof parent.value === 'number' && typeof effective.value === 'number';
         return {
@@ -748,9 +757,9 @@ export class TenantProductEntitlementsService {
           planCode: parent?.plan?.code ?? null,
           planVersion: parent?.plan?.version ?? null,
           status: ready ? 'REVIEW_REQUIRED' : 'BLOCKED',
-          reason: ready ? null : (effective?.reason ?? 'CAPABILITY_OR_PLAN_UNAVAILABLE'),
+          reason: ready ? null : (!active ? 'CAPABILITY_INACTIVE_OR_UNKNOWN' : (effective?.reason ?? 'CAPABILITY_OR_PLAN_UNAVAILABLE')),
         };
-      });
+      }));
     });
   }
 
