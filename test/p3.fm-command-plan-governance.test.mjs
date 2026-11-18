@@ -58,6 +58,7 @@ test('governance reuses the canonical engine and returns only bounded plan data'
     createVersion: async (...args) => { calls.push(['version',...args]); return { version: args[1].version }; },
     setEntitlement: async (...args) => { calls.push(['entitlement',...args]); return args[2]; },
     publishVersion: async (...args) => { calls.push(['publish',...args]); return { status: 'PUBLISHED' }; },
+    retireVersion: async (...args) => { calls.push(['retire',...args]); return {status:'RETIRED'}; },
   }, {
     listGovernance: async () => [{ key:'ai.workout_monthly_max',kind:'LIMIT',domain:'AI',description:'Limite de treino',status:'ACTIVE',allowedPolicyValues:null }],
   });
@@ -70,7 +71,9 @@ test('governance reuses the canonical engine and returns only bounded plan data'
   await controller.createVersion('plan-id',{version:3});
   await controller.setEntitlement('plan-id',3,{featureKey:'ai.workout_monthly_max',limitValue:100});
   await controller.publishVersion('plan-id',3);
-  assert.deepEqual(calls.map(c=>c[0]),['plan','version','entitlement','publish']);
+  await controller.retireVersion('plan-id',3);
+  assert.deepEqual(calls.map(c=>c[0]),['plan','version','entitlement','publish','retire']);
+  assert.deepEqual(calls.at(-1),['retire','plan-id',3,undefined,true]);
 });
 
 test('the dedicated endpoint is separate from browser SUPER_ADMIN and tokenless subscriptions', async () => {
@@ -87,4 +90,16 @@ test('the dedicated endpoint is separate from browser SUPER_ADMIN and tokenless 
   assert.match(service, /serializable/);
   assert.match(service, /PRODUCT_PLAN_ENTITLEMENT_UPDATED/);
   assert.match(module, /FmCommandPlanGovernanceController/);
+});
+
+test('FM retirement rejects any referenced version before mutation', async()=>{
+  const {ProductEntitlementsService}=require('../dist/src/modules/product-entitlements/product-entitlements.service.js');
+  for(const blockedBy of ['tenantProductSubscription','saasPlanPrice','commercialLaunchOffering','commercialLaunchPolicy']){
+    let writes=0;
+    const tx={productPlanVersion:{findFirst:async()=>({id:'version-a',status:'PUBLISHED',productPlan:{code:'IRON_A'}}),update:async()=>{writes++;}},
+      ...Object.fromEntries(['tenantProductSubscription','saasPlanPrice','commercialLaunchOffering','commercialLaunchPolicy'].map(k=>[k,{count:async()=>k===blockedBy?1:0}]))};
+    const service=new ProductEntitlementsService({$transaction:async cb=>cb(tx)},{record:async()=>{writes++;}},{});
+    await assert.rejects(()=>service.retireVersion('plan-a',1,undefined,true),/Versao vinculada/);
+    assert.equal(writes,0);
+  }
 });
