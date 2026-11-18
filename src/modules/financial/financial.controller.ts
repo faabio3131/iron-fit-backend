@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { FinancialService } from './financial.service';
 import { StripePaymentWebhookInboxService } from './stripe-payment-webhook-inbox.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
@@ -18,6 +18,7 @@ import { UpsertFiscalScopeBindingDto } from './dto/upsert-fiscal-scope-binding.d
 import { CancelFiscalHandoffDto } from './dto/cancel-fiscal-handoff.dto';
 import { FiscalReconciliationCancellationService } from './fiscal-reconciliation-cancellation.service';
 import { FiscalBridgeDispatchService } from './fiscal-bridge-dispatch.service';
+import { FiscalA1DelegationService } from './fiscal-a1-delegation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { StepUpGuard } from '../auth/guards/step-up.guard';
@@ -38,6 +39,7 @@ export class FinancialController {
     private fiscalScopeBinding: FiscalScopeBindingService,
     private fiscalLifecycle: FiscalReconciliationCancellationService,
     private fiscalBridgeDispatch: FiscalBridgeDispatchService,
+    private fiscalA1Delegation: FiscalA1DelegationService,
   ) {}
 
   private resolveGymId(user: any, requestedGymId?: string) {
@@ -244,6 +246,21 @@ export class FinancialController {
     return this.fiscalScopeBinding.getSafe(
       this.resolveGymId(user, requestedGymId),
     );
+  }
+
+  /** A1 is uploaded browser→NFCore; never receive PFX/password at IRON. */
+  @Post('fiscal/a1/delegation')
+  @Header('Cache-Control', 'no-store')
+  @Roles('OWNER')
+  prepareFiscalA1Delegation(@CurrentUser() user: any) {
+    return this.fiscalA1Delegation.prepare(this.resolveGymId(user), user.id);
+  }
+
+  @Get('fiscal/a1/status')
+  @Header('Cache-Control', 'no-store')
+  @Roles('OWNER')
+  fiscalA1Status(@CurrentUser() user: any) {
+    return this.fiscalA1Delegation.status(this.resolveGymId(user));
   }
 
   @Get('fiscal/readiness')
