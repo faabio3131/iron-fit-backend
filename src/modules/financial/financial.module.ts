@@ -21,6 +21,7 @@ import { AuthModule } from '../auth/auth.module';
 import { FiscalScopeBindingService } from './fiscal-scope-binding.service';
 import { FiscalBridgeHttpTransport } from './fiscal-bridge.contract';
 import { FiscalBridgeDispatchService } from './fiscal-bridge-dispatch.service';
+import { FiscalA1DelegationService } from './fiscal-a1-delegation.service';
 import { FiscalBridgeMaintenanceService } from './fiscal-bridge-maintenance.service';
 import { FiscalReconciliationCancellationService } from './fiscal-reconciliation-cancellation.service';
 
@@ -42,6 +43,7 @@ import { FiscalReconciliationCancellationService } from './fiscal-reconciliation
     FiscalScopeBindingService,
     FiscalBridgeHttpTransport,
     FiscalBridgeDispatchService,
+    FiscalA1DelegationService,
     FiscalBridgeMaintenanceService,
     FiscalReconciliationCancellationService,
     AuditService,
