@@ -64,6 +64,11 @@ function makeService({
       if (!definition) throw new Error('Capability nao canonica: ' + key);
       return definition;
     },
+    requireActive: async (key) => {
+      const definition = PRODUCT_FEATURE_CATALOG_V1.find((item) => item.key === key);
+      if (!definition) throw new Error('Capability nao canonica: ' + key);
+      return definition;
+    },
     listForResolution: async () => PRODUCT_FEATURE_CATALOG_V1,
   };
 
@@ -494,4 +499,56 @@ test('PE3 stays outside PE4 plan transitions, pricing, Creator Network and stude
   }
   assert.match(doc, /upgrade, downgrade[\s\S]*— PE4/);
   assert.match(doc, /`Subscription` financeiro do aluno não é alterado/);
+});
+
+test('FM legacy LIMIT alignment requires exact current contract and explicit approval; OWNER remains denied', async () => {
+  const key = 'content.private_items_max';
+  const subscription = subscriptionWith([planEntitlement(key, 'LIMIT', 50)]);
+  const previous = { id:'legacy-limit-1', gymId:'gym-a', featureKey:key,
+    kind:'LIMIT', featureEnabled:null, limitValue:20, policyValues:null };
+  const { service, audits, tenantStore } = makeService({subscription,tenantConfigurations:[previous]});
+  const preview = await service.previewFmLegacyLimits('gym-a');
+  assert.equal(preview.length, 1);
+  assert.equal(preview[0].status, 'REVIEW_REQUIRED');
+  assert.equal(preview[0].effectiveLimit,20);
+  assert.equal(preview[0].planLimit,50);
+  const approval = {configurationId:'legacy-limit-1', subscriptionId:'tenant-sub-a',
+    planCode:'IRON_BASE', planVersion:1, legacyLimit:20, planLimit:50,
+    confirm:'ALINHAR_AO_LIMITE_DO_PLANO', reason:'Revisao comercial aprovada'};
+  for (const wrong of [
+    {...approval,confirm:'AUTO'},
+    {...approval,legacyLimit:21},
+    {...approval,configurationId:'old-record'},
+    {...approval,subscriptionId:'another-sub'},
+    {...approval,planVersion:2},
+    {...approval,planLimit:500},
+  ]) await assert.rejects(()=>service.alignFmLegacyLimit('gym-a',key,wrong,'fm-review-1'));
+  assert.equal(tenantStore.get(key).limitValue,20);
+  assert.equal(audits.length,0);
+  await assert.rejects(()=>service.resetTenantConfiguration('gym-a',key,'owner-a'),/Direitos e limites comerciais/);
+  const result = await service.alignFmLegacyLimit('gym-a',key,approval,'fm-review-1');
+  assert.equal(result.effectiveLimit,50);
+  assert.equal(tenantStore.size,0);
+  assert.equal(audits.length,1);
+  assert.equal(audits[0].input.action,'FM_LEGACY_LIMIT_ALIGNED_TO_PLAN');
+  assert.equal(audits[0].input.next.correlationId,'fm-review-1');
+  await assert.rejects(()=>service.alignFmLegacyLimit('gym-a',key,approval,'fm-review-1'));
+  assert.equal(audits.length,1);
+  assert.equal((await service.resolveFeature('gym-a',key)).value,50);
+});
+
+test('FM legacy LIMIT preserves invalid fail-closed restriction above contract', async () => {
+  const key = 'content.private_items_max';
+  const subscription = subscriptionWith([planEntitlement(key, 'LIMIT', 50)]);
+  const previous = { id:'legacy-limit-1', gymId:'gym-a', featureKey:key,
+    kind:'LIMIT', featureEnabled:null, limitValue:75, policyValues:null };
+  const { service, audits, tenantStore } = makeService({subscription,tenantConfigurations:[previous]});
+  assert.equal((await service.previewFmLegacyLimits('gym-a'))[0].status,'BLOCKED');
+  await assert.rejects(()=>service.alignFmLegacyLimit('gym-a',key,{
+    configurationId:'legacy-limit-1',subscriptionId:'tenant-sub-a',planCode:'IRON_BASE',
+    planVersion:1,legacyLimit:75,planLimit:50,confirm:'ALINHAR_AO_LIMITE_DO_PLANO',
+    reason:'Revisao comercial aprovada'
+  },'fm-review-1'),/Restricao invalida/);
+  assert.equal(tenantStore.get(key).limitValue,75);
+  assert.equal(audits.length,0);
 });

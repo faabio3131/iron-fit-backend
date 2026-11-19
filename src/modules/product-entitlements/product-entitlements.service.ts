@@ -372,7 +372,7 @@ export class ProductEntitlementsService {
     });
   }
 
-  async retireVersion(planId: string, versionNumber: number, actorUserId?: string) {
+  async retireVersion(planId: string, versionNumber: number, actorUserId?: string, fmUnusedOnly = false) {
     if (!Number.isInteger(versionNumber) || versionNumber < 1) {
       throw new BadRequestException('version deve ser inteiro positivo');
     }
@@ -386,6 +386,20 @@ export class ProductEntitlementsService {
       if (version.status === ProductPlanVersionStatus.RETIRED) return version;
       if (version.status !== ProductPlanVersionStatus.PUBLISHED) {
         throw new ConflictException('Somente versao publicada pode ser retirada');
+      }
+
+      if (fmUnusedOnly) {
+        // FM may retire an unused version, not a contractual/launch dependency.
+        // The Command separately serializes this operation with FM price mapping.
+        const [subscriptions, prices, launchOffers, launchTrial] = await Promise.all([
+          tx.tenantProductSubscription.count({ where: { planVersionId: version.id } }),
+          tx.saasPlanPrice.count({ where: { planVersionId: version.id } }),
+          tx.commercialLaunchOffering.count({ where: { planVersionId: version.id } }),
+          tx.commercialLaunchPolicy.count({ where: { trialPlanVersionId: version.id } }),
+        ]);
+        if (subscriptions || prices || launchOffers || launchTrial) {
+          throw new ConflictException('Versao vinculada a contrato, preco ou launch; retirada FM bloqueada');
+        }
       }
 
       const retiredAt = new Date();

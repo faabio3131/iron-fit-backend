@@ -711,6 +711,124 @@ export class TenantProductEntitlementsService {
     return this.loadTenantConfigurations(this.prisma, scopedGymId);
   }
 
+  /**
+   * FM-only callers use the separately authenticated control-plane. A gym
+   * OWNER cannot access these transitions through the tenant configuration API.
+   * Existing LIMIT records remain authoritative until an explicit reviewed change.
+   */
+  async previewFmLegacyLimits(gymId: string) {
+    const scopedGymId = this.requireGymId(gymId);
+    return this.serializable(async (tx) => {
+      const context = await this.loadResolutionContext(scopedGymId, tx);
+      if (!context.gymActive) throw new NotFoundException('Academia ativa nao encontrada');
+      const rows = await tx.tenantProductConfiguration.findMany({
+        where: { gymId: scopedGymId, kind: ProductEntitlementKind.LIMIT },
+        orderBy: { featureKey: 'asc' },
+        take: 513,
+      });
+      if (rows.length > 512) throw new ConflictException('Limites legados excedem a janela de revisao');
+      const definitions = await this.capabilities.listForResolution(tx);
+      return Promise.all(rows.map(async (row) => {
+        const definition = definitions.find((item) => item.key === row.featureKey);
+        let active = false;
+        if (definition?.kind === 'LIMIT') {
+          try {
+            await this.capabilities.requireActive(row.featureKey, tx);
+            active = true;
+          } catch (error) {
+            if (!(error instanceof BadRequestException) && !(error instanceof ConflictException)) throw error;
+          }
+        }
+        const parent = definition?.kind === 'LIMIT'
+          ? this.resolvePlanFromContext(definition, context) : null;
+        const effective = parent && definition
+          ? this.applyConfigurationLayer(definition, parent, row, 'TENANT_CONFIGURATION')
+          : null;
+        const ready = active && parent?.source === 'PLAN_ENTITLEMENT' &&
+          effective?.source === 'TENANT_CONFIGURATION' &&
+          typeof parent.value === 'number' && typeof effective.value === 'number';
+        return {
+          configurationId: row.id,
+          featureKey: row.featureKey,
+          legacyLimit: row.limitValue,
+          effectiveLimit: typeof effective?.value === 'number' ? effective.value : null,
+          planLimit: typeof parent?.value === 'number' ? parent.value : null,
+          subscriptionId: parent?.subscriptionId ?? null,
+          planCode: parent?.plan?.code ?? null,
+          planVersion: parent?.plan?.version ?? null,
+          status: ready ? 'REVIEW_REQUIRED' : 'BLOCKED',
+          reason: ready ? null : (!active ? 'CAPABILITY_INACTIVE_OR_UNKNOWN' : (effective?.reason ?? 'CAPABILITY_OR_PLAN_UNAVAILABLE')),
+        };
+      }));
+    });
+  }
+
+  /** Compare-and-set in the canonical SERIALIZABLE transaction. No silent reset,
+   * no new plan assignment, no change to a subscription, or expansion beyond
+   * the plan. Invalid/fail-closed records require separate investigation.
+   */
+  async alignFmLegacyLimit(
+    gymId: string,
+    featureKey: string,
+    expected: {
+      configurationId: string;
+      subscriptionId: string;
+      planCode: string;
+      planVersion: number;
+      legacyLimit: number;
+      planLimit: number;
+      confirm: string;
+      reason: string;
+    },
+    correlationId: string,
+  ) {
+    const scopedGymId = this.requireGymId(gymId);
+    if (expected.confirm !== 'ALINHAR_AO_LIMITE_DO_PLANO' ||
+        typeof expected.reason !== 'string' || expected.reason.trim().length < 10 ||
+        expected.reason.length > 300 || !/^[A-Za-z0-9._:-]{1,128}$/.test(correlationId)) {
+      throw new BadRequestException('Revisao explicita do limite legado obrigatoria');
+    }
+    return this.serializable(async (tx) => {
+      const definition = await this.capabilities.requireActive(featureKey, tx);
+      if (definition.kind !== 'LIMIT') throw new BadRequestException('Revisao exclusiva de LIMIT');
+      const context = await this.loadResolutionContext(scopedGymId, tx);
+      const parent = this.resolvePlanFromContext(definition, context);
+      const record = await this.loadTenantConfiguration(tx, scopedGymId, featureKey);
+      if (!record || record.kind !== ProductEntitlementKind.LIMIT ||
+          record.id !== expected.configurationId ||
+          record.limitValue !== expected.legacyLimit ||
+          parent.source !== 'PLAN_ENTITLEMENT' ||
+          parent.subscriptionId !== expected.subscriptionId ||
+          parent.plan?.code !== expected.planCode ||
+          parent.plan?.version !== expected.planVersion ||
+          typeof parent.value !== 'number' || parent.value !== expected.planLimit) {
+        throw new ConflictException('Restricao ou plano mudou; consulte novamente antes de revisar');
+      }
+      const effective = this.applyConfigurationLayer(definition, parent, record, 'TENANT_CONFIGURATION');
+      if (effective.source !== 'TENANT_CONFIGURATION' ||
+          effective.value !== expected.legacyLimit ||
+          !canNarrowLimit(parent.value, expected.legacyLimit)) {
+        throw new ConflictException('Restricao invalida: preservada sem ampliacao de direitos');
+      }
+      await tx.tenantProductConfiguration.delete({ where: { id: record.id } });
+      await this.audit.record({
+        gymId: scopedGymId,
+        userId: null,
+        action: 'FM_LEGACY_LIMIT_ALIGNED_TO_PLAN',
+        entity: 'TenantProductConfiguration',
+        entityId: record.id,
+        previous: { ...this.auditValue(record), effectiveLimit: effective.value },
+        next: {
+          featureKey, effectiveLimit: parent.value,
+          subscriptionId: parent.subscriptionId, plan: parent.plan,
+          authority: 'FM_COMMAND_PLAN_GOVERNANCE', correlationId,
+          reason: expected.reason.trim(),
+        },
+      }, tx);
+      return { removed: true, featureKey, effectiveLimit: parent.value };
+    });
+  }
+
   async setTenantConfiguration(
     gymId: string | undefined,
     featureKey: string,
