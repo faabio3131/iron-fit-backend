@@ -74,3 +74,10 @@ test('Contabo four-tier operator is read-only by default, checks deployed SHA, a
   assert.match(script, /buildSha/);
   assert.ok(script.indexOf('sha256sum -c') < script.indexOf('node scripts/stage-ai-monthly-plan-versions.mjs --apply'));
 });
+
+
+test('four-tier readback uses the container Node runtime rather than requiring host Node', () => {
+  const publisher = readFileSync(resolve(root, 'ops/contabo/publish-four-tiers.sh'), 'utf8');
+  assert.match(publisher, /printf '%s' "\$AFTER" \| docker compose exec -T api node -e/);
+  assert.doesNotMatch(publisher, /\| node -e/);
+});

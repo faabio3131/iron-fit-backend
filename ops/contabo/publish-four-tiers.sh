@@ -38,7 +38,7 @@ docker compose exec -T \
   api node scripts/stage-ai-monthly-plan-versions.mjs --apply
 # Independent, read-only canonical postcondition; never reassign an existing subscription.
 AFTER=$(docker compose exec -T api node scripts/stage-ai-monthly-plan-versions.mjs)
-printf '%s' "$AFTER" | node -e '
+printf '%s' "$AFTER" | docker compose exec -T api node -e '
   let input = ""; process.stdin.on("data", c => input += c);
   process.stdin.on("end", () => {
     const r=JSON.parse(input);

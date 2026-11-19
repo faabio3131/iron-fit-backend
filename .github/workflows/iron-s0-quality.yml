@@ -295,19 +295,19 @@ jobs:
           EXPO_PUBLIC_API_URL: http://127.0.0.1:3333/api/v1
         run: npx jest test/live-system-contract.test.ts --runInBand --ci
 
-      # Pin the actual app production SHA; old Macro O references are not authoritative.
-      - name: Checkout deployed IRON Web/mobile production release
+      # Retain deployed app above and certify the exact proposed #133 functional app here.
+      - name: Checkout exact IRON Web/mobile release candidate
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 1c7df687b771f1f1ba6e567350bb9010a014becb
+          ref: f3b6018180a8210510cbae942384db3dc92ee789
           path: iron-fit-app-macro-o-candidate
 
-      - name: Install deployed IRON Web/mobile production release dependencies
+      - name: Install exact IRON Web/mobile release candidate dependencies
         working-directory: iron-fit-app-macro-o-candidate
         run: npm ci
 
-      - name: Cross-surface deployed Web/mobile release against current backend
+      - name: Cross-surface release candidate against current backend
         working-directory: iron-fit-app-macro-o-candidate
         env:
           IRON_LIVE_E2E: 'true'
@@ -411,7 +411,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/FM-CONTROL-CENTER
-          ref: 947b75f89c0b7cdef62a639fe2250bd18c2fe5a6
+          ref: 06ea95859ee24072ba3e780f7bddff44d0c54c86
           path: fm-command-commercial-ci
 
       - name: Setup FM Command Node 24
