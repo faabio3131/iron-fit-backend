@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Header, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { IsUUID } from 'class-validator';
 import { FinancialService } from './financial.service';
 import { StripePaymentWebhookInboxService } from './stripe-payment-webhook-inbox.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
@@ -25,6 +26,11 @@ import { StepUpGuard } from '../auth/guards/step-up.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { resolveTenantOperationGymId } from '../../common/security/tenant-operation-scope';
+
+class WithdrawFiscalA1Dto {
+  @IsUUID('4')
+  requestId: string;
+}
 
 @Controller('financial')
 @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
@@ -254,6 +260,13 @@ export class FinancialController {
   @Roles('OWNER')
   prepareFiscalA1Delegation(@CurrentUser() user: any) {
     return this.fiscalA1Delegation.prepare(this.resolveGymId(user), user.id);
+  }
+
+  @Post('fiscal/a1/withdraw')
+  @Header('Cache-Control', 'no-store')
+  @Roles('OWNER')
+  withdrawFiscalA1(@CurrentUser() user: any, @Body() dto: WithdrawFiscalA1Dto) {
+    return this.fiscalA1Delegation.withdraw(this.resolveGymId(user), user.id, dto.requestId);
   }
 
   @Get('fiscal/a1/status')
