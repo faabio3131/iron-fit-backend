@@ -39,3 +39,9 @@ Cakto: validação da conta CPF/KYC, ofertas e URLs reais, secret webhook em cof
 
 ## CHECKPOINT — atualizado 09/11/2026
 **Macro/WP:** P — IF-P0-01, iniciado. **Branch backend:** `chore/iron-internal-closure-agentes-20261109`. **FM Command:** PR #56 DRAFT; **Site:** PR #19 DRAFT. **Deploy:** HOMOLOG, sem Cakto publicada. **Gate:** CI main backend/app verde; CI candidata Command/site verde, mas P/Q/R/S/T ainda não certificados. **Próxima ação:** ler schema e integração FM Command↔IRON, implementar outbox/S2S real e testes adversariais, certificar CI e prosseguir em sequência.
+
+
+### CURRENT 2026-11-19 — separação de gates P3/P6/O23
+- Command #218 publicado na main `06ea95859ee24072ba3e780f7bddff44d0c54c86`, deploy #44566697246 SUCCESS. Cakto avulsos adiados; não ativar webhook.
+- Backend #277 candidata `9f8b1a56f05142b01a5c149afc9d697f75ec494e`, CI #44601409898 SUCCESS 64/64; App #132 CI #44448167771 SUCCESS 22/22; NFCore #562 HEAD e12d18b9795b9e231f44b52012a31e37be2cc73e CI #44611620992 SUCCESS, revisão independente e integração composta ainda pendentes.
+- Para não bloquear P3 em gate fiscal/visual, extrair somente controller/service/regressões comerciais e correção do publisher no presente candidato; app #133 `f3b6018180a8210510cbae942384db3dc92ee789` preserva o bloco de estilos CURRENT. Preservar #277/#132 para integrar o saldo P6/O23 após gates, sem reimplementar. CI nova obrigatória; nenhum merge, deploy ou liberação financeira nesta etapa.

@@ -15,6 +15,14 @@ class OwnerCheckoutDto {
   requestId: string;
 }
 
+class OwnerReceiptDto {
+  @IsUUID()
+  invoiceId: string;
+
+  @IsUUID()
+  requestId: string;
+}
+
 @Controller('commercial/billing')
 @UseGuards(JwtAuthGuard, RolesGuard, StepUpGuard)
 export class IronCommercialCheckoutController {
@@ -31,6 +39,12 @@ export class IronCommercialCheckoutController {
   @Get('current')
   current(@CurrentUser() user: any) {
     return this.checkout.readCurrent(user?.activeGymId ?? user?.gymId);
+  }
+
+  @Roles('OWNER')
+  @Post('receipt/resend')
+  resendReceipt(@CurrentUser() user: any, @Body() dto: OwnerReceiptDto) {
+    return this.checkout.resendReceipt(user?.activeGymId ?? user?.gymId, user?.id, dto.invoiceId, dto.requestId);
   }
 
   /** Only the verified tenant OWNER may initiate an FM-owned checkout. */

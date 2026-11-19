@@ -96,8 +96,13 @@ test('canonical Command subscription readback is scoped to the current gym and d
     return new Response(JSON.stringify({
       source: 'FM_COMMAND_CANONICAL', authority: 'FM_COMMAND', productCode: 'IRON_FIT_CORE',
       gymId, checkedAt: '2026-11-17T15:00:00.000Z', settlementConfirmedByThisView: false,
-      subscription: { planCode: 'IRON_PRO_MONTHLY', status: 'pending', paidThrough: null },
-      invoices: [{ status: 'pending', amountMinor: 26900, currency: 'BRL', periodEnd: null }],
+      subscription: { planCode: 'IRON_PRO_MONTHLY', status: 'pending', paidThrough: null,
+        nextPaymentAt: '2026-12-17T00:00:00.000Z', scheduleObservedAt: '2026-11-17T15:00:00.000Z',
+        caktoManagementAvailable: true, scheduleAnchor: 'must-not-leak' },
+      historyTruncated: true,
+      invoices: [{ status: 'pending', amountMinor: 26900, currency: 'BRL', periodEnd: null,
+        createdAt: '2026-11-17T14:00:00.000Z', recordedPaymentStatus: 'received',
+        paymentRecordedAt: '2026-11-17T14:30:00.000Z', externalPaymentId: 'must-not-leak' }],
     }), { status: 200 });
   };
   try {
@@ -105,7 +110,16 @@ test('canonical Command subscription readback is scoped to the current gym and d
     const result = await service.readCurrent(gymId);
     assert.equal(result.source, 'FM_COMMAND_CANONICAL');
     assert.equal(result.subscription.status, 'pending');
+    assert.equal(result.subscription.nextPaymentAt, '2026-12-17T00:00:00.000Z');
+    assert.equal(result.subscription.scheduleObservedAt, '2026-11-17T15:00:00.000Z');
+    assert.equal(result.subscription.caktoManagementAvailable, true);
+    assert.equal(Object.hasOwn(result.subscription, 'scheduleAnchor'), false);
     assert.equal(result.invoices[0].amountMinor, 26900);
+    assert.equal(result.historyTruncated, true);
+    assert.equal(result.invoices[0].recordedPaymentStatus, 'received');
+    assert.equal(result.invoices[0].createdAt, '2026-11-17T14:00:00.000Z');
+    assert.equal(result.invoices[0].paymentRecordedAt, '2026-11-17T14:30:00.000Z');
+    assert.equal(Object.hasOwn(result.invoices[0], 'externalPaymentId'), false);
     assert.equal(result.settlementConfirmedByThisView, false);
     assert.equal(Object.hasOwn(result, 'paid'), false);
     assert.equal(Object.hasOwn(result, 'entitlement'), false);
@@ -197,4 +211,31 @@ test('non-trial/admin/canceled/future suspended records fail closed before calli
         e=>e.getStatus?.()===409);
     }
   } finally {globalThis.fetch=previous;restore();}
+});
+
+
+test('receipt resend uses authenticated gym, actor and original invoice, never a recipient or payment mutation',async()=>{
+  const restore=setEnv(),oldFetch=globalThis.fetch;
+  const actorId=randomUUID();
+  const service=new IronCommercialCheckoutService({tenantProductSubscription:{findFirst:async query=>{
+    assert.deepEqual(query.where,{gymId});return{id:subscriptionId};
+  }}});
+  let calls=0;
+  globalThis.fetch=async(url,init)=>{
+    calls++;
+    assert.equal(url,'https://app.fmcommand.com.br/api/internal/iron/commerce/receipt');
+    assert.equal(init.method,'POST');
+    assert.deepEqual(JSON.parse(init.body),{gymId,expectedSubscriptionId:subscriptionId,invoiceId,actorId,requestId});
+    return new Response(JSON.stringify({productCode:'IRON_FIT_CORE',provider:'CAKTO',status:'EMAIL_RESEND_ACCEPTED',deliveryConfirmed:false}),{status:200});
+  };
+  try{
+    assert.deepEqual(await service.resendReceipt(gymId,actorId,invoiceId,requestId),
+      {provider:'CAKTO',status:'EMAIL_RESEND_ACCEPTED',deliveryConfirmed:false});
+    await assert.rejects(()=>service.resendReceipt(gymId,actorId,'forged',requestId),e=>e.getStatus?.()===400);
+    assert.equal(calls,1);
+    globalThis.fetch=async()=>new Response('{}',{status:429});
+    await assert.rejects(()=>service.resendReceipt(gymId,actorId,invoiceId,requestId),e=>e.getStatus?.()===429);
+    globalThis.fetch=async()=>new Response(JSON.stringify({productCode:'IRON_FIT_CORE',provider:'CAKTO',status:'EMAIL_RESEND_ACCEPTED',deliveryConfirmed:true}),{status:200});
+    await assert.rejects(()=>service.resendReceipt(gymId,actorId,invoiceId,requestId),e=>e.getStatus?.()===503);
+  }finally{globalThis.fetch=oldFetch;restore();}
 });
