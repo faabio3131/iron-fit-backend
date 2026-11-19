@@ -118,3 +118,10 @@ Somente então a UI “Assinatura IRON” poderá reativar ações comerciais at
 **Dependências:** [Macro P #243](https://github.com/faabio3131/iron-fit-backend/issues/243); [FM Command — código canônico](https://github.com/faabio3131/FM-CONTROL-CENTER); [IRON app — painel atual](https://github.com/faabio3131/iron-fit-app/blob/production/src/components/SaasBillingPanel.tsx).
 
 **Não confundir:** esta atualização é **documentação de gaps**, não implementação, PASS, deploy ou autorização para cobrança real.
+
+### CURRENT — consolidação 18/11/2026 (candidatas, não produção)
+- #132 fallback legado desacoplado: CI #44439235505 SUCCESS no HEAD anterior. Owner bloqueado já corrigido pelas entregas #258/#223; não reimplementar.
+- P3-IRON-03 histórico e pagamentos: Command #218 inclui invoices de toda a academia vinculada, até 24 com indicação de truncamento, data da fatura e status/data de registro do pagamento; proxy valida e filtra dados sensíveis; app apresenta os fatos. Campo de próxima cobrança do provider não existe no ledger: `paidThrough` é cobertura registrada, não data confirmada de renovação. Recibo fiscal/gateway não é fabricado.
+- P3-IRON-04/05 recuperação pós-reload: mesma oferta e única fatura pendente, mesmo tenant/produto/customer/gateway/valor, sob lock de assinatura; novo request id vincula a fatura original sem criar outra assinatura. Status pago ou distinto permanece bloqueado. Alteração em Command #218, a certificar.
+- P3-IRON-05 ações de mudança/cancelamento: C06 do Command registra intenções administrativas `awaiting_policy` e rejeições, não autoriza execução de IRON. Não usar rota humana ou implementar política inventada. Permanecem OPEN até contrato canônico de autosserviço e política efetivamente executável. Sem confundir com webhook de cancelamento já construído.
+- P3-IRON-01/02/06/07 mantêm os critérios originais. Sem nova integração antes do fechamento residual, conforme determinação do proprietário.

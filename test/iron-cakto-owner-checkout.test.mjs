@@ -97,7 +97,10 @@ test('canonical Command subscription readback is scoped to the current gym and d
       source: 'FM_COMMAND_CANONICAL', authority: 'FM_COMMAND', productCode: 'IRON_FIT_CORE',
       gymId, checkedAt: '2026-11-17T15:00:00.000Z', settlementConfirmedByThisView: false,
       subscription: { planCode: 'IRON_PRO_MONTHLY', status: 'pending', paidThrough: null },
-      invoices: [{ status: 'pending', amountMinor: 26900, currency: 'BRL', periodEnd: null }],
+      historyTruncated: true,
+      invoices: [{ status: 'pending', amountMinor: 26900, currency: 'BRL', periodEnd: null,
+        createdAt: '2026-11-17T14:00:00.000Z', recordedPaymentStatus: 'received',
+        paymentRecordedAt: '2026-11-17T14:30:00.000Z', externalPaymentId: 'must-not-leak' }],
     }), { status: 200 });
   };
   try {
@@ -106,6 +109,11 @@ test('canonical Command subscription readback is scoped to the current gym and d
     assert.equal(result.source, 'FM_COMMAND_CANONICAL');
     assert.equal(result.subscription.status, 'pending');
     assert.equal(result.invoices[0].amountMinor, 26900);
+    assert.equal(result.historyTruncated, true);
+    assert.equal(result.invoices[0].recordedPaymentStatus, 'received');
+    assert.equal(result.invoices[0].createdAt, '2026-11-17T14:00:00.000Z');
+    assert.equal(result.invoices[0].paymentRecordedAt, '2026-11-17T14:30:00.000Z');
+    assert.equal(Object.hasOwn(result.invoices[0], 'externalPaymentId'), false);
     assert.equal(result.settlementConfirmedByThisView, false);
     assert.equal(Object.hasOwn(result, 'paid'), false);
     assert.equal(Object.hasOwn(result, 'entitlement'), false);

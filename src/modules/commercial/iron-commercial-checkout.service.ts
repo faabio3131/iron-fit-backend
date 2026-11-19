@@ -9,6 +9,10 @@ import { TenantProductSubscriptionStatus } from '@prisma/client';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PLAN = /^[A-Z][A-Z0-9_]{1,63}$/;
+const optionalDate = (value: unknown): value is string | null | undefined =>
+  value == null || (typeof value === 'string' && Number.isFinite(Date.parse(value)));
+const optionalStatus = (value: unknown): value is string | null | undefined =>
+  value == null || (typeof value === 'string' && /^[a-zA-Z_]{1,40}$/.test(value));
 
 /**
  * The authenticated IRON owner owns the tenant; FM Command owns billing.
@@ -115,7 +119,9 @@ export class IronCommercialCheckoutService {
     if (data.source !== 'FM_COMMAND_CANONICAL' || data.authority !== 'FM_COMMAND' ||
         data.productCode !== 'IRON_FIT_CORE' || data.gymId !== gymId ||
         typeof data.checkedAt !== 'string' || !Array.isArray(data.invoices) ||
-        data.invoices.length > 24 || data.settlementConfirmedByThisView !== false)
+        data.invoices.length > 24 || data.settlementConfirmedByThisView !== false ||
+        (data.historyTruncated !== undefined && typeof data.historyTruncated !== 'boolean') ||
+        !Number.isFinite(Date.parse(data.checkedAt)))
       throw new ServiceUnavailableException('Contrato comercial inesperado');
 
     let commercialSubscription: {
@@ -128,7 +134,7 @@ export class IronCommercialCheckoutService {
       const item = data.subscription as Record<string, unknown>;
       if (typeof item.planCode !== 'string' || !PLAN.test(item.planCode) ||
           typeof item.status !== 'string' || item.status.length > 40 ||
-          (item.paidThrough !== null && typeof item.paidThrough !== 'string') ||
+          item.paidThrough === undefined || !optionalDate(item.paidThrough) ||
           (item.planName != null && (typeof item.planName !== 'string' || item.planName.length > 120)) ||
           (item.interval != null && item.interval !== 'monthly' && item.interval !== 'yearly'))
         throw new ServiceUnavailableException('Contrato de assinatura invalido');
@@ -147,11 +153,16 @@ export class IronCommercialCheckoutService {
       if (typeof item.status !== 'string' || item.status.length > 40 ||
           typeof item.amountMinor !== 'number' || !Number.isSafeInteger(item.amountMinor) ||
           item.amountMinor <= 0 || item.currency !== 'BRL' ||
-          (item.periodEnd !== null && typeof item.periodEnd !== 'string'))
+          item.periodEnd === undefined || !optionalDate(item.periodEnd) ||
+          !optionalDate(item.createdAt) || !optionalDate(item.paymentRecordedAt) ||
+          !optionalStatus(item.recordedPaymentStatus))
         throw new ServiceUnavailableException('Contrato de faturas invalido');
       return {
         status: item.status, amountMinor: item.amountMinor, currency: 'BRL' as const,
         periodEnd: item.periodEnd as string | null,
+        createdAt: item.createdAt ?? null,
+        paymentRecordedAt: item.paymentRecordedAt ?? null,
+        recordedPaymentStatus: item.recordedPaymentStatus ?? null,
       };
     });
     return {
@@ -160,6 +171,7 @@ export class IronCommercialCheckoutService {
       checkedAt: data.checkedAt,
       subscription: commercialSubscription,
       invoices,
+      historyTruncated: typeof data.historyTruncated === 'boolean' ? data.historyTruncated : null,
       settlementConfirmedByThisView: false as const,
     };
   }
