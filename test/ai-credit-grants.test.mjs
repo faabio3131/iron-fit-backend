@@ -10,8 +10,13 @@ const gym = '00d4727a-03d4-4d5a-915f-b2a3e45f6dc0';
 const paidInvoice = '328ec91f-e575-45e6-83db-9956a3b4e5ff';
 function harness(){
  const grants = [];
+ const revocations = [];
  const audit = [];
  const tx = {
+  aiCreditRevocation: {
+    findUnique: async ({where}) => revocations.find(r => r.sourceInvoiceId === where.sourceInvoiceId) ?? null,
+    create: async ({data}) => {revocations.push(data);return data;},
+  },
   aiCreditGrant: {
     findUnique: async ({where}) => grants.find(g => g.sourceInvoiceId === where.sourceInvoiceId) ?? null,
     aggregate: async ({where}) => ({
@@ -32,7 +37,7 @@ function harness(){
  };
  const svc = new AiMonthlyQuotaService(prisma,{}, {record: async (event)=>{audit.push(event);}});
  svc.usage = async () => ({ group:'WORKOUT',periodStart:start,periodEnd:end,allowance:50,used:0,remaining:50 });
- return {svc,grants,audit};
+ return {svc,grants,audit,revocations};
 }
 test('FM Command only: rejects forged unpaid, unknown and unlimited packs', async()=>{
  const {svc,grants}=harness();
@@ -58,8 +63,6 @@ test('verified paid pack is idempotent, scoped and audit recorded', async()=>{
 });
 test('refund revokes exact tenant grant; retry is no-op and unknown refund is safe', async()=>{
  const {svc,grants,audit}=harness();
- const missing=await svc.revokePaidWorkoutPack({tenantId:gym,sourceInvoiceId:paidInvoice});
- assert.deepEqual(missing,{idempotent:true,revoked:0});
  await svc.grantPaidWorkoutPack({tenantId:gym,sourceInvoiceId:paidInvoice,packageCode:'IRON_AI_WORKOUT_100',paymentStatus:'PAID'});
  await assert.rejects(()=>svc.revokePaidWorkoutPack({tenantId:'other-gym',sourceInvoiceId:paidInvoice}));
  const revoked=await svc.revokePaidWorkoutPack({tenantId:gym,sourceInvoiceId:paidInvoice});
@@ -77,4 +80,18 @@ test('settled finite packs cannot be silently denied after money is paid', async
  });
  assert.equal(confirmation.units,300);
  assert.equal(grants.length,2);
+});
+
+test('refund before grant is a durable tenant-bound tombstone; late grant cannot resurrect', async()=>{
+ const {svc,grants,revocations,audit}=harness();
+ const input={tenantId:gym,sourceInvoiceId:paidInvoice};
+ assert.deepEqual(await svc.revokePaidWorkoutPack(input),{idempotent:true,revoked:0});
+ assert.deepEqual(await svc.revokePaidWorkoutPack(input),{idempotent:true,revoked:0});
+ assert.equal(revocations.length,1);
+ assert.equal(revocations[0].tenantId,gym);
+ assert.equal(audit.length,1);
+ await assert.rejects(()=>svc.revokePaidWorkoutPack({...input,tenantId:'other-gym'}));
+ for (const tenantId of [gym,'other-gym'])
+  await assert.rejects(()=>svc.grantPaidWorkoutPack({tenantId,sourceInvoiceId:paidInvoice,packageCode:'IRON_AI_WORKOUT_100',paymentStatus:'PAID'}));
+ assert.equal(grants.length,0);
 });
