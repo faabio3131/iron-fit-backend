@@ -96,7 +96,9 @@ test('canonical Command subscription readback is scoped to the current gym and d
     return new Response(JSON.stringify({
       source: 'FM_COMMAND_CANONICAL', authority: 'FM_COMMAND', productCode: 'IRON_FIT_CORE',
       gymId, checkedAt: '2026-11-17T15:00:00.000Z', settlementConfirmedByThisView: false,
-      subscription: { planCode: 'IRON_PRO_MONTHLY', status: 'pending', paidThrough: null },
+      subscription: { planCode: 'IRON_PRO_MONTHLY', status: 'pending', paidThrough: null,
+        nextPaymentAt: '2026-12-17T00:00:00.000Z', scheduleObservedAt: '2026-11-17T15:00:00.000Z',
+        caktoManagementAvailable: true, scheduleAnchor: 'must-not-leak' },
       historyTruncated: true,
       invoices: [{ status: 'pending', amountMinor: 26900, currency: 'BRL', periodEnd: null,
         createdAt: '2026-11-17T14:00:00.000Z', recordedPaymentStatus: 'received',
@@ -108,6 +110,10 @@ test('canonical Command subscription readback is scoped to the current gym and d
     const result = await service.readCurrent(gymId);
     assert.equal(result.source, 'FM_COMMAND_CANONICAL');
     assert.equal(result.subscription.status, 'pending');
+    assert.equal(result.subscription.nextPaymentAt, '2026-12-17T00:00:00.000Z');
+    assert.equal(result.subscription.scheduleObservedAt, '2026-11-17T15:00:00.000Z');
+    assert.equal(result.subscription.caktoManagementAvailable, true);
+    assert.equal(Object.hasOwn(result.subscription, 'scheduleAnchor'), false);
     assert.equal(result.invoices[0].amountMinor, 26900);
     assert.equal(result.historyTruncated, true);
     assert.equal(result.invoices[0].recordedPaymentStatus, 'received');

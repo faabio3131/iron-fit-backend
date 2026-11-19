@@ -127,6 +127,7 @@ export class IronCommercialCheckoutService {
     let commercialSubscription: {
       planCode: string; planName: string | null; interval: 'monthly' | 'yearly' | null;
       status: string; paidThrough: string | null;
+      nextPaymentAt: string | null; scheduleObservedAt: string | null; caktoManagementAvailable: boolean;
     } | null = null;
     if (data.subscription !== null) {
       if (!data.subscription || typeof data.subscription !== 'object' || Array.isArray(data.subscription))
@@ -135,6 +136,9 @@ export class IronCommercialCheckoutService {
       if (typeof item.planCode !== 'string' || !PLAN.test(item.planCode) ||
           typeof item.status !== 'string' || item.status.length > 40 ||
           item.paidThrough === undefined || !optionalDate(item.paidThrough) ||
+          !optionalDate(item.nextPaymentAt) || !optionalDate(item.scheduleObservedAt) ||
+          (item.nextPaymentAt != null && item.scheduleObservedAt == null) ||
+          (item.caktoManagementAvailable != null && typeof item.caktoManagementAvailable !== 'boolean') ||
           (item.planName != null && (typeof item.planName !== 'string' || item.planName.length > 120)) ||
           (item.interval != null && item.interval !== 'monthly' && item.interval !== 'yearly'))
         throw new ServiceUnavailableException('Contrato de assinatura invalido');
@@ -144,6 +148,9 @@ export class IronCommercialCheckoutService {
         interval: item.interval === 'monthly' || item.interval === 'yearly' ? item.interval : null,
         status: item.status,
         paidThrough: item.paidThrough as string | null,
+        nextPaymentAt: item.nextPaymentAt ?? null,
+        scheduleObservedAt: item.scheduleObservedAt ?? null,
+        caktoManagementAvailable: item.caktoManagementAvailable === true,
       };
     }
     const invoices = data.invoices.map((raw) => {
