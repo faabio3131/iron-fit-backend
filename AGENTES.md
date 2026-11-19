@@ -1,17 +1,18 @@
 # AGENTES.md — IRON FIT CORE | CRONOGRAMA EXECUTÁVEL DE FECHAMENTO INTERNO
-**Baseline:** 09/11/2026 · **Estado:** EM EXECUÇÃO — NÃO GO-LIVE. **Objetivo:** IRON FIT CORE V1.0.0 — GO-LIVE CERTIFIED.
+**Baseline reconciliada:** 18/11/2026 · **Estado:** EM EXECUÇÃO — NÃO GO-LIVE. **Objetivo:** IRON FIT CORE V1.0.0 — GO-LIVE CERTIFIED.
 Este documento é um DELTA dos AGENTS.md e dos Prompts/Cronogramas Mestres vigentes, não os substitui. Não construir demo, sistema paralelo, endpoints fictícios, autenticação/billing/tenant duplicados. CURRENT comprovado prevalece sobre documentação histórica.
 
-## CURRENT comprovado
-- Backend `faabio3131/iron-fit-backend` main `c0bbcd4e`, CI #42274200239 SUCCESS; app Web/mobile `faabio3131/iron-fit-app` main `8204c7a1`, CI #42267643474 SUCCESS.
-- Contabo: Web e API HTTP 200, PostgreSQL readiness OK, 55 migrations aplicadas. Em 09/11, backend `959b2ea`, app `7a4d5f6`; árvores Git main/production equivalentes, commits com históricos diferentes. Deploy `/opt/fm/ironfit/deploy.sh` usa branches production e exige fast-forward, PROIBIDO forçar.
-- Ambiente da Contabo: `HOMOLOG`, `SAAS_BILLING_PROVIDER=INTERNAL_SANDBOX`, e-mail transacional desabilitado. `fmadmin` é o usuário de acesso SSH existente; nunca copiar credenciais para repo.
-- Billing SaaS de academia é autoridade FM Command (`faabio3131/fm-command-v2`), distinto de financeiro academia→aluno e de assinaturas do próprio FM Command. FM Command Cakto PR #56 DRAFT, CI #42570593789 e PostgreSQL #42570593935 SUCCESS na revisão `38a4188e` (NÃO PUBLICADO). Site FM `faabio3131/fm-site-novo` PR #19 DRAFT, CI #42571006545 SUCCESS `1fae292` (NÃO PUBLICADO). Backend #211 vídeos candidatos aberta.
-- Cakto: webhooks assinados HMAC-SHA256 timestamp + corpo bruto conforme documentação oficial; sem conta, ofertas, URLs e secret reais; CPF do titular não elimina automaticamente obrigação fiscal de vendedor.
+## CURRENT comprovado — substituir estados históricos, não requisitos
+- Backend main `2b576fc0e870be5816ef2779b4a70abc0ad02926`, production `15bbd2ee45949d8ed6cef389927b4eeca6fec19e`; PR #276 integrada, [CI pós-merge #44430334749](https://github.com/faabio3131/iron-fit-backend/actions/runs/44430334749) SUCCESS, 63 etapas. Comparação main/production sem diferença de arquivos na auditoria anterior.
+- App main `0edd596026695d1d65588dbcb0d0e4b451f6eac0`, production `1c7df687b771f1f1ba6e567350bb9010a014becb`; diferença limitada ao workflow mobile production. Histórico de treino publicado no código; PRs #127/#129/#130/#131 integradas. Último checkpoint físico antes da #276 constava na issue #243; SHA físico mais recente UNCERTIFIED.
+- Autoridade FM→academia: **FM Command V1** `faabio3131/FM-CONTROL-CENTER`, não `fm-command-v2`. #215/#216 Cakto, #222 readback, #223 recuperação, #226/#228 governança e #227 métrica trial já integrados. Command #218 créditos avulsos Draft: 11 commits ahead / 45 behind na consulta; journal main até 0021, candidata acrescenta 0022. Reconciliar sem merge cego. #62/#206 só se dependência real elegível; #202/#203/#210 não são por si pendências IRON.
+- Contabo HOMOLOG; deploy físico da #276, imagem Web, readback autenticado e PostgreSQL vídeo ainda UNCERTIFIED. Última evidência de conexão governada: dois planos, 16 capacidades; não confundir quatro tiers certificados em PostgreSQL descartável com quatro planos materializados no ambiente. Não repetir credencial já configurada.
+- Site FM/IRON: vídeos comerciais publicados conforme checkpoint do operador; CTA/preços e ofertas oficiais não certificados nesta execução. Cakto real e outros provedores externos segregados conforme [matriz aprovada](docs/PENDENCIAS_EXTERNAS_E_FECHAMENTO_INTERNO_2026-11-17.md).
+- `fm_supervisor/plan.json` não localizado em main dos três repositórios: GATE_NOT_CONFIGURED para esse mecanismo específico; nunca inferir fiscalização automática. EGM drift direcionado, sem revisão Goldfish nativa.
 
 ## Execução autônoma por WP
 **AUDITAR → IMPLEMENTAR → TESTAR → CORRIGIR → RETESTAR → AUDITAR DIFF → PR → CI → MERGE QUANDO GATE PERMITIR → PÓS-MERGE → PRÓXIMO WP.**
-Registrar macro/WP, repo, branch, HEAD, PR, CI, testes efetivamente executados, deploy, ambiente, bloqueio e próxima ação. Falha corrigível: corrigir e retestar. Sem PASS sem prova.
+Registrar macro/WP, repo, branch, HEAD, PR, CI, testes efetivamente executados, deploy, ambiente, bloqueio e próxima ação. Falha corrigível: corrigir e retestar. Sem PASS sem prova. **DELTA ONLY:** antes de alterar, localizar requisito → código atual → teste/CI existente → lacuna reproduzível; preservar implementação certificada. Reaproveitar CI do mesmo SHA e testes dirigidos durante construção; executar gates obrigatórios do novo HEAD e certificação consolidada ao final. Não repetir suítes verdes sem alteração ou justificativa; nunca relaxar segurança. Atualizar esta mesma matriz e #243 ao finalizar cada WP; nenhuma nova numeração FC ou cronograma paralelo.
 
 ### Ordem obrigatória e critérios de aceite
 | WP | Domínio canônico e trabalho interno obrigatório | Gate técnico |
@@ -31,11 +32,31 @@ Registrar macro/WP, repo, branch, HEAD, PR, CI, testes efetivamente executados, 
 | IF-S-01 | **Release v1.0.0**: freeze SHAs, tag, changelog, builds, PRs e CI verdes, pacote de release/rollback | release canônico verificável |
 | IF-T-01 | **Go-live**: preflight, cutover controlado, smoke do cliente, S2S/billing, observabilidade, rollback standby, certificação final | GO-LIVE CERTIFIED somente com evidência real; sem credenciais externas, classificar INTERNAL READY/EXTERNAL BLOCKER |
 
+## Matriz viva de execução dos mesmos 14 WPs (18/11/2026)
+A tabela de critérios acima permanece intacta. Estado se refere ao escopo interno; homologação externa não converte trabalho entregue em reimplementação. DONE_PROVEN exige prova exata para o item, não declaração global do módulo. OPEN/UNCERTIFIED não autoriza reconstruir módulos.
+
+| WP | Estado residual | Evidência existente / única ação restante |
+|---|---|---|
+| IF-P0-01 | OPEN — catálogo/runtime | Command #215/#222/#223/#226/#228, IRON #256/#258/#273/#275/#276 integrados. Reconciliar 2 planos observados vs 4 tiers/8 SKUs aprovados e readback; não reconstruir billing. |
+| IF-P0-02 | UNCERTIFIED — composição | Command #215 e IRON checkout existentes; oferta/ciclo/mapping e invoice-bound confirmados por contrato. Diagnóstico autenticado no ambiente quando disponível; Cakto real externo. |
+| IF-P0-03 | UNCERTIFIED — composição | Command #215 webhook, ledger, idempotência, renewal/refund implementados; reutilizar testes existentes e verificar somente gaps de ciclo comprovados. Webhook oficial externo. |
+| IF-P0-04 | UNCERTIFIED — composição | Command #215 outbox + IRON S2S; CI #44430334749 cobre consumidor real em PG. Verificar pagamento sintético integrado e status/negativas faltantes, não reconstruir. |
+| IF-P0-05 | IN_PROGRESS — delta P3 | Trial/onboarding #217, retry #112, readback #256/#117, recuperação #258/#223. App [#132](https://github.com/faabio3131/iron-fit-app/pull/132) corrige bloqueio por falha da projeção legada, CI pendente. Restam autosserviço upgrade/downgrade/cancelamento conforme O12, renovação/recibos com dados canônicos, catálogo e E2E interno final. Não conceder licença por redirect. |
+| IF-P0-06 | UNCERTIFIED — verificação | Preservar sites atuais e vídeos comerciais publicados conforme checkpoint; verificar CTA/preços/links com catálogo aprovado. Sem novo site. |
+| IF-P0-07 | UNCERTIFIED — verificação | Comunicação/Evolution #184/#191, alertas #186/#187, CI #40989167122 e #44430334749; só corrigir fluxo concreto em convite/reset/worker. E-mail real externo. |
+| IF-P1-01 | UNCERTIFIED — composição | Piloto #217–#220, financeiro #193–#206, histórico #269/#271 + app #127/#130/#131 integrados. Reutilizar navegador/PG já aprovados; validar composição final, não reconstruir academia. |
+| IF-P1-02 | OPEN — fiscal/créditos | IRON #268/App #125 A1 delegado existentes; NFCore #542 em integração, issues #249/#524: onboarding canônico, rotação/revogação, readiness município e medição, E2E interno. Command #218: reconciliar créditos IA conforme aprovação, não reconstruir; restantes adapters preservados e providers físicos externos. F11 #221 somente métricas previamente aprovadas ainda sem fonte/mapeamento; #227 trial pronto. |
+| IF-P1-03 | OPEN — ajustes delimitados | O23 aprovação anterior #109; #110 residual contraste/hierarquia/responsividade; UUID #126 e histórico #127/#130 já entregues no código. Vídeo #242: script #264 já implementado; 272 exercícios, 110 URLs candidatas, 162 sem link direto, 272 pending human review. Medir PG read-only, corrigir player apenas com falha; curadoria humana externa. |
+| IF-Q-01 | UNCERTIFIED — candidata final | CI #44430334749 SUCCESS (audit, DAST passivo, PG, navegador, carga, isolamento, restore); preservar gates, sem rerun inútil; certificar SHA final e corrigir achados concretos. |
+| IF-R-01 | UNCERTIFIED — operacional | Confirmar SHA Contabo, migrations, backup/restore/rollback, saúde/observabilidade e readiness final; não reinventar infraestrutura. |
+| IF-S-01 | OPEN — fechamento | Consolidar SHAs/builds/changelog/evidências, release candidata interna; tag oficial condicionada aos gates mestres. |
+| IF-T-01 | BLOCKED_EXTERNAL — lançamento | Somente após BUILD_INTERNAL_READY e homologações autorizadas; não impedir engenharia interna. |
+
 ## Gates imutáveis
 O Visual Premium só pode receber merge final após aprovação visual explícita para a candidata em avaliação. A IA é advisory; treino requer revisão profissional. Todo financeiro é backend-authoritative; acesso por role+permission+tenant+entitlement+step-up. Cakto jamais autoriza licença por e-mail/CPF, redirect, link genérico ou payload sem assinatura, valor e fatura compatíveis. Não usar sandbox como produção. Não marcar hardware/provider como homologado sem evidência. STOP-SHIP: secrets/cross-tenant leak, privilege escalation, PAN/CVV, cobrança ou licença incorreta, CI/build/E2E crítico vermelho, migração quebrada, falso deploy.
 
 ## Dependências externas (não interromper a construção interna)
 Cakto: validação da conta CPF/KYC, ofertas e URLs reais, secret webhook em cofre, primeira transação autorizada, confirmação fiscal/tributária. Hardware: SDK/equipamento presencial. SMTP: configuração de domínio/SPF/DKIM/DMARC. Fiscal/providers: credenciais oficiais/assinaturas/homologações. Não rebaixar o escopo interno por indisponibilidade desses dados.
 
-## CHECKPOINT — atualizado 09/11/2026
-**Macro/WP:** P — IF-P0-01, iniciado. **Branch backend:** `chore/iron-internal-closure-agentes-20261109`. **FM Command:** PR #56 DRAFT; **Site:** PR #19 DRAFT. **Deploy:** HOMOLOG, sem Cakto publicada. **Gate:** CI main backend/app verde; CI candidata Command/site verde, mas P/Q/R/S/T ainda não certificados. **Próxima ação:** ler schema e integração FM Command↔IRON, implementar outbox/S2S real e testes adversariais, certificar CI e prosseguir em sequência.
+## CHECKPOINT — atualizado 18/11/2026
+**Macro/WP:** P — IF-P0-01..05. **Estado:** engenharia residual em execução. **Primeira alteração:** app PR #132 (HEAD `28e9201a28ad5cfbe659c2804d60f0f0dc6e1d31`), fallback legado desacoplado, 3 testes dirigidos acrescentados; CI/merge/deploy ainda pendentes. Em paralelo, revisar contrato comercial restante no Command V1; #218 divergiu da main, não integrar sem reconciliação e gate. **Operação:** acesso remoto anteriormente bloqueado por quota; não fingir deploy/PG. **Próxima ação:** confirmar CI #132, corrigir somente falhas, reconciliar catálogo e O12 com APIs reais; manter os 14 IDs e #243, prosseguir nos deltas fiscais e indicadores aprovados sem reabrir blocos entregues. Nenhum pagamento, credencial, alteração de contrato real ou homologação externa executada.
