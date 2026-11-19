@@ -25,7 +25,12 @@ function harness(allowance = 2, options = {}) {
     r.tenantId === where.tenantId && r.group === where.group &&
     r.periodStart.getTime() === where.periodStart.getTime() &&
     where.state.in.includes(r.state)).length;
+  const revocations = [];
   const tx = {
+    aiCreditRevocation: {
+      findUnique: async ({where}) => revocations.find(r => r.sourceInvoiceId === where.sourceInvoiceId) ?? null,
+      create: async ({data}) => { revocations.push(data); return data; },
+    },
     aiCreditGrant: {
       findUnique: async ({ where }) => grants.find(g => g.sourceInvoiceId === where.sourceInvoiceId) ?? null,
       aggregate: async ({ where }) => ({ _sum: { units: grants.filter(g =>
@@ -151,7 +156,7 @@ test('FMCC paid invoice grants one non-rollover pack, idempotently; refund revok
   assert.equal(audits.length,2);
   assert.equal((await service.usage('gym-a','WORKOUT_GENERATION')).allowance,50);
   assert.equal((await service.revokePaidWorkoutPack({ tenantId:'gym-a', sourceInvoiceId:payload.sourceInvoiceId })).idempotent,true);
-  await assert.rejects(() => service.grantPaidWorkoutPack(payload), /utilizada/);
+  await assert.rejects(() => service.grantPaidWorkoutPack(payload), /revogada/);
 });
 
 test('FMCC credit import rejects unpaid, unknown and forged package requests', async () => {
