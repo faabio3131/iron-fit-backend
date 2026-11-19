@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHmac } from "node:crypto";
+import { pool } from "@/infrastructure/db/client";
+import { IronAiCreditBilling } from "@/application/billing/iron-ai-credit-billing";
+import { IronAiCreditOutboxWorker } from "@/application/billing/iron-ai-credit-outbox-worker";
 import {
   IronCommercialConnector,
   IRON_COMMERCIAL_SECRET_REF,
@@ -97,6 +100,80 @@ describe("IRON real FM Command consumer ↔ Nest/PostgreSQL S2S interoperability
 
     await expect(connector.snapshot({ ...context, tenantId: "other-control-tenant" }, source))
       .rejects.toThrow("integration.iron_control_tenant_denied");
+    // The actual Command billing/worker code runs in its own disposable DB;
+    // only HTTP crosses to IRON. Cakto events are synthetic signed fixtures.
+    const dbUrl=new URL(process.env.DATABASE_URL ?? "");
+    if(process.env.NODE_ENV!=="test" || !["localhost","127.0.0.1"].includes(dbUrl.hostname) ||
+      dbUrl.pathname!=="/fmcc_cross_ci" || realOrigin!=="http://127.0.0.1:3333")
+      throw new Error("iron_cross_credit_requires_isolated_databases_and_loopback");
+    const ciTenant="cross-credit-"+randomUUID();
+    const productId=(await pool.query("INSERT INTO fmcc_product_definition(tenant_id,slug,name,status) VALUES($1,'iron','IRON cross CI','active') RETURNING id",[ciTenant])).rows[0].id as string;
+    const customerId=(await pool.query("INSERT INTO fmcc_billing_customer(tenant_id,external_customer_id) VALUES($1,$2) RETURNING id",[ciTenant,randomUUID()])).rows[0].id as string;
+    const gatewayId=(await pool.query("INSERT INTO fmcc_billing_gateway_account(tenant_id,provider,environment,label,secret_ref,status) VALUES($1,'cakto','production','cross-ci','env://FMCC_CAKTO_WEBHOOK_SECRET','enabled') RETURNING id",[ciTenant])).rows[0].id as string;
+    await pool.query("INSERT INTO fmcc_billing_customer_binding(tenant_id,product_id,customer_id,external_tenant_id) VALUES($1,$2,$3,$4)",[ciTenant,productId,customerId,created.gymId]);
+    await pool.query("INSERT INTO fmcc_billing_product_plan(tenant_id,product_id,plan_code,name,interval,amount_minor,status) VALUES($1,$2,'IRON_START_M_2026','IRON START','monthly',14700,'active')",[ciTenant,productId]);
+    await pool.query("INSERT INTO fmcc_billing_product_route(tenant_id,product_id,gateway_account_id,status) VALUES($1,$2,$3,'enabled')",[ciTenant,productId,gatewayId]);
+    await pool.query("INSERT INTO fmcc_billing_subscription(tenant_id,product_id,customer_id,plan_code,status,paid_through) VALUES($1,$2,$3,'IRON_START_M_2026','active',now()+interval '30 days')",[ciTenant,productId,customerId]);
+    const syntheticSecret=randomUUID()+randomUUID();
+    const cfg={
+      FMCC_IRON_COMMERCIAL_SALES_ENABLED:"true",FMCC_IRON_BILLING_TENANT_ID:ciTenant,FMCC_IRON_PRODUCT_ID:productId,
+      FMCC_CAKTO_WEBHOOK_SECRET:syntheticSecret,FMCC_CAKTO_CHECKOUTS_JSON:JSON.stringify([
+        {offerId:"ci_credit_100",productId:"ci_credit_product",planCode:"IRON_AI_WORKOUT_100",
+          checkoutUrl:"https://pay.cakto.com.br/ci_credit_100",amountMinor:1990,interval:"one_time"}]),
+      FMCC_IRON_CONTROL_PLANE_URL:"https://api.ironfitcore.com.br/api/v1/control-plane/fmcc",
+      FMCC_IRON_CONTROL_PLANE_TOKEN:token,
+    };
+    const billing=new IronAiCreditBilling(cfg);
+    const creditCalls: {status:number;body:Record<string,unknown>}[]=[];
+    const creditTransport:typeof fetch=async(input,init)=>{
+      const target=new URL(String(input));
+      if(target.origin!=="https://api.ironfitcore.com.br"||
+        !/^\/api\/v1\/control-plane\/fmcc\/ai\/credits\/(grant|revoke)$/.test(target.pathname))
+        throw new Error("cross_credit_destination_denied");
+      const response=await fetch(realOrigin+target.pathname,init);
+      creditCalls.push({status:response.status,body:await response.clone().json() as Record<string,unknown>});
+      return response;
+    };
+    const worker=new IronAiCreditOutboxWorker(pool,cfg,creditTransport);
+    const signed=async(event:string,invoiceId:string,paymentId:string)=>{
+      const raw=JSON.stringify({event,data:{id:paymentId,offer_type:"main",sck:invoiceId,
+        status:event==="purchase_approved"?"paid":"refunded",amount:19.9,currency:"BRL",
+        offer:{id:"ci_credit_100"},product:{id:"ci_credit_product"},paidAt:new Date().toISOString()}});
+      const ts=String(Math.floor(Date.now()/1000));
+      return billing.handleWebhook(new Headers({"x-cakto-timestamp":ts,
+        "x-cakto-signature":"v1="+createHmac("sha256",syntheticSecret).update(ts+"."+raw).digest("hex")}),raw);
+    };
+    const firstCredit=await billing.prepareCheckout(created.gymId,"IRON_AI_WORKOUT_100",randomUUID());
+    const paymentId=randomUUID();
+    expect(await signed("purchase_approved",firstCredit.invoiceId,paymentId)).toBe("applied");
+    expect(await signed("purchase_approved",firstCredit.invoiceId,paymentId)).toBe("duplicate");
+    expect(await worker.processOne()).toBe("delivered");
+    expect(creditCalls.at(-1)?.body).toMatchObject({idempotent:false,units:100});
+    expect(await signed("refund",firstCredit.invoiceId,paymentId)).toBe("applied");
+    expect(await worker.processOne()).toBe("delivered");
+    expect(creditCalls.at(-1)?.body).toMatchObject({revoked:1});
+
+    const secondCredit=await billing.prepareCheckout(created.gymId,"IRON_AI_WORKOUT_100",randomUUID());
+    const payment2=randomUUID();
+    expect(await signed("purchase_approved",secondCredit.invoiceId,payment2)).toBe("applied");
+    expect(await signed("refund",secondCredit.invoiceId,payment2)).toBe("applied");
+    const beforeCalls=creditCalls.length;
+    expect(await worker.processOne()).toBe("delivered");
+    expect(await worker.processOne()).toBe("delivered");
+    expect(creditCalls.length).toBe(beforeCalls+1);
+    expect(creditCalls.at(-1)?.body).toMatchObject({idempotent:true,revoked:0});
+    const grantPath=realOrigin+"/api/v1/control-plane/fmcc/ai/credits/grant";
+    const requestGrant=(credential:string,gymId:string)=>fetch(grantPath,{method:"POST",headers:{
+      authorization:"Bearer "+credential,"x-correlation-id":randomUUID(),"content-type":"application/json"},
+      body:JSON.stringify({tenantId:gymId,sourceInvoiceId:secondCredit.invoiceId,
+        packageCode:"IRON_AI_WORKOUT_100",paymentStatus:"PAID"})});
+    expect((await requestGrant(token,created.gymId)).status).toBe(409);
+    expect((await requestGrant("invalid-ci-token",created.gymId)).status).toBe(401);
+    const queue=await pool.query("SELECT status,count(*)::int AS n FROM fmcc_iron_ai_credit_outbox WHERE order_id IN ($1,$2) GROUP BY status",[firstCredit.invoiceId,secondCredit.invoiceId]);
+    expect(queue.rows).toEqual([{status:"delivered",n:4}]);
+    console.log(JSON.stringify({event:"iron_cross_repo_credit_outbox_certification",realCommandLedger:true,
+      realIronHttp:true,paidReplay:true,refundedGrantRevoked:true,refundBeforeGrant:true,lateGrantDenied:true,
+      productionCakto:false}));
     console.log(JSON.stringify({
       event: "iron_actual_command_connector_live_backend_certification",
       publishedPlanCatalog: true, snapshot: true, pull: true,

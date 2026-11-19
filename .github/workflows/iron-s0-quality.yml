@@ -281,7 +281,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 38ea03dcc583c54c8cdaa5226ccfde7d817cb951
+          ref: 1c7df687b771f1f1ba6e567350bb9010a014becb
           path: iron-fit-app
 
       - name: Install certified IRON app dependencies
@@ -300,7 +300,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 38ea03dcc583c54c8cdaa5226ccfde7d817cb951
+          ref: 1c7df687b771f1f1ba6e567350bb9010a014becb
           path: iron-fit-app-macro-o-candidate
 
       - name: Install deployed IRON Web/mobile production release dependencies
@@ -411,7 +411,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/FM-CONTROL-CENTER
-          ref: ea023998f75f4995550adc8573eb68f631f0b57f
+          ref: 526c750f66183123f8ccf9a69001ed3c74274de0
           path: fm-command-commercial-ci
 
       - name: Setup FM Command Node 24
@@ -423,10 +423,21 @@ jobs:
         working-directory: fm-command-commercial-ci
         run: npm ci
 
+      - name: Prepare independent disposable Command ledger for cross-repository E2E
+        working-directory: fm-command-commercial-ci
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fmcc_cross_ci
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE fmcc_cross_ci'
+          npm run db:migrate
+
       - name: Live Command connector-to-IRON backend interop
         working-directory: fm-command-commercial-ci
         env:
           NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fmcc_cross_ci
+          BETTER_AUTH_SECRET: ci-only-cross-repository-auth-secret-not-production
         run: |
           cp ../test/iron-command-consumer-contract-live.fixture tests/iron-command-consumer-contract-live.test.ts
           npx vitest run tests/iron-command-consumer-contract-live.test.ts
