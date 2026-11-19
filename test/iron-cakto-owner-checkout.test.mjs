@@ -212,3 +212,30 @@ test('non-trial/admin/canceled/future suspended records fail closed before calli
     }
   } finally {globalThis.fetch=previous;restore();}
 });
+
+
+test('receipt resend uses authenticated gym, actor and original invoice, never a recipient or payment mutation',async()=>{
+  const restore=setEnv(),oldFetch=globalThis.fetch;
+  const actorId=randomUUID();
+  const service=new IronCommercialCheckoutService({tenantProductSubscription:{findFirst:async query=>{
+    assert.deepEqual(query.where,{gymId});return{id:subscriptionId};
+  }}});
+  let calls=0;
+  globalThis.fetch=async(url,init)=>{
+    calls++;
+    assert.equal(url,'https://app.fmcommand.com.br/api/internal/iron/commerce/receipt');
+    assert.equal(init.method,'POST');
+    assert.deepEqual(JSON.parse(init.body),{gymId,expectedSubscriptionId:subscriptionId,invoiceId,actorId,requestId});
+    return new Response(JSON.stringify({productCode:'IRON_FIT_CORE',provider:'CAKTO',status:'EMAIL_RESEND_ACCEPTED',deliveryConfirmed:false}),{status:200});
+  };
+  try{
+    assert.deepEqual(await service.resendReceipt(gymId,actorId,invoiceId,requestId),
+      {provider:'CAKTO',status:'EMAIL_RESEND_ACCEPTED',deliveryConfirmed:false});
+    await assert.rejects(()=>service.resendReceipt(gymId,actorId,'forged',requestId),e=>e.getStatus?.()===400);
+    assert.equal(calls,1);
+    globalThis.fetch=async()=>new Response('{}',{status:429});
+    await assert.rejects(()=>service.resendReceipt(gymId,actorId,invoiceId,requestId),e=>e.getStatus?.()===429);
+    globalThis.fetch=async()=>new Response(JSON.stringify({productCode:'IRON_FIT_CORE',provider:'CAKTO',status:'EMAIL_RESEND_ACCEPTED',deliveryConfirmed:true}),{status:200});
+    await assert.rejects(()=>service.resendReceipt(gymId,actorId,invoiceId,requestId),e=>e.getStatus?.()===503);
+  }finally{globalThis.fetch=oldFetch;restore();}
+});

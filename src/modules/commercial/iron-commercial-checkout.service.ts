@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -162,7 +164,9 @@ export class IronCommercialCheckoutService {
           item.amountMinor <= 0 || item.currency !== 'BRL' ||
           item.periodEnd === undefined || !optionalDate(item.periodEnd) ||
           !optionalDate(item.createdAt) || !optionalDate(item.paymentRecordedAt) ||
-          !optionalStatus(item.recordedPaymentStatus))
+          !optionalStatus(item.recordedPaymentStatus) ||
+          (item.receiptReference != null && (typeof item.receiptReference !== 'string' || !UUID.test(item.receiptReference) ||
+            item.status !== 'paid' || item.recordedPaymentStatus !== 'received')))
         throw new ServiceUnavailableException('Contrato de faturas invalido');
       return {
         status: item.status, amountMinor: item.amountMinor, currency: 'BRL' as const,
@@ -170,6 +174,7 @@ export class IronCommercialCheckoutService {
         createdAt: item.createdAt ?? null,
         paymentRecordedAt: item.paymentRecordedAt ?? null,
         recordedPaymentStatus: item.recordedPaymentStatus ?? null,
+        receiptReference: typeof item.receiptReference === 'string' ? item.receiptReference : null,
       };
     });
     return {
@@ -181,6 +186,41 @@ export class IronCommercialCheckoutService {
       historyTruncated: typeof data.historyTruncated === 'boolean' ? data.historyTruncated : null,
       settlementConfirmedByThisView: false as const,
     };
+  }
+
+  /** Re-send the provider's original payment confirmation, not a fiscal
+   * document or local charge. Identity and invoice scope are checked again by
+   * Command; the browser never supplies a recipient/provider order ID. */
+  async resendReceipt(gymId: string | undefined, actorId: string | undefined, invoiceId: string, requestId: string) {
+    if (!gymId || !actorId || ![gymId,actorId,invoiceId,requestId].every(value=>typeof value==='string' && UUID.test(value)))
+      throw new BadRequestException('Identificacao comercial invalida');
+    const current=await this.prisma.tenantProductSubscription.findFirst({
+      where:{gymId},select:{id:true},orderBy:{effectiveFrom:'desc'},
+    });
+    if(!current) throw new ConflictException('Vinculo comercial da academia nao encontrado');
+    const conf=this.config();
+    const target=new URL(conf.url);
+    target.pathname='/api/internal/iron/commerce/receipt';
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),22_000);
+    try{
+      const response=await fetch(target.toString(),{
+        method:'POST',redirect:'error',cache:'no-store',signal:controller.signal,
+        headers:{Authorization:'Bearer '+conf.token,'Content-Type':'application/json','X-Correlation-ID':requestId},
+        body:JSON.stringify({gymId,expectedSubscriptionId:current.id,invoiceId,actorId,requestId}),
+      });
+      if(response.status===429) throw new HttpException('Aguarde antes de solicitar outro envio de comprovante',HttpStatus.TOO_MANY_REQUESTS);
+      if(!response.ok) throw new ServiceUnavailableException('Reenvio nao confirmado pelo provedor');
+      const result:unknown=await response.json();
+      if(!result||typeof result!=='object'||Array.isArray(result)) throw new Error('invalid');
+      const row=result as Record<string,unknown>;
+      if(row.productCode!=='IRON_FIT_CORE'||row.provider!=='CAKTO'||row.status!=='EMAIL_RESEND_ACCEPTED'||
+        row.deliveryConfirmed!==false) throw new Error('invalid');
+      return {provider:'CAKTO' as const,status:'EMAIL_RESEND_ACCEPTED' as const,deliveryConfirmed:false as const};
+    }catch(error){
+      if(error instanceof HttpException) throw error;
+      throw new ServiceUnavailableException('Reenvio nao confirmado; aguarde e confira sua caixa de entrada');
+    }finally{clearTimeout(timer);}
   }
 
   async prepare(gymId: string | undefined, planCode: string, requestId: string) {
