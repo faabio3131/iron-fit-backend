@@ -1,0 +1,31 @@
+name: Resolve patched Effect lock metadata (read-only evidence)
+on:
+  push:
+    branches: [work/resolve-effect-3-22-1-20261119]
+permissions:
+  contents: read
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resolve exact patched dependency with npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp package-lock.json /tmp/effect-before-lock.json
+          node -e 'const fs=require("node:fs");const p=require("./package.json");p.overrides={...p.overrides,effect:"3.22.1"};fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          node <<'NODE'
+          const before=require('/tmp/effect-before-lock.json'), after=require('./package-lock.json');
+          const keys=[...new Set([...Object.keys(before.packages),...Object.keys(after.packages)])];
+          const changed=keys.filter(k=>JSON.stringify(before.packages[k])!==JSON.stringify(after.packages[k])).map(k=>({path:k,entry:after.packages[k]??null}));
+          if(after.packages['node_modules/effect']?.version!=='3.22.1') throw Error('Wrong resolved effect');
+          console.log('IRON_EFFECT_LOCK_DELTA='+JSON.stringify(changed));
+          NODE
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm audit --audit-level=high
