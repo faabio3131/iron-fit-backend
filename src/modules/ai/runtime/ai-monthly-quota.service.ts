@@ -181,6 +181,11 @@ export class AiMonthlyQuotaService {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         return await this.prisma.$transaction(async (tx) => {
+          // A durable refund tombstone wins even if REVOKE arrived before GRANT.
+          const reversal = await tx.aiCreditRevocation.findUnique({
+            where: { sourceInvoiceId: input.sourceInvoiceId },
+          });
+          if (reversal) throw new ConflictException('Referencia financeira de IA revogada');
           const existing = await tx.aiCreditGrant.findUnique({
             where: { sourceInvoiceId: input.sourceInvoiceId },
           });
@@ -218,22 +223,44 @@ export class AiMonthlyQuotaService {
   async revokePaidWorkoutPack(input: { tenantId: string; sourceInvoiceId: string }) {
     if (!input.tenantId?.trim() || !/^[A-Za-z0-9:_-]{8,160}$/.test(input.sourceInvoiceId ?? ''))
       throw new BadRequestException('Referencia financeira invalida');
-    return this.prisma.$transaction(async (tx) => {
-      const grant = await tx.aiCreditGrant.findUnique({ where: { sourceInvoiceId: input.sourceInvoiceId } });
-      // Refund can overtake a still-pending GRANT delivery: no credit is a safe idempotent no-op.
-      if (!grant) return { idempotent: true, revoked: 0 };
-      if (grant.tenantId !== input.tenantId) throw new ConflictException('Credito pertence a outra academia');
-      if (grant.revokedAt) return { idempotent: true, revoked: 0 };
-      const revoked = await tx.aiCreditGrant.updateMany({
-        where: { id: grant.id, revokedAt: null }, data: { revokedAt: new Date() },
-      });
-      if (revoked.count) await this.audit.record({
-        gymId: input.tenantId, userId: null,
-        action: 'AI_PAID_CREDITS_REVOKED', entity: 'AiCreditGrant', entityId: grant.id,
-        previous: { units: grant.units, packageCode: grant.packageCode, sourceInvoiceId: grant.sourceInvoiceId },
-        next: { revoked: true },
-      }, tx);
-      return { idempotent: false, revoked: revoked.count };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const grant = await tx.aiCreditGrant.findUnique({ where: { sourceInvoiceId: input.sourceInvoiceId } });
+          const reversal = await tx.aiCreditRevocation.findUnique({ where: { sourceInvoiceId: input.sourceInvoiceId } });
+          if ((grant && grant.tenantId !== input.tenantId) ||
+              (reversal && reversal.tenantId !== input.tenantId))
+            throw new ConflictException('Credito pertence a outra academia');
+          // Record a tombstone even if no GRANT has arrived. Serializable
+          // isolation and retry cover a concurrent grant/refund write skew.
+          if (!reversal) {
+            await tx.aiCreditRevocation.create({data:{
+              sourceInvoiceId: input.sourceInvoiceId, tenantId: input.tenantId,
+            }});
+            if (!grant) await this.audit.record({
+              gymId: input.tenantId, userId: null,
+              action: 'AI_PAID_CREDITS_REVOKED', entity: 'AiCreditRevocation', entityId: input.sourceInvoiceId,
+              next: { sourceInvoiceId: input.sourceInvoiceId, revoked: true, grantAbsent: true },
+            }, tx);
+          }
+          if (!grant || grant.revokedAt) return { idempotent: true, revoked: 0 };
+          const revoked = await tx.aiCreditGrant.updateMany({
+            where: { id: grant.id, revokedAt: null }, data: { revokedAt: new Date() },
+          });
+          if (revoked.count) await this.audit.record({
+            gymId: input.tenantId, userId: null,
+            action: 'AI_PAID_CREDITS_REVOKED', entity: 'AiCreditGrant', entityId: grant.id,
+            previous: { units: grant.units, packageCode: grant.packageCode, sourceInvoiceId: grant.sourceInvoiceId },
+            next: { revoked: true },
+          }, tx);
+          return { idempotent: false, revoked: revoked.count };
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError
+          && (error.code === 'P2034' || error.code === 'P2002') && attempt < MAX_RETRIES - 1) continue;
+        throw error;
+      }
+    }
+    throw new ConflictException('Concorrencia na revogacao de credito de IA');
   }
 }

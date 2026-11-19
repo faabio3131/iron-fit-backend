@@ -150,3 +150,13 @@ model AiMonthlyConsumption {
   @@unique([tenantId, group, periodStart, requestId])
   @@index([tenantId, group, periodStart, state])
 }
+
+
+// Durable refund tombstone: a delayed paid event can never resurrect an invoice.
+model AiCreditRevocation {
+  sourceInvoiceId String   @id
+  tenantId        String
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
