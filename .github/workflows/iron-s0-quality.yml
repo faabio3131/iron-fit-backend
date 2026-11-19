@@ -300,7 +300,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/iron-fit-app
-          ref: 2f072f2d47e8176087121fb15c9f6eaa88ce8c49
+          ref: ecf54b2a5e9d5bd3a909f16f0c581a9c146bb290
           path: iron-fit-app-macro-o-candidate
 
       - name: Install exact IRON Web/mobile release candidate dependencies
