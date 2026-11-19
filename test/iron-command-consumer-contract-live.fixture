@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { randomUUID, createHmac } from "node:crypto";
 import { pool } from "@/infrastructure/db/client";
 import { IronAiCreditBilling } from "@/application/billing/iron-ai-credit-billing";
+import { CaktoIronReadbackInbox } from "@/application/billing/cakto-iron-readback-inbox";
+import { caktoReadbackFixture, ciCaktoReadEnv } from "./fixtures/cakto-readback-fixture";
 import { IronAiCreditOutboxWorker } from "@/application/billing/iron-ai-credit-outbox-worker";
 import {
   IronCommercialConnector,
@@ -115,7 +117,9 @@ describe("IRON real FM Command consumer ↔ Nest/PostgreSQL S2S interoperability
     await pool.query("INSERT INTO fmcc_billing_product_route(tenant_id,product_id,gateway_account_id,status) VALUES($1,$2,$3,'enabled')",[ciTenant,productId,gatewayId]);
     await pool.query("INSERT INTO fmcc_billing_subscription(tenant_id,product_id,customer_id,plan_code,status,paid_through) VALUES($1,$2,$3,'IRON_START_M_2026','active',now()+interval '30 days')",[ciTenant,productId,customerId]);
     const syntheticSecret=randomUUID()+randomUUID();
+    const readback=caktoReadbackFixture();
     const cfg={
+      ...ciCaktoReadEnv,
       FMCC_IRON_COMMERCIAL_SALES_ENABLED:"true",FMCC_IRON_BILLING_TENANT_ID:ciTenant,FMCC_IRON_PRODUCT_ID:productId,
       FMCC_CAKTO_WEBHOOK_SECRET:syntheticSecret,FMCC_CAKTO_CHECKOUTS_JSON:JSON.stringify([
         {offerId:"ci_credit_100",productId:"ci_credit_product",planCode:"IRON_AI_WORKOUT_100",
@@ -123,7 +127,8 @@ describe("IRON real FM Command consumer ↔ Nest/PostgreSQL S2S interoperability
       FMCC_IRON_CONTROL_PLANE_URL:"https://api.ironfitcore.com.br/api/v1/control-plane/fmcc",
       FMCC_IRON_CONTROL_PLANE_TOKEN:token,
     };
-    const billing=new IronAiCreditBilling(cfg);
+    const billing=new IronAiCreditBilling(cfg,readback.transport);
+    const inbox=new CaktoIronReadbackInbox(cfg,readback.transport);
     const creditCalls: {status:number;body:Record<string,unknown>}[]=[];
     const creditTransport:typeof fetch=async(input,init)=>{
       const target=new URL(String(input));
@@ -140,8 +145,10 @@ describe("IRON real FM Command consumer ↔ Nest/PostgreSQL S2S interoperability
         status:event==="purchase_approved"?"paid":"refunded",amount:19.9,currency:"BRL",
         offer:{id:"ci_credit_100"},product:{id:"ci_credit_product"},paidAt:new Date().toISOString()}});
       const ts=String(Math.floor(Date.now()/1000));
-      return billing.handleWebhook(new Headers({"x-cakto-timestamp":ts,
+      readback.register(raw);
+      const queued=await inbox.accept("ai_credits",new Headers({"x-cakto-timestamp":ts,
         "x-cakto-signature":"v1="+createHmac("sha256",syntheticSecret).update(ts+"."+raw).digest("hex")}),raw);
+      return queued==="queued"?inbox.processOne():queued;
     };
     const firstCredit=await billing.prepareCheckout(created.gymId,"IRON_AI_WORKOUT_100",randomUUID());
     const paymentId=randomUUID();

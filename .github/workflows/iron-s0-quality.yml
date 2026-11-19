@@ -411,7 +411,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/FM-CONTROL-CENTER
-          ref: 9fb824192c20736a7f7477a7a53cc1a49e0aa392
+          ref: 39d87f5c788ceb0d57065b10a3bbed79cdaa6bb6
           path: fm-command-commercial-ci
 
       - name: Setup FM Command Node 24
