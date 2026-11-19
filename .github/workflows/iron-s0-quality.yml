@@ -517,3 +517,77 @@ jobs:
             test "$(id -un)" = node
           '
 
+  fiscal-a1-cross-repo:
+    name: Real NFCore A1 HTTPS and PostgreSQL contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: iron_nfcore_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d iron_nfcore_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      IRON_NFCORE_TEST_DSN: postgresql://postgres:postgres@127.0.0.1:5432/iron_nfcore_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run build
+      - name: Checkout exact NFCore withdrawal candidate
+        uses: actions/checkout@v4
+        with:
+          repository: faabio3131/nf-core-v001
+          ref: e12d18b9795b9e231f44b52012a31e37be2cc73e
+          path: nfcore-a1-ci
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install actual NFCore code and dependencies
+        working-directory: nfcore-a1-ci
+        run: python -m pip install -e '.[dev,telemetry]'
+      - name: Certify A1 end to end across real repository implementations
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export IRON_NFCORE_FIXTURE_DIR="$(mktemp -d /tmp/iron-nfcore-XXXXXXXX)"
+          export IRON_NFCORE_WORKLOAD_TOKEN="$(openssl rand -hex 32)"
+          export IRON_NFCORE_PFX_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$IRON_NFCORE_WORKLOAD_TOKEN"
+          echo "::add-mask::$IRON_NFCORE_PFX_PASSWORD"
+          server_pid=""
+          cleanup() {
+            if [ -n "$server_pid" ]; then kill "$server_pid" 2>/dev/null || true; fi
+            rm -rf -- "$IRON_NFCORE_FIXTURE_DIR"
+          }
+          trap cleanup EXIT
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj '/CN=127.0.0.1' \
+            -addext 'subjectAltName=IP:127.0.0.1' \
+            -keyout "$IRON_NFCORE_FIXTURE_DIR/tls.key" -out "$IRON_NFCORE_FIXTURE_DIR/tls.crt" 2>/dev/null
+          export NODE_EXTRA_CA_CERTS="$IRON_NFCORE_FIXTURE_DIR/tls.crt"
+          python test/fixtures/iron-nfcore-a1-server.py >"$IRON_NFCORE_FIXTURE_DIR/server.log" 2>&1 &
+          server_pid=$!
+          for attempt in $(seq 1 40); do
+            if curl -fsS --cacert "$NODE_EXTRA_CA_CERTS" https://127.0.0.1:18443/openapi.json >/dev/null; then break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              echo 'NFCore fixture startup failed'
+              tail -n 25 "$IRON_NFCORE_FIXTURE_DIR/server.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          curl -fsS --cacert "$NODE_EXTRA_CA_CERTS" https://127.0.0.1:18443/openapi.json >/dev/null
+          node --test test/iron-nfcore-a1-live.e2e.mjs
