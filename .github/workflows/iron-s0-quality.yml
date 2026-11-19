@@ -89,6 +89,7 @@ jobs:
           mask_and_export B6_RESET_PASSWORD "Dd4!$(openssl rand -hex 16)"
           mask_and_export B6_ADMIN_PASSWORD "Ee5!$(openssl rand -hex 16)"
           mask_and_export FMCC_IRON_CONTROL_PLANE_TOKEN "$(openssl rand -hex 40)"
+          mask_and_export FMCC_IRON_PLAN_GOVERNANCE_TOKEN "$(openssl rand -hex 40)"
 
       - name: Dependency audit
         run: npm audit --audit-level=high
@@ -410,7 +411,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: faabio3131/FM-CONTROL-CENTER
-          ref: a47997bb62c1b9b19d1f4f5c529f3191ef021f92
+          ref: ea023998f75f4995550adc8573eb68f631f0b57f
           path: fm-command-commercial-ci
 
       - name: Setup FM Command Node 24
@@ -429,7 +430,10 @@ jobs:
         run: |
           cp ../test/iron-command-consumer-contract-live.fixture tests/iron-command-consumer-contract-live.test.ts
           npx vitest run tests/iron-command-consumer-contract-live.test.ts
-          npx vitest run tests/iron-commercial-connector.integration.test.ts tests/iron-entitlement-outbox.unit.test.ts tests/iron-paid-license-reconciliation.unit.test.ts tests/iron-plan-version-binding.unit.test.ts tests/iron-commercial-plan-activation.unit.test.ts
+          npx vitest run tests/iron-commercial-connector.integration.test.ts tests/iron-entitlement-outbox.unit.test.ts tests/iron-paid-license-reconciliation.unit.test.ts tests/iron-plan-version-binding.unit.test.ts tests/iron-commercial-plan-activation.unit.test.ts tests/iron-plan-governance.integration.test.ts
+
+      - name: Governed legacy LIMIT real HTTP and PostgreSQL certification
+        run: node --test test/p3.fm-legacy-limit-live.e2e.mjs
 
       - name: Prepare disposable process-restart recovery proof
         run: node test/iron-q-disposable-restart-drill.mjs prepare

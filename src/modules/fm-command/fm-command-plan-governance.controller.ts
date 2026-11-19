@@ -82,4 +82,12 @@ export class FmCommandPlanGovernanceController {
   ) {
     return this.plans.publishVersion(planId, version);
   }
+
+  @Post('plans/:planId/versions/:version/retire')
+  retireVersion(
+    @Param('planId', new ParseUUIDPipe()) planId: string,
+    @Param('version', ParseIntPipe) version: number,
+  ) {
+    return this.plans.retireVersion(planId, version, undefined, true);
+  }
 }
