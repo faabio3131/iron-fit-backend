@@ -148,3 +148,29 @@ test('P6 class uses existing tenant-bound role and step-up without any A1 inboun
   assert.doesNotMatch(source,/pfxBase64|pkcs12|currentPassword.*a1|@Post\('fiscal\/a1\/upload'\)/i);
   assert.doesNotMatch(service,/prisma\.certificate|\.create\(\{.*pkcs12|record\(\{[^}]*delegationToken/s);
 });
+
+
+test('P6 withdrawal uses only canonical scope and explicit request identity; does not revoke ICP-Brasil', async () => {
+  const requestId='a92bbdf1-b8d9-4c73-89bc-ed4b1a6d8976';
+  const f=fixture({response:{status:'WITHDRAWN',official_revocation:'NOT_PERFORMED',official_homologation:'NOT_VERIFIED'}});
+  assert.deepEqual(await f.service.withdraw('gym-a','owner-a',requestId), {
+    status:'WITHDRAWN',officialRevocation:'NOT_PERFORMED',officialHomologation:'NOT_VERIFIED',
+  });
+  const post=f.calls.find(x=>x.kind==='post');
+  assert.equal(post.path,'/v1/iron/a1/withdraw');
+  assert.deepEqual(post.body,{issuer_cnpj:CNPJ,actor_user_id:'owner-a',request_id:requestId});
+  assert.equal(post.ctx.scope.tenantId,'nfcore-tenant');
+  assert.equal(f.audits[0].action,'FISCAL_A1_VAULT_WITHDRAWN');
+  for(const options of [
+    {environment:IntegrationEnvironment.PROD},
+    {trialCnpj:'22333444000180'},
+    {response:{status:'WITHDRAWN',official_revocation:'PERFORMED',official_homologation:'NOT_VERIFIED'}},
+  ]){
+    const bad=fixture(options);
+    await assert.rejects(()=>bad.service.withdraw('gym-a','owner-a',requestId));
+    assert.equal(bad.audits.length,0);
+  }
+  const invalid=fixture();
+  await assert.rejects(()=>invalid.service.withdraw('gym-a','owner-a','bad'));
+  assert.equal(invalid.calls.length,0);
+});
