@@ -121,6 +121,42 @@ export class FiscalA1DelegationService {
     };
   }
 
+  /** Withdrawal removes only the NFCore homologation Vault record. It does not
+   * revoke an ICP-Brasil certificate or modify already authorized documents. */
+  async withdraw(gymId: string, actorUserId: string, requestId: string) {
+    if (!actorUserId || actorUserId.length > 128 ||
+        typeof requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
+      throw new ConflictException('Solicitacao de retirada A1 invalida');
+    }
+    const cnpj = await this.issuer(gymId);
+    const connection = await this.connection(gymId);
+    let response: Record<string, unknown>;
+    try {
+      response = await this.http.post(
+        '/v1/iron/a1/withdraw',
+        { issuer_cnpj: cnpj, actor_user_id: actorUserId, request_id: requestId.toLowerCase() },
+        connection.context, requestId.toLowerCase(),
+      );
+    } catch {
+      // Do not retry a destructive operation on an uncertain network outcome.
+      throw new ServiceUnavailableException('Retirada A1 nao confirmada; consulte o cofre antes de nova solicitacao');
+    }
+    if (response.status !== 'WITHDRAWN' || response.official_revocation !== 'NOT_PERFORMED' ||
+        response.official_homologation !== 'NOT_VERIFIED') {
+      throw new ServiceUnavailableException('Contrato de retirada A1 invalido');
+    }
+    await this.audit.record({
+      gymId, userId: actorUserId, action: 'FISCAL_A1_VAULT_WITHDRAWN',
+      entity: 'IntegrationConnection', entityId: connection.connectionId,
+      next: { environment: IntegrationEnvironment.HOMOLOG, requestId: requestId.toLowerCase(), officialRevocation: 'NOT_PERFORMED' },
+    });
+    return {
+      status: 'WITHDRAWN' as const,
+      officialRevocation: 'NOT_PERFORMED' as const,
+      officialHomologation: 'NOT_VERIFIED' as const,
+    };
+  }
+
   async status(gymId: string) {
     const cnpj = await this.issuer(gymId);
     const connection = await this.connection(gymId);
