@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { PrismaClient } from '@prisma/client';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 const require = createRequire('/tmp/iron-browser-qa/package.json');
 const { chromium } = require('playwright-core');
@@ -253,6 +254,36 @@ test('Macro O real browser: trial, login, team actions, restricted finance, modu
       checked++;
     }
     assert.ok(checked >= 11);
+    // O23 evidence from the real authenticated app against disposable PostgreSQL.
+    // This captures UI, not a new implementation; never capture login/password fields.
+    if (process.env.IRON_O23_VISUAL_EVIDENCE === 'true') {
+      const output = 'iron-o23-evidence';
+      await mkdir(output, { recursive: true });
+      for (const [module, ready] of [
+        ['overview', 'cockpit-refresh'],
+        ['saasBilling', 'saas-billing-panel'],
+        ['fiscal', 'fiscal-center'],
+      ]) {
+        await page.setViewportSize({ width: 1366, height: 900 });
+        await page.getByTestId('nav-' + module).click();
+        await page.getByTestId(ready).waitFor({ timeout: 30000 });
+        await page.getByText('Carregando dados canônicos…', { exact: true }).waitFor({ state: 'hidden' });
+        await page.evaluate(() => document.fonts.ready);
+        await page.screenshot({ path: output + '/' + module + '-desktop.png', animations: 'disabled' });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.getByTestId(ready).waitFor({ timeout: 30000 });
+        await page.waitForFunction(() => document.documentElement.scrollWidth <= window.innerWidth + 2);
+        await page.screenshot({ path: output + '/' + module + '-mobile.png', animations: 'disabled' });
+      }
+      await page.setViewportSize({ width: 1366, height: 768 });
+      await writeFile(output + '/checkpoint.txt', [
+        'IRON REAL — authenticated synthetic QA tenant, local CI runtime',
+        'App: ecf54b2a5e9d5bd3a909f16f0c581a9c146bb290',
+        'Backend candidate: ' + (process.env.GITHUB_SHA ?? 'LOCAL_UNVERIFIED'),
+        'No Cakto payment, external fiscal homologation or productive data.',
+        'Screenshots are O23 review evidence, not a public preview or human approval.',
+      ].join('\n') + '\n');
+    }
     assert.deepEqual(pageErrors, [], 'No uncaught browser runtime errors');
     await page.getByTestId('commercial-logout').click();
     await page.getByTestId('login-submit').waitFor({ timeout: 15000 });
